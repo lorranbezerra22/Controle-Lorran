@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { personSplitAll, personColor, isFamilia } from "@/lib/people";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAdjustments, groupAdjustments, effectiveShares, costPersonInst } from "@/lib/adjustments";
 import { CountUp } from "@/components/CountUp";
 import { Sparkline } from "@/components/Sparkline";
