@@ -89,7 +89,7 @@ function LancamentosPage() {
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <MonthPicker monthIndex={m} year={y} onChange={(mm, yy) => { setM(mm); setY(yy); }} />
+        <MonthPicker value={`${y}-${String(m+1).padStart(2,"0")}`} onChange={(v) => { const [yy,mm]=v.split("-").map(Number); setM(mm-1); setY(yy); }} />
         <Select value={kind} onValueChange={(v) => setKind(v as any)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
