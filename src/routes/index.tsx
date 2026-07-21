@@ -1,45 +1,55 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ProtectedShell } from "@/components/ProtectedShell";
+import { Wallet, TrendingUp, CreditCard, Plane } from "lucide-react";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  component: HomePage,
+  head: () => ({ meta: [{ title: "Dashboard — Gestão Família" }] }),
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function HomePage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-8 bg-background text-foreground font-sans">
-      <div className="max-w-2xl w-full space-y-6 text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Recriação Gestão Família</h1>
-        <p className="text-lg text-muted-foreground leading-relaxed">
-          Para iniciar a recriação do projeto, por favor confirme respondendo 
-          <span className="font-mono bg-muted px-2 py-1 rounded mx-1">"prosseguir mesmo assim"</span>.
-        </p>
-        
-        <div className="grid gap-4 text-left border rounded-lg p-6 bg-card shadow-sm">
-          <h2 className="font-semibold text-xl">Cronograma de Fases:</h2>
-          <ul className="space-y-3">
-            <li className="flex items-start">
-              <span className="flex-shrink-0 w-8 font-bold text-primary">Fase 1</span>
-              <span>Design system, integrações Supabase, componentes UI base e Auth/Login</span>
-            </li>
-            <li className="flex items-start">
-              <span className="flex-shrink-0 w-8 font-bold text-primary">Fase 2</span>
-              <span>Módulo Financeiro (lançamentos, cartões, dashboard)</span>
-            </li>
-            <li className="flex items-start">
-              <span className="flex-shrink-0 w-8 font-bold text-primary">Fase 3</span>
-              <span>Módulo Milhas (7 sub-rotas, mapa, comparações)</span>
-            </li>
-            <li className="flex items-start">
-              <span className="flex-shrink-0 w-8 font-bold text-primary">Fase 4</span>
-              <span>Conta, notificações e refinamento final</span>
-            </li>
-          </ul>
+    <ProtectedShell>
+      <div className="space-y-6">
+        <header>
+          <p className="text-xs uppercase tracking-[0.25em] text-primary">Fase 1 concluída</p>
+          <h1 className="text-3xl md:text-4xl font-bold mt-1">Bem-vindo à sua Gestão Família</h1>
+          <p className="text-muted-foreground mt-2 max-w-2xl">
+            Design system, autenticação, layout e schema do banco estão prontos. As telas
+            de Dashboard, Lançamentos, Cartões e Milhas serão implementadas nas próximas fases.
+          </p>
+        </header>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { icon: Wallet, label: "Contas", desc: "Fase 2" },
+            { icon: TrendingUp, label: "Financeiro", desc: "Fase 2" },
+            { icon: CreditCard, label: "Cartões", desc: "Fase 2" },
+            { icon: Plane, label: "Milhas", desc: "Fase 3" },
+          ].map((c) => {
+            const Icon = c.icon;
+            return (
+              <div key={c.label} className="tech-panel p-5">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: "var(--gradient-primary)" }}>
+                  <Icon className="w-5 h-5" style={{ color: "#0F1B2E" }} />
+                </div>
+                <div className="text-sm font-medium">{c.label}</div>
+                <div className="text-xs text-muted-foreground mt-1">{c.desc}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="tech-panel p-6">
+          <h2 className="text-lg font-semibold mb-3">Roadmap</h2>
+          <ol className="space-y-2 text-sm text-muted-foreground">
+            <li><strong className="text-foreground">Fase 1 ✓</strong> — Design system, auth, shell e schema Supabase</li>
+            <li><strong className="text-foreground">Fase 2</strong> — Dashboard, Lançamentos, Cartões, Contas, Categorias</li>
+            <li><strong className="text-foreground">Fase 3</strong> — Módulo Milhas completo (7 sub-rotas)</li>
+            <li><strong className="text-foreground">Fase 4</strong> — Anotações, Importações, Solução Financeira, polish</li>
+          </ol>
         </div>
       </div>
-    </div>
+    </ProtectedShell>
   );
 }
