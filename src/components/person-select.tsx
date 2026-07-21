@@ -7,14 +7,17 @@ interface Props {
   includeFamilia?: boolean;
   placeholder?: string;
   allowEmpty?: boolean;
+  extras?: string[];
 }
 
-export function PersonSelect({ value, onChange, includeFamilia = true, placeholder = "Pessoa", allowEmpty = false }: Props) {
+export function PersonSelect({ value, onChange, includeFamilia = true, placeholder = "Pessoa", allowEmpty = false, extras = [] }: Props) {
   const { data: people = [] } = usePeople();
   const names = new Set<string>();
   people.forEach((p: any) => p?.name && names.add(p.name));
   if (includeFamilia) names.add("Família");
+  extras.forEach((n) => n && names.add(n));
   const list = Array.from(names);
+
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger><SelectValue placeholder={placeholder} /></SelectTrigger>
