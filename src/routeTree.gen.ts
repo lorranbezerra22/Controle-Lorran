@@ -13,6 +13,7 @@ import { Route as MilhasRouteImport } from './routes/milhas'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LancamentosRouteImport } from './routes/lancamentos'
 import { Route as CartoesRouteImport } from './routes/cartoes'
+import { Route as BaseRouteImport } from './routes/base'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MilhasIndexRouteImport } from './routes/milhas.index'
 import { Route as MilhasResgatesRouteImport } from './routes/milhas.resgates'
@@ -41,6 +42,11 @@ const LancamentosRoute = LancamentosRouteImport.update({
 const CartoesRoute = CartoesRouteImport.update({
   id: '/cartoes',
   path: '/cartoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BaseRoute = BaseRouteImport.update({
+  id: '/base',
+  path: '/base',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -91,6 +97,7 @@ const MilhasComparacaoRoute = MilhasComparacaoRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/base': typeof BaseRoute
   '/cartoes': typeof CartoesRoute
   '/lancamentos': typeof LancamentosRoute
   '/login': typeof LoginRoute
@@ -106,6 +113,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/base': typeof BaseRoute
   '/cartoes': typeof CartoesRoute
   '/lancamentos': typeof LancamentosRoute
   '/login': typeof LoginRoute
@@ -121,6 +129,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/base': typeof BaseRoute
   '/cartoes': typeof CartoesRoute
   '/lancamentos': typeof LancamentosRoute
   '/login': typeof LoginRoute
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/base'
     | '/cartoes'
     | '/lancamentos'
     | '/login'
@@ -153,6 +163,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/base'
     | '/cartoes'
     | '/lancamentos'
     | '/login'
@@ -167,6 +178,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/base'
     | '/cartoes'
     | '/lancamentos'
     | '/login'
@@ -183,6 +195,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BaseRoute: typeof BaseRoute
   CartoesRoute: typeof CartoesRoute
   LancamentosRoute: typeof LancamentosRoute
   LoginRoute: typeof LoginRoute
@@ -217,6 +230,13 @@ declare module '@tanstack/react-router' {
       path: '/cartoes'
       fullPath: '/cartoes'
       preLoaderRoute: typeof CartoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/base': {
+      id: '/base'
+      path: '/base'
+      fullPath: '/base'
+      preLoaderRoute: typeof BaseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -312,6 +332,7 @@ const MilhasRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BaseRoute: BaseRoute,
   CartoesRoute: CartoesRoute,
   LancamentosRoute: LancamentosRoute,
   LoginRoute: LoginRoute,
