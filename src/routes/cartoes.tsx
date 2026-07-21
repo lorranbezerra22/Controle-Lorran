@@ -576,7 +576,9 @@ function CartoesPage() {
             <>
             <Field label="Pessoa">
               <Select value={personFilter} onValueChange={setPersonFilter}>
-                <SelectTrigger className={`w-auto min-w-[140px] ${personFilter !== "all" ? activeCls : ""}`}><SelectValue /></SelectTrigger>
+                <SelectTrigger className={`w-auto min-w-[140px] h-10 rounded-xl transition-all shadow-sm ${personFilter !== "all" ? "border-gold/50 ring-2 ring-gold/20 bg-gold/5 font-medium" : "border-border text-muted-foreground"}`}>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as pessoas</SelectItem>
                   {personOptions.map((p: string) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
@@ -585,7 +587,9 @@ function CartoesPage() {
             </Field>
             <Field label="+ Pessoa">
               <Select value={personFilter2} onValueChange={setPersonFilter2}>
-                <SelectTrigger className={`w-auto min-w-[120px] ${personFilter2 !== "all" ? activeCls : ""}`}><SelectValue placeholder="Adicionar" /></SelectTrigger>
+                <SelectTrigger className={`w-auto min-w-[120px] h-10 rounded-xl transition-all shadow-sm ${personFilter2 !== "all" ? "border-gold/50 ring-2 ring-gold/20 bg-gold/5 font-medium" : "border-border text-muted-foreground"}`}>
+                  <SelectValue placeholder="Adicionar" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Adicionar pessoa</SelectItem>
                   {personOptions.map((p: string) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
@@ -594,10 +598,14 @@ function CartoesPage() {
             </Field>
             <Field label="Cartão">
               <Select value={cardFilter} onValueChange={setCardFilter}>
-                <SelectTrigger className={`w-auto min-w-[140px] ${cardFilter !== "all" ? activeCls : ""}`}><SelectValue /></SelectTrigger>
+                <SelectTrigger className={`w-auto min-w-[140px] h-10 rounded-xl transition-all shadow-sm ${cardFilter !== "all" ? "border-gold/50 ring-2 ring-gold/20 bg-gold/5 font-medium" : "border-border text-muted-foreground"}`}>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os cartões</SelectItem>
-                  {cards.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  {cards.map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </Field>
