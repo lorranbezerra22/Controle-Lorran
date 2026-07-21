@@ -608,8 +608,6 @@ function CartoesPage() {
                   ))}
                 </SelectContent>
               </Select>
-                </SelectContent>
-              </Select>
             </Field>
             <Field label="Categoria">
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
