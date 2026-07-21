@@ -605,12 +605,17 @@ function LancamentosPage() {
                     {paying.kind === "expense" && norm(paying.person || "") === "familia" ? "Conta do Lorran (50%)" : "Conta debitada"}
                   </Label>
                   <Select value={payAccount ? payAccount : "__none__"} onValueChange={(v) => setPayAccount(v === "__none__" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder="Selecione a conta" /></SelectTrigger>
+                    <SelectTrigger className="w-full h-11 rounded-xl shadow-sm border-border bg-background/50 hover:border-primary/50 transition-all">
+                      <SelectValue placeholder="Selecione a conta" />
+                    </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">Sem conta (só registrar, não debita saldo)</SelectItem>
+                      <SelectItem value="__none__" className="py-2.5">Sem conta (só registrar, não debita saldo)</SelectItem>
                       {accounts.map((a: any) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          {a.bank}{a.account_name ? ` · ${a.account_name}` : ""} — {brl(a.balance ?? 0)}
+                        <SelectItem key={a.id} value={a.id} className="py-2.5">
+                          <div className="flex items-center gap-2">
+                            <BankIcon bank={a.bank} size={18} square />
+                            <span>{a.bank}{a.account_name ? ` · ${a.account_name}` : ""} — <strong className="text-success">{brl(a.balance ?? 0)}</strong></span>
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
