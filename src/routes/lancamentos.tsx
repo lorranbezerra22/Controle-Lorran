@@ -627,11 +627,16 @@ function LancamentosPage() {
                   <div className="grid gap-2">
                     <Label className="text-xs font-medium">Conta da Tayane (50%)</Label>
                     <Select value={payAccountTayane || undefined} onValueChange={setPayAccountTayane}>
-                      <SelectTrigger><SelectValue placeholder="Selecione a conta" /></SelectTrigger>
+                      <SelectTrigger className="w-full h-11 rounded-xl shadow-sm border-border bg-background/50 hover:border-primary/50 transition-all">
+                        <SelectValue placeholder="Selecione a conta" />
+                      </SelectTrigger>
                       <SelectContent>
                         {accounts.map((a: any) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {a.bank}{a.account_name ? ` · ${a.account_name}` : ""} — {brl(a.balance ?? 0)}
+                          <SelectItem key={a.id} value={a.id} className="py-2.5">
+                            <div className="flex items-center gap-2">
+                              <BankIcon bank={a.bank} size={18} square />
+                              <span>{a.bank}{a.account_name ? ` · ${a.account_name}` : ""} — <strong className="text-success">{brl(a.balance ?? 0)}</strong></span>
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
