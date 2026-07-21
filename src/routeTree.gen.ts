@@ -9,11 +9,25 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as MilhasRouteImport } from './routes/milhas'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LancamentosRouteImport } from './routes/lancamentos'
 import { Route as CartoesRouteImport } from './routes/cartoes'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MilhasIndexRouteImport } from './routes/milhas.index'
+import { Route as MilhasResgatesRouteImport } from './routes/milhas.resgates'
+import { Route as MilhasRegistrosRouteImport } from './routes/milhas.registros'
+import { Route as MilhasProgramasRouteImport } from './routes/milhas.programas'
+import { Route as MilhasPlanejamentoRouteImport } from './routes/milhas.planejamento'
+import { Route as MilhasGanhosRouteImport } from './routes/milhas.ganhos'
+import { Route as MilhasConfigRouteImport } from './routes/milhas.config'
+import { Route as MilhasComparacaoRouteImport } from './routes/milhas.comparacao'
 
+const MilhasRoute = MilhasRouteImport.update({
+  id: '/milhas',
+  path: '/milhas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -34,18 +48,75 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MilhasIndexRoute = MilhasIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MilhasRoute,
+} as any)
+const MilhasResgatesRoute = MilhasResgatesRouteImport.update({
+  id: '/resgates',
+  path: '/resgates',
+  getParentRoute: () => MilhasRoute,
+} as any)
+const MilhasRegistrosRoute = MilhasRegistrosRouteImport.update({
+  id: '/registros',
+  path: '/registros',
+  getParentRoute: () => MilhasRoute,
+} as any)
+const MilhasProgramasRoute = MilhasProgramasRouteImport.update({
+  id: '/programas',
+  path: '/programas',
+  getParentRoute: () => MilhasRoute,
+} as any)
+const MilhasPlanejamentoRoute = MilhasPlanejamentoRouteImport.update({
+  id: '/planejamento',
+  path: '/planejamento',
+  getParentRoute: () => MilhasRoute,
+} as any)
+const MilhasGanhosRoute = MilhasGanhosRouteImport.update({
+  id: '/ganhos',
+  path: '/ganhos',
+  getParentRoute: () => MilhasRoute,
+} as any)
+const MilhasConfigRoute = MilhasConfigRouteImport.update({
+  id: '/config',
+  path: '/config',
+  getParentRoute: () => MilhasRoute,
+} as any)
+const MilhasComparacaoRoute = MilhasComparacaoRouteImport.update({
+  id: '/comparacao',
+  path: '/comparacao',
+  getParentRoute: () => MilhasRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cartoes': typeof CartoesRoute
   '/lancamentos': typeof LancamentosRoute
   '/login': typeof LoginRoute
+  '/milhas': typeof MilhasRouteWithChildren
+  '/milhas/comparacao': typeof MilhasComparacaoRoute
+  '/milhas/config': typeof MilhasConfigRoute
+  '/milhas/ganhos': typeof MilhasGanhosRoute
+  '/milhas/planejamento': typeof MilhasPlanejamentoRoute
+  '/milhas/programas': typeof MilhasProgramasRoute
+  '/milhas/registros': typeof MilhasRegistrosRoute
+  '/milhas/resgates': typeof MilhasResgatesRoute
+  '/milhas/': typeof MilhasIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cartoes': typeof CartoesRoute
   '/lancamentos': typeof LancamentosRoute
   '/login': typeof LoginRoute
+  '/milhas/comparacao': typeof MilhasComparacaoRoute
+  '/milhas/config': typeof MilhasConfigRoute
+  '/milhas/ganhos': typeof MilhasGanhosRoute
+  '/milhas/planejamento': typeof MilhasPlanejamentoRoute
+  '/milhas/programas': typeof MilhasProgramasRoute
+  '/milhas/registros': typeof MilhasRegistrosRoute
+  '/milhas/resgates': typeof MilhasResgatesRoute
+  '/milhas': typeof MilhasIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +124,61 @@ export interface FileRoutesById {
   '/cartoes': typeof CartoesRoute
   '/lancamentos': typeof LancamentosRoute
   '/login': typeof LoginRoute
+  '/milhas': typeof MilhasRouteWithChildren
+  '/milhas/comparacao': typeof MilhasComparacaoRoute
+  '/milhas/config': typeof MilhasConfigRoute
+  '/milhas/ganhos': typeof MilhasGanhosRoute
+  '/milhas/planejamento': typeof MilhasPlanejamentoRoute
+  '/milhas/programas': typeof MilhasProgramasRoute
+  '/milhas/registros': typeof MilhasRegistrosRoute
+  '/milhas/resgates': typeof MilhasResgatesRoute
+  '/milhas/': typeof MilhasIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cartoes' | '/lancamentos' | '/login'
+  fullPaths:
+    | '/'
+    | '/cartoes'
+    | '/lancamentos'
+    | '/login'
+    | '/milhas'
+    | '/milhas/comparacao'
+    | '/milhas/config'
+    | '/milhas/ganhos'
+    | '/milhas/planejamento'
+    | '/milhas/programas'
+    | '/milhas/registros'
+    | '/milhas/resgates'
+    | '/milhas/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cartoes' | '/lancamentos' | '/login'
-  id: '__root__' | '/' | '/cartoes' | '/lancamentos' | '/login'
+  to:
+    | '/'
+    | '/cartoes'
+    | '/lancamentos'
+    | '/login'
+    | '/milhas/comparacao'
+    | '/milhas/config'
+    | '/milhas/ganhos'
+    | '/milhas/planejamento'
+    | '/milhas/programas'
+    | '/milhas/registros'
+    | '/milhas/resgates'
+    | '/milhas'
+  id:
+    | '__root__'
+    | '/'
+    | '/cartoes'
+    | '/lancamentos'
+    | '/login'
+    | '/milhas'
+    | '/milhas/comparacao'
+    | '/milhas/config'
+    | '/milhas/ganhos'
+    | '/milhas/planejamento'
+    | '/milhas/programas'
+    | '/milhas/registros'
+    | '/milhas/resgates'
+    | '/milhas/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,10 +186,18 @@ export interface RootRouteChildren {
   CartoesRoute: typeof CartoesRoute
   LancamentosRoute: typeof LancamentosRoute
   LoginRoute: typeof LoginRoute
+  MilhasRoute: typeof MilhasRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/milhas': {
+      id: '/milhas'
+      path: '/milhas'
+      fullPath: '/milhas'
+      preLoaderRoute: typeof MilhasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -99,14 +226,96 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/milhas/': {
+      id: '/milhas/'
+      path: '/'
+      fullPath: '/milhas/'
+      preLoaderRoute: typeof MilhasIndexRouteImport
+      parentRoute: typeof MilhasRoute
+    }
+    '/milhas/resgates': {
+      id: '/milhas/resgates'
+      path: '/resgates'
+      fullPath: '/milhas/resgates'
+      preLoaderRoute: typeof MilhasResgatesRouteImport
+      parentRoute: typeof MilhasRoute
+    }
+    '/milhas/registros': {
+      id: '/milhas/registros'
+      path: '/registros'
+      fullPath: '/milhas/registros'
+      preLoaderRoute: typeof MilhasRegistrosRouteImport
+      parentRoute: typeof MilhasRoute
+    }
+    '/milhas/programas': {
+      id: '/milhas/programas'
+      path: '/programas'
+      fullPath: '/milhas/programas'
+      preLoaderRoute: typeof MilhasProgramasRouteImport
+      parentRoute: typeof MilhasRoute
+    }
+    '/milhas/planejamento': {
+      id: '/milhas/planejamento'
+      path: '/planejamento'
+      fullPath: '/milhas/planejamento'
+      preLoaderRoute: typeof MilhasPlanejamentoRouteImport
+      parentRoute: typeof MilhasRoute
+    }
+    '/milhas/ganhos': {
+      id: '/milhas/ganhos'
+      path: '/ganhos'
+      fullPath: '/milhas/ganhos'
+      preLoaderRoute: typeof MilhasGanhosRouteImport
+      parentRoute: typeof MilhasRoute
+    }
+    '/milhas/config': {
+      id: '/milhas/config'
+      path: '/config'
+      fullPath: '/milhas/config'
+      preLoaderRoute: typeof MilhasConfigRouteImport
+      parentRoute: typeof MilhasRoute
+    }
+    '/milhas/comparacao': {
+      id: '/milhas/comparacao'
+      path: '/comparacao'
+      fullPath: '/milhas/comparacao'
+      preLoaderRoute: typeof MilhasComparacaoRouteImport
+      parentRoute: typeof MilhasRoute
+    }
   }
 }
+
+interface MilhasRouteChildren {
+  MilhasComparacaoRoute: typeof MilhasComparacaoRoute
+  MilhasConfigRoute: typeof MilhasConfigRoute
+  MilhasGanhosRoute: typeof MilhasGanhosRoute
+  MilhasPlanejamentoRoute: typeof MilhasPlanejamentoRoute
+  MilhasProgramasRoute: typeof MilhasProgramasRoute
+  MilhasRegistrosRoute: typeof MilhasRegistrosRoute
+  MilhasResgatesRoute: typeof MilhasResgatesRoute
+  MilhasIndexRoute: typeof MilhasIndexRoute
+}
+
+const MilhasRouteChildren: MilhasRouteChildren = {
+  MilhasComparacaoRoute: MilhasComparacaoRoute,
+  MilhasConfigRoute: MilhasConfigRoute,
+  MilhasGanhosRoute: MilhasGanhosRoute,
+  MilhasPlanejamentoRoute: MilhasPlanejamentoRoute,
+  MilhasProgramasRoute: MilhasProgramasRoute,
+  MilhasRegistrosRoute: MilhasRegistrosRoute,
+  MilhasResgatesRoute: MilhasResgatesRoute,
+  MilhasIndexRoute: MilhasIndexRoute,
+}
+
+const MilhasRouteWithChildren =
+  MilhasRoute._addFileChildren(MilhasRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CartoesRoute: CartoesRoute,
   LancamentosRoute: LancamentosRoute,
   LoginRoute: LoginRoute,
+  MilhasRoute: MilhasRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
