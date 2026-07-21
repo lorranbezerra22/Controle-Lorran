@@ -576,7 +576,9 @@ function CartoesPage() {
             <>
             <Field label="Pessoa">
               <Select value={personFilter} onValueChange={setPersonFilter}>
-                <SelectTrigger className={`w-auto min-w-[140px] ${personFilter !== "all" ? activeCls : ""}`}><SelectValue /></SelectTrigger>
+                <SelectTrigger className={`w-auto min-w-[140px] h-10 rounded-xl transition-all shadow-sm ${personFilter !== "all" ? "border-gold/50 ring-2 ring-gold/20 bg-gold/5 font-medium" : "border-border text-muted-foreground"}`}>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as pessoas</SelectItem>
                   {personOptions.map((p: string) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
