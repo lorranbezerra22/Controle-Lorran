@@ -429,7 +429,6 @@ function LancamentosPage() {
                   <td className="p-3 whitespace-nowrap text-muted-foreground hidden sm:table-cell">{fmtDate(t.due_at)}</td>
                   <td className="p-3 font-medium">
                     <div className="flex items-center gap-2">
-                      {t.categories?.icon && <span className="shrink-0">{t.categories.icon}</span>}
                       <span className="truncate">{t.description}</span>
                     </div>
                     {t.is_fixed && <span className="ml-2 text-xs text-muted-foreground">• fixa</span>}
@@ -439,7 +438,12 @@ function LancamentosPage() {
                       </Badge>
                     )}
                   </td>
-                  <td className="p-3 hidden md:table-cell text-muted-foreground">{t.categories?.name ?? "—"}</td>
+                  <td className="p-3 hidden md:table-cell text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      {t.categories?.icon && <span className="shrink-0">{t.categories.icon}</span>}
+                      <span>{t.categories?.name ?? "—"}</span>
+                    </div>
+                  </td>
                   <td className="p-3 hidden md:table-cell text-muted-foreground">
                     {t.person ?? "—"}
                     {t.paid_by && norm(t.paid_by) !== norm(t.person || "") && (
@@ -930,8 +934,10 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{label}</span>
+    <div className="flex flex-col gap-1.5 min-w-[140px] flex-1 sm:flex-none">
+      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">
+        {label}
+      </label>
       {children}
     </div>
   );
