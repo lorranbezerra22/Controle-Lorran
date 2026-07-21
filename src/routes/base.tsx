@@ -794,10 +794,9 @@ function CatRow({ cat, onChange }: any) {
           <SmartInput value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="Nome" />
         </div>
         <div className="flex gap-2 items-center">
-          <Input type="number" step="0.01" placeholder="Orçamento (opcional)" value={form.budget} onChange={e => setForm({ ...form, budget: e.target.value })} />
-          <label className="flex items-center gap-1.5 text-xs whitespace-nowrap">
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input type="checkbox" checked={form.essential} onChange={e => setForm({ ...form, essential: e.target.checked })} />
-            Essencial
+            <span className="font-normal">Marcar como Essencial</span>
           </label>
         </div>
         <div className="flex gap-2 justify-end">
