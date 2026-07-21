@@ -115,7 +115,7 @@ function Dashboard() {
         eyebrow="Visão geral"
         title="Dashboard"
         subtitle={`${monthLabel(m)} · ${y}`}
-        actions={<MonthPicker monthIndex={m} year={y} onChange={(mm, yy) => { setM(mm); setY(yy); }} className="w-40" />}
+        actions={<MonthPicker value={`${y}-${String(m+1).padStart(2,"0")}`} onChange={(v) => { const [yy,mm]=v.split("-").map(Number); setM(mm-1); setY(yy); }} className="w-40" />}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
