@@ -1396,10 +1396,13 @@ function KPISkeleton() {
 }
 
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, labelEnd }: { label: string; children: React.ReactNode; labelEnd?: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{label}</span>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between">
+        <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground ml-1">{label}</label>
+        {labelEnd}
+      </div>
       {children}
     </div>
   );
