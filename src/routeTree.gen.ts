@@ -9,11 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SolucaoFinanceiraRouteImport } from './routes/solucao-financeira'
 import { Route as MilhasRouteImport } from './routes/milhas'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LancamentosRouteImport } from './routes/lancamentos'
+import { Route as ImportarRouteImport } from './routes/importar'
+import { Route as FinanceiroRouteImport } from './routes/financeiro'
+import { Route as ContaRouteImport } from './routes/conta'
 import { Route as CartoesRouteImport } from './routes/cartoes'
 import { Route as BaseRouteImport } from './routes/base'
+import { Route as AnotacoesRouteImport } from './routes/anotacoes'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MilhasIndexRouteImport } from './routes/milhas.index'
 import { Route as MilhasResgatesRouteImport } from './routes/milhas.resgates'
@@ -24,6 +29,11 @@ import { Route as MilhasGanhosRouteImport } from './routes/milhas.ganhos'
 import { Route as MilhasConfigRouteImport } from './routes/milhas.config'
 import { Route as MilhasComparacaoRouteImport } from './routes/milhas.comparacao'
 
+const SolucaoFinanceiraRoute = SolucaoFinanceiraRouteImport.update({
+  id: '/solucao-financeira',
+  path: '/solucao-financeira',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MilhasRoute = MilhasRouteImport.update({
   id: '/milhas',
   path: '/milhas',
@@ -39,6 +49,21 @@ const LancamentosRoute = LancamentosRouteImport.update({
   path: '/lancamentos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ImportarRoute = ImportarRouteImport.update({
+  id: '/importar',
+  path: '/importar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinanceiroRoute = FinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContaRoute = ContaRouteImport.update({
+  id: '/conta',
+  path: '/conta',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CartoesRoute = CartoesRouteImport.update({
   id: '/cartoes',
   path: '/cartoes',
@@ -47,6 +72,11 @@ const CartoesRoute = CartoesRouteImport.update({
 const BaseRoute = BaseRouteImport.update({
   id: '/base',
   path: '/base',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnotacoesRoute = AnotacoesRouteImport.update({
+  id: '/anotacoes',
+  path: '/anotacoes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -97,11 +127,16 @@ const MilhasComparacaoRoute = MilhasComparacaoRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/anotacoes': typeof AnotacoesRoute
   '/base': typeof BaseRoute
   '/cartoes': typeof CartoesRoute
+  '/conta': typeof ContaRoute
+  '/financeiro': typeof FinanceiroRoute
+  '/importar': typeof ImportarRoute
   '/lancamentos': typeof LancamentosRoute
   '/login': typeof LoginRoute
   '/milhas': typeof MilhasRouteWithChildren
+  '/solucao-financeira': typeof SolucaoFinanceiraRoute
   '/milhas/comparacao': typeof MilhasComparacaoRoute
   '/milhas/config': typeof MilhasConfigRoute
   '/milhas/ganhos': typeof MilhasGanhosRoute
@@ -113,10 +148,15 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/anotacoes': typeof AnotacoesRoute
   '/base': typeof BaseRoute
   '/cartoes': typeof CartoesRoute
+  '/conta': typeof ContaRoute
+  '/financeiro': typeof FinanceiroRoute
+  '/importar': typeof ImportarRoute
   '/lancamentos': typeof LancamentosRoute
   '/login': typeof LoginRoute
+  '/solucao-financeira': typeof SolucaoFinanceiraRoute
   '/milhas/comparacao': typeof MilhasComparacaoRoute
   '/milhas/config': typeof MilhasConfigRoute
   '/milhas/ganhos': typeof MilhasGanhosRoute
@@ -129,11 +169,16 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/anotacoes': typeof AnotacoesRoute
   '/base': typeof BaseRoute
   '/cartoes': typeof CartoesRoute
+  '/conta': typeof ContaRoute
+  '/financeiro': typeof FinanceiroRoute
+  '/importar': typeof ImportarRoute
   '/lancamentos': typeof LancamentosRoute
   '/login': typeof LoginRoute
   '/milhas': typeof MilhasRouteWithChildren
+  '/solucao-financeira': typeof SolucaoFinanceiraRoute
   '/milhas/comparacao': typeof MilhasComparacaoRoute
   '/milhas/config': typeof MilhasConfigRoute
   '/milhas/ganhos': typeof MilhasGanhosRoute
@@ -147,11 +192,16 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/anotacoes'
     | '/base'
     | '/cartoes'
+    | '/conta'
+    | '/financeiro'
+    | '/importar'
     | '/lancamentos'
     | '/login'
     | '/milhas'
+    | '/solucao-financeira'
     | '/milhas/comparacao'
     | '/milhas/config'
     | '/milhas/ganhos'
@@ -163,10 +213,15 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/anotacoes'
     | '/base'
     | '/cartoes'
+    | '/conta'
+    | '/financeiro'
+    | '/importar'
     | '/lancamentos'
     | '/login'
+    | '/solucao-financeira'
     | '/milhas/comparacao'
     | '/milhas/config'
     | '/milhas/ganhos'
@@ -178,11 +233,16 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/anotacoes'
     | '/base'
     | '/cartoes'
+    | '/conta'
+    | '/financeiro'
+    | '/importar'
     | '/lancamentos'
     | '/login'
     | '/milhas'
+    | '/solucao-financeira'
     | '/milhas/comparacao'
     | '/milhas/config'
     | '/milhas/ganhos'
@@ -195,15 +255,27 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AnotacoesRoute: typeof AnotacoesRoute
   BaseRoute: typeof BaseRoute
   CartoesRoute: typeof CartoesRoute
+  ContaRoute: typeof ContaRoute
+  FinanceiroRoute: typeof FinanceiroRoute
+  ImportarRoute: typeof ImportarRoute
   LancamentosRoute: typeof LancamentosRoute
   LoginRoute: typeof LoginRoute
   MilhasRoute: typeof MilhasRouteWithChildren
+  SolucaoFinanceiraRoute: typeof SolucaoFinanceiraRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/solucao-financeira': {
+      id: '/solucao-financeira'
+      path: '/solucao-financeira'
+      fullPath: '/solucao-financeira'
+      preLoaderRoute: typeof SolucaoFinanceiraRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/milhas': {
       id: '/milhas'
       path: '/milhas'
@@ -225,6 +297,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LancamentosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/importar': {
+      id: '/importar'
+      path: '/importar'
+      fullPath: '/importar'
+      preLoaderRoute: typeof ImportarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/financeiro': {
+      id: '/financeiro'
+      path: '/financeiro'
+      fullPath: '/financeiro'
+      preLoaderRoute: typeof FinanceiroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/conta': {
+      id: '/conta'
+      path: '/conta'
+      fullPath: '/conta'
+      preLoaderRoute: typeof ContaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cartoes': {
       id: '/cartoes'
       path: '/cartoes'
@@ -237,6 +330,13 @@ declare module '@tanstack/react-router' {
       path: '/base'
       fullPath: '/base'
       preLoaderRoute: typeof BaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/anotacoes': {
+      id: '/anotacoes'
+      path: '/anotacoes'
+      fullPath: '/anotacoes'
+      preLoaderRoute: typeof AnotacoesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -332,11 +432,16 @@ const MilhasRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AnotacoesRoute: AnotacoesRoute,
   BaseRoute: BaseRoute,
   CartoesRoute: CartoesRoute,
+  ContaRoute: ContaRoute,
+  FinanceiroRoute: FinanceiroRoute,
+  ImportarRoute: ImportarRoute,
   LancamentosRoute: LancamentosRoute,
   LoginRoute: LoginRoute,
   MilhasRoute: MilhasRouteWithChildren,
+  SolucaoFinanceiraRoute: SolucaoFinanceiraRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
