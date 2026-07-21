@@ -502,43 +502,61 @@ function Dashboard() {
         actions={
           <>
           <div className="flex gap-4 flex-wrap items-end">
-          {(() => {
-            const baseSel = "h-10 border rounded-xl px-4 text-sm text-foreground transition-all bg-card appearance-none focus:outline-none hover:border-gold/40 focus:border-gold/40 focus:ring-2 focus:ring-gold/20 [&>option]:bg-card [&>option]:text-foreground shadow-sm";
-            const inactive = "border-border text-muted-foreground";
-            const active = "border-gold/50 ring-2 ring-gold/20 bg-gold/5 text-foreground font-medium";
-            const mActive = selM !== "all";
-            const yActive = selY !== "all";
-            const pActive = personFilter !== "all";
-            const p2Active = personFilter2 !== "all";
-            return (
-              <>
-                <Field label="Mês">
-                  <select value={String(selM)} onChange={(e) => setSelM(e.target.value === "all" ? "all" : Number(e.target.value))} className={`${baseSel} ${mActive ? active : inactive}`}>
-                    <option value="all">Todos os meses</option>
-                    {Array.from({ length: 12 }, (_, m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
-                  </select>
-                </Field>
-                <Field label="Ano">
-                  <select value={String(selY)} onChange={(e) => setSelY(e.target.value === "all" ? "all" : Number(e.target.value))} className={`${baseSel} ${yActive ? active : inactive}`}>
-                    <option value="all">Todos os anos</option>
-                    {years.map((y) => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                </Field>
-                <Field label="Pessoa">
-                  <select value={personFilter} onChange={(e) => setPersonFilter(e.target.value)} className={`${baseSel} ${pActive ? active : inactive}`}>
-                    <option value="all">Todas as pessoas</option>
-                    {people.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}
-                  </select>
-                </Field>
-                <Field label="+ Pessoa">
-                  <select value={personFilter2} onChange={(e) => setPersonFilter2(e.target.value)} className={`${baseSel} ${p2Active ? active : inactive}`}>
-                    <option value="all">Adicionar pessoa</option>
-                    {people.map((p: any) => <option key={p.id} value={p.name}>{p.name}</option>)}
-                  </select>
-                </Field>
-              </>
-            );
-          })()}
+            <Field label="Mês">
+              <Select value={String(selM)} onValueChange={(v) => setSelM(v === "all" ? "all" : Number(v))}>
+                <SelectTrigger className={`w-auto min-w-[140px] h-10 rounded-xl transition-all shadow-sm ${selM !== "all" ? "border-gold/50 ring-2 ring-gold/20 bg-gold/5 font-medium" : "border-border text-muted-foreground"}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os meses</SelectItem>
+                  {Array.from({ length: 12 }, (_, m) => (
+                    <SelectItem key={m} value={String(m)}>{monthLabel(m)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+
+            <Field label="Ano">
+              <Select value={String(selY)} onValueChange={(v) => setSelY(v === "all" ? "all" : Number(v))}>
+                <SelectTrigger className={`w-auto min-w-[120px] h-10 rounded-xl transition-all shadow-sm ${selY !== "all" ? "border-gold/50 ring-2 ring-gold/20 bg-gold/5 font-medium" : "border-border text-muted-foreground"}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os anos</SelectItem>
+                  {years.map((y) => (
+                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+
+            <Field label="Pessoa">
+              <Select value={personFilter} onValueChange={setPersonFilter}>
+                <SelectTrigger className={`w-auto min-w-[140px] h-10 rounded-xl transition-all shadow-sm ${personFilter !== "all" ? "border-gold/50 ring-2 ring-gold/20 bg-gold/5 font-medium" : "border-border text-muted-foreground"}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as pessoas</SelectItem>
+                  {people.map((p: any) => (
+                    <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+
+            <Field label="+ Pessoa">
+              <Select value={personFilter2} onValueChange={setPersonFilter2}>
+                <SelectTrigger className={`w-auto min-w-[140px] h-10 rounded-xl transition-all shadow-sm ${personFilter2 !== "all" ? "border-gold/50 ring-2 ring-gold/20 bg-gold/5 font-medium" : "border-border text-muted-foreground"}`}>
+                  <SelectValue placeholder="Adicionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Adicionar pessoa</SelectItem>
+                  {people.map((p: any) => (
+                    <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
           </div>
           <NotificationBell transactions={tx} installments={inst} cards={cards} />
           </>
