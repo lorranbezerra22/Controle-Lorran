@@ -501,6 +501,7 @@ function Dashboard() {
         subtitle={`${periodLabel}${[personFilter, personFilter2].filter((p) => p && p !== "all").length > 0 ? ` · ${[personFilter, personFilter2].filter((p) => p && p !== "all").join(" + ")}` : ""}`}
         actions={
           <>
+          <div className="flex gap-4 flex-wrap items-end">
           {(() => {
             const baseSel = "h-10 border rounded-xl px-4 text-sm text-foreground transition-all bg-card appearance-none focus:outline-none hover:border-gold/40 focus:border-gold/40 focus:ring-2 focus:ring-gold/20 [&>option]:bg-card [&>option]:text-foreground shadow-sm";
             const inactive = "border-border text-muted-foreground";
@@ -538,6 +539,7 @@ function Dashboard() {
               </>
             );
           })()}
+          </div>
           <NotificationBell transactions={tx} installments={inst} cards={cards} />
           </>
         }
