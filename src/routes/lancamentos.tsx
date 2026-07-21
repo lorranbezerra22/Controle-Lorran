@@ -308,62 +308,115 @@ function LancamentosPage() {
         ))}
       </div>
 
-      <div className="flex gap-3 flex-wrap items-end">
-        {(() => { const baseSel = "h-10 border rounded-xl px-4 text-sm text-foreground transition-all bg-card appearance-none focus:outline-none hover:border-gold/40 focus:border-gold/40 focus:ring-2 focus:ring-gold/20 [&>option]:bg-card [&>option]:text-foreground shadow-sm"; const inactive = "border-border text-muted-foreground"; const active = "border-gold/50 ring-2 ring-gold/20 bg-gold/5 text-foreground font-medium"; return (
-        <>
+      <div className="flex gap-4 flex-wrap items-end">
         <Field label="Status">
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className={`${baseSel} ${statusFilter !== "all" ? active : inactive}`}>
-            <option value="all">Todos status</option>
-            <option value="paid">Pago</option>
-            <option value="pending">Em aberto</option>
-          </select>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+            <SelectTrigger className={`w-auto min-w-[140px] h-10 rounded-xl transition-all shadow-sm ${statusFilter !== "all" ? "border-gold/50 ring-2 ring-gold/20 bg-gold/5 font-medium" : "border-border text-muted-foreground"}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos status</SelectItem>
+              <SelectItem value="paid">Pago</SelectItem>
+              <SelectItem value="pending">Em aberto</SelectItem>
+            </SelectContent>
+          </Select>
         </Field>
+
         <Field label="Tipo">
-          <select value={fixedFilter} onChange={(e) => setFixedFilter(e.target.value as any)} className={`${baseSel} ${fixedFilter !== "all" ? active : inactive}`}>
-            <option value="all">Fixos + Variáveis</option>
-            <option value="fixed">Apenas fixos</option>
-            <option value="variable">Apenas variáveis</option>
-          </select>
+          <Select value={fixedFilter} onValueChange={(v) => setFixedFilter(v as any)}>
+            <SelectTrigger className={`w-auto min-w-[140px] h-10 rounded-xl transition-all shadow-sm ${fixedFilter !== "all" ? "border-gold/50 ring-2 ring-gold/20 bg-gold/5 font-medium" : "border-border text-muted-foreground"}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Fixos + Variáveis</SelectItem>
+              <SelectItem value="fixed">Apenas fixos</SelectItem>
+              <SelectItem value="variable">Apenas variáveis</SelectItem>
+            </SelectContent>
+          </Select>
         </Field>
+
         <Field label="Origem">
-          <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value as any)} className={`${baseSel} ${sourceFilter !== "all" ? active : inactive}`}>
-            <option value="all">Todas as origens</option>
-            <option value="manual">Lançamentos manuais</option>
-            <option value="card">Pagamentos de cartão</option>
-          </select>
+          <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as any)}>
+            <SelectTrigger className={`w-auto min-w-[140px] h-10 rounded-xl transition-all shadow-sm ${sourceFilter !== "all" ? "border-gold/50 ring-2 ring-gold/20 bg-gold/5 font-medium" : "border-border text-muted-foreground"}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as origens</SelectItem>
+              <SelectItem value="manual">Lançamentos manuais</SelectItem>
+              <SelectItem value="card">Pagamentos de cartão</SelectItem>
+            </SelectContent>
+          </Select>
         </Field>
+
         <Field label="Categoria">
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className={`${baseSel} ${categoryFilter !== "all" ? active : inactive}`}>
-            <option value="all">Todas categorias</option>
-            {cats.map((c: any) => <option key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ""}{c.name}</option>)}
-          </select>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className={`w-auto min-w-[160px] h-10 rounded-xl transition-all shadow-sm ${categoryFilter !== "all" ? "border-gold/50 ring-2 ring-gold/20 bg-gold/5 font-medium" : "border-border text-muted-foreground"}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas categorias</SelectItem>
+              {cats.map((c: any) => (
+                <SelectItem key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ""}{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
+
         <Field label="Pessoa">
-          <select value={personFilter} onChange={(e) => setPersonFilter(e.target.value)} className={`${baseSel} ${personFilter !== "all" ? active : inactive}`}>
-            <option value="all">Todas as pessoas</option>
-            {personOptions.map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
+          <Select value={personFilter} onValueChange={setPersonFilter}>
+            <SelectTrigger className={`w-auto min-w-[140px] h-10 rounded-xl transition-all shadow-sm ${personFilter !== "all" ? "border-gold/50 ring-2 ring-gold/20 bg-gold/5 font-medium" : "border-border text-muted-foreground"}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as pessoas</SelectItem>
+              {personOptions.map((p) => (
+                <SelectItem key={p} value={p}>{p}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
+
         <Field label="+ Pessoa">
-          <select value={personFilter2} onChange={(e) => setPersonFilter2(e.target.value)} className={`${baseSel} ${personFilter2 !== "all" ? active : inactive}`}>
-            <option value="all">Adicionar pessoa</option>
-            {personOptions.map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
+          <Select value={personFilter2} onValueChange={setPersonFilter2}>
+            <SelectTrigger className={`w-auto min-w-[140px] h-10 rounded-xl transition-all shadow-sm ${personFilter2 !== "all" ? "border-gold/50 ring-2 ring-gold/20 bg-gold/5 font-medium" : "border-border text-muted-foreground"}`}>
+              <SelectValue placeholder="Adicionar" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Adicionar pessoa</SelectItem>
+              {personOptions.map((p) => (
+                <SelectItem key={p} value={p}>{p}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
+
         <Field label="Mês">
-          <select value={String(selM)} onChange={(e) => setSelM(e.target.value === "all" ? "all" : Number(e.target.value))} className={`${baseSel} ${selM !== "all" ? active : inactive}`}>
-            <option value="all">Todos os meses</option>
-            {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
-          </select>
+          <Select value={String(selM)} onValueChange={(v) => setSelM(v === "all" ? "all" : Number(v))}>
+            <SelectTrigger className={`w-auto min-w-[120px] h-10 rounded-xl transition-all shadow-sm ${selM !== "all" ? "border-gold/50 ring-2 ring-gold/20 bg-gold/5 font-medium" : "border-border text-muted-foreground"}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os meses</SelectItem>
+              {MESES.map((m, i) => (
+                <SelectItem key={i} value={String(i)}>{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
+
         <Field label="Ano">
-          <select value={String(selY)} onChange={(e) => setSelY(e.target.value === "all" ? "all" : Number(e.target.value))} className={`${baseSel} ${selY !== "all" ? active : inactive}`}>
-            <option value="all">Todos os anos</option>
-            {years.map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
+          <Select value={String(selY)} onValueChange={(v) => setSelY(v === "all" ? "all" : Number(v))}>
+            <SelectTrigger className={`w-auto min-w-[120px] h-10 rounded-xl transition-all shadow-sm ${selY !== "all" ? "border-gold/50 ring-2 ring-gold/20 bg-gold/5 font-medium" : "border-border text-muted-foreground"}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os anos</SelectItem>
+              {years.map((y) => (
+                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
-        </>
-        ); })()}
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
