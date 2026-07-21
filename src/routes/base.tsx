@@ -490,6 +490,16 @@ function PersonForm({ onDone }: any) {
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      // Check for duplicate name (case-insensitive)
+      const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+      const newNameNorm = norm(parsed.data.name);
+      const isDuplicate = people.some((p: any) => norm(p.name) === newNameNorm);
+      
+      if (isDuplicate) {
+        toast.error("Já existe uma pessoa com este nome.");
+        return;
+      }
+
       const { error } = await supabase.from("people").insert({
         user_id: user!.id,
         name: parsed.data.name,
