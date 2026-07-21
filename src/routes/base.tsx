@@ -878,14 +878,9 @@ function CategoryForm({ onDone }: any) {
       <div className="space-y-1.5"><Label>Nome</Label>
         <SmartInput value={form.name} onChange={(v) => setForm({ ...form, name: v })} required />
       </div>
-      <div className="grid grid-cols-2 gap-3 items-end">
-        <div className="space-y-1.5"><Label>Orçamento mensal (opcional)</Label>
-          <Input type="number" step="0.01" value={form.budget} onChange={e => setForm({ ...form, budget: e.target.value })} />
-        </div>
-        <label className="flex items-center gap-2 text-sm pb-2">
-          <input type="checkbox" checked={form.essential} onChange={e => setForm({ ...form, essential: e.target.checked })} />
-          Essencial
-        </label>
+      <div className="flex items-center gap-2 text-sm pt-1">
+        <input type="checkbox" id="is_essential" checked={form.essential} onChange={e => setForm({ ...form, essential: e.target.checked })} />
+        <Label htmlFor="is_essential" className="cursor-pointer font-normal">Marcar como Essencial</Label>
       </div>
       <Button type="submit" disabled={saving} className="w-full">{saving ? "Salvando…" : "Criar categoria"}</Button>
     </form>
