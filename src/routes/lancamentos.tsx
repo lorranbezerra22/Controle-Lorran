@@ -309,7 +309,7 @@ function LancamentosPage() {
       </div>
 
       <div className="flex gap-3 flex-wrap items-end">
-        {(() => { const baseSel = "h-10 border rounded-xl px-4 text-sm text-foreground transition-all bg-card appearance-none focus:outline-none hover:border-gold/40 [&>option]:bg-card [&>option]:text-foreground"; const inactive = "border-border text-muted-foreground"; const active = "border-primary ring-2 ring-primary/30 bg-primary/5 text-foreground"; return (
+        {(() => { const baseSel = "h-10 border rounded-xl px-4 text-sm text-foreground transition-all bg-card appearance-none focus:outline-none hover:border-gold/40 focus:border-gold/40 focus:ring-2 focus:ring-gold/20 [&>option]:bg-card [&>option]:text-foreground shadow-sm"; const inactive = "border-border text-muted-foreground"; const active = "border-gold/50 ring-2 ring-gold/20 bg-gold/5 text-foreground font-medium"; return (
         <>
         <Field label="Status">
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className={`${baseSel} ${statusFilter !== "all" ? active : inactive}`}>
@@ -428,8 +428,10 @@ function LancamentosPage() {
                   <td className="p-3 whitespace-nowrap text-muted-foreground font-medium">{t.posted_at ? fmtDate(t.posted_at) : (t.due_at ? fmtDate(t.due_at) : "—")}</td>
                   <td className="p-3 whitespace-nowrap text-muted-foreground hidden sm:table-cell">{fmtDate(t.due_at)}</td>
                   <td className="p-3 font-medium">
-                    {t.categories?.icon && <span className="mr-1.5">{t.categories.icon}</span>}
-                    {t.description}
+                    <div className="flex items-center gap-2">
+                      {t.categories?.icon && <span className="shrink-0">{t.categories.icon}</span>}
+                      <span className="truncate">{t.description}</span>
+                    </div>
                     {t.is_fixed && <span className="ml-2 text-xs text-muted-foreground">• fixa</span>}
                     {adj && adj.length > 0 && (
                       <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5 border-primary/40 text-primary" title={adj.map((a) => `${a.person}: ${brl(Number(a.amount))}`).join(" · ")}>
