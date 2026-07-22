@@ -1129,7 +1129,7 @@ function AdjustmentForm({ tx, existing, onDone }: { tx: any; existing: any[]; on
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("não autenticado");
       // 1. Apagar ajustes antigos
-      await supabase.from("transaction_adjustments").delete().eq("transaction_id", tx.id);
+      await supabase.from("transacao_ajustes").delete().eq("transaction_id", tx.id);
       
       // 2. Preparar novos ajustes
       const insertRows = rows.map((r) => {
@@ -1138,7 +1138,7 @@ function AdjustmentForm({ tx, existing, onDone }: { tx: any; existing: any[]; on
       });
       
       // 3. Salvar novos ajustes
-      const { error } = await supabase.from("transaction_adjustments").insert(insertRows);
+      const { error } = await supabase.from("transacao_ajustes").insert(insertRows);
       if (error) throw error;
 
       // 4. Se a transação já estava paga, precisamos atualizar o saldo das contas
@@ -1160,7 +1160,7 @@ function AdjustmentForm({ tx, existing, onDone }: { tx: any; existing: any[]; on
   const removeAll = async () => {
     setSaving(true);
     try {
-      const { error } = await supabase.from("transaction_adjustments").delete().eq("transaction_id", tx.id);
+      const { error } = await supabase.from("transacao_ajustes").delete().eq("transaction_id", tx.id);
       if (error) throw error;
       // 4. Se a transação já estava paga, precisamos atualizar o saldo das contas
       if (tx.status === "paid") {

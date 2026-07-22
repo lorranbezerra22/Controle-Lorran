@@ -377,7 +377,7 @@ function ImportPage() {
             active: true,
             import_batch_id: batchId,
           })));
-          const { error } = await supabase.from("recurring_rules").insert(rows);
+          const { error } = await supabase.from("regras_recorrentes").insert(rows);
           if (!error) rrCount += rows.length;
         }
       }
@@ -406,7 +406,7 @@ function ImportPage() {
     await supabase.from("transacoes").delete().eq("import_batch_id", id);
     await supabase.from("cartao_parcelas").delete().eq("import_batch_id", id);
     await supabase.from("cartao_compras").delete().eq("import_batch_id", id);
-    await supabase.from("recurring_rules").delete().eq("import_batch_id", id);
+    await supabase.from("regras_recorrentes").delete().eq("import_batch_id", id);
     await supabase.from("lotes_importacao").delete().eq("id", id);
     toast.success("Importação desfeita");
     invalidate("transactions"); invalidate("installments"); invalidate("recurring_rules");

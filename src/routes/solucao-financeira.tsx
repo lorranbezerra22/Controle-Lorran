@@ -121,7 +121,7 @@ function SolucaoFinanceiraPage() {
   const { data: loans = [] } = useQuery({
     queryKey: ["loans"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("loans").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("emprestimos").select("*").order("created_at", { ascending: false });
       if (error) throw error;
       return data as Loan[];
     },
@@ -130,7 +130,7 @@ function SolucaoFinanceiraPage() {
   const { data: payments = [] } = useQuery({
     queryKey: ["loan_payments"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("loan_payments").select("*").order("paid_at", { ascending: false });
+      const { data, error } = await supabase.from("emprestimo_pagamentos").select("*").order("paid_at", { ascending: false });
       if (error) throw error;
       return data as Payment[];
     },
@@ -183,12 +183,12 @@ function SolucaoFinanceiraPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Excluir empréstimo e seu histórico?")) return;
-    const { error } = await supabase.from("loans").delete().eq("id", id);
+    const { error } = await supabase.from("emprestimos").delete().eq("id", id);
     if (error) toast.error(error.message); else { toast.success("Excluído"); invalidate(); }
   };
 
   const markPaid = async (loan: Loan) => {
-    const { error } = await supabase.from("loans").update({ status: "paid" }).eq("id", loan.id);
+    const { error } = await supabase.from("emprestimos").update({ status: "paid" }).eq("id", loan.id);
     if (error) toast.error(error.message); else { toast.success("Marcado como quitado"); invalidate(); }
   };
 
@@ -747,7 +747,7 @@ function NewLoanDialog({ open, onOpenChange, onSaved }: { open: boolean; onOpenC
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return toast.error("Sessão expirada");
     const due = form.due_date || firstDueDate(form.start_date);
-    const { error } = await supabase.from("loans").insert({
+    const { error } = await supabase.from("emprestimos").insert({
       user_id: u.user.id,
       borrower_name: form.borrower_name,
       principal: Number(form.principal),
@@ -867,7 +867,7 @@ function PayDialog({ loan, onOpenChange, onSaved }: { loan: Loan | null; onOpenC
     if (!amount) return toast.error("Informe o valor");
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return toast.error("Sessão expirada");
-    const { error } = await supabase.from("loan_payments").insert({
+    const { error } = await supabase.from("emprestimo_pagamentos").insert({
       loan_id: loan.id, user_id: u.user.id, amount: Number(amount), paid_at: date, notes: notes || null,
     });
     if (error) toast.error(error.message);
@@ -909,12 +909,12 @@ function HistoryDialog({ loan, payments, onOpenChange, onChanged }: { loan: Loan
   const togglePaid = async (n: number, tag: string, pagoId?: string) => {
     const willBePaid = !pagoId;
     if (pagoId) {
-      const { error } = await supabase.from("loan_payments").delete().eq("id", pagoId);
+      const { error } = await supabase.from("emprestimo_pagamentos").delete().eq("id", pagoId);
       if (error) return toast.error(error.message);
     } else {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return toast.error("Sessão expirada");
-      const { error } = await supabase.from("loan_payments").insert({
+      const { error } = await supabase.from("emprestimo_pagamentos").insert({
         loan_id: loan.id, user_id: u.user.id, amount: valorParcela,
         paid_at: new Date().toISOString().slice(0, 10), notes: tag,
       });
@@ -923,7 +923,7 @@ function HistoryDialog({ loan, payments, onOpenChange, onChanged }: { loan: Loan
     const pagasDepois = schedule.filter(s => s.pago).length + (willBePaid ? 1 : -1);
     const novoStatus = pagasDepois >= parcelas ? "paid" : "active";
     if (novoStatus !== loan.status) {
-      await supabase.from("loans").update({ status: novoStatus }).eq("id", loan.id);
+      await supabase.from("emprestimos").update({ status: novoStatus }).eq("id", loan.id);
     }
     toast.success(willBePaid ? `Parcela ${n} paga` : `Parcela ${n} desmarcada`);
     onChanged();
@@ -990,7 +990,7 @@ function EditLoanDialog({ loan, onOpenChange, onSaved }: { loan: Loan | null; on
       installments: Math.max(1, Number(installments) || 1),
       cost_basis: costBasis.trim() === "" ? null : Number(costBasis),
     };
-    const { error } = await supabase.from("loans").update(payload).eq("id", loan.id);
+    const { error } = await supabase.from("emprestimos").update(payload).eq("id", loan.id);
     if (error) return toast.error(error.message);
     toast.success("Empréstimo atualizado");
     onOpenChange(false);
