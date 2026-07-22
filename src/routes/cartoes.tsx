@@ -314,8 +314,10 @@ function CartoesPage() {
   const santanderBreakdown = useMemo(() => {
     if (!santanderCard) return null as null | { brand: string; fatura: number; restante: number }[];
     const map: Record<string, { fatura: number; restante: number }> = {};
+    const subcardIds = cards.filter((sc: any) => sc.pai_id === santanderCard.id).map((sc: any) => sc.id);
+    const allRelevantIds = [santanderCard.id, ...subcardIds];
     monthInst
-      .filter((i: any) => i.card_id === santanderCard.id)
+      .filter((i: any) => allRelevantIds.includes(i.card_id))
       .forEach((i: any) => {
         const pid = i.purchase_id || i.card_purchases?.id;
         const brand = i.card_purchases?.brand || purchaseBrands[pid] || "Master 3019";
