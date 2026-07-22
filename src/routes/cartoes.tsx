@@ -823,7 +823,7 @@ function CartoesPage() {
 
       <Dialog open={!!editingCard} onOpenChange={(o) => !o && setEditingCard(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Editar cartão</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingCard?.id ? "Editar cartão" : "Novo cartão"}</DialogTitle></DialogHeader>
           {editingCard && <CardForm initialData={editingCard} onDone={() => { setEditingCard(null); invalidate("cards"); }} />}
         </DialogContent>
       </Dialog>
