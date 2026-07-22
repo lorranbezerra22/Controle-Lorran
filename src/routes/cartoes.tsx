@@ -1297,6 +1297,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
         <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="space-y-2 rounded-xl border border-border bg-gradient-to-br from-muted/30 to-transparent p-2.5">
           <PersonSelect 
             multiSelect 
+            value=""
             selectedValues={splitPeople} 
             onChange={(v) => setSplitPeople(v ? v.split(",") : [])}
             includeFamilia={false}

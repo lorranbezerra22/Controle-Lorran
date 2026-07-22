@@ -613,6 +613,7 @@ function LancamentosPage() {
                     <Label className="text-xs font-medium">Pago por</Label>
                     <PersonSelect 
                       multiSelect 
+                      value={payBy} 
                       selectedValues={payBy ? payBy.split(",") : []} 
                       onChange={(v) => setPayBy(v)} 
                       includeFamilia={false}
@@ -981,6 +982,7 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
               <Label className="text-xs">Selecione as pessoas</Label>
               <PersonSelect 
                 multiSelect 
+                value=""
                 selectedValues={splitPeople} 
                 onChange={(v) => setSplitPeople(v ? v.split(",") : [])}
                 includeFamilia={false}
