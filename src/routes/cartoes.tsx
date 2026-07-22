@@ -1032,10 +1032,23 @@ function CardForm({ onDone }: any) {
     e.preventDefault(); if (!__tryLock()) return; setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const metadata = isSU ? { 
+        brands: { 
+          visa: form.visa_last_digits, 
+          master: form.master_last_digits 
+        } 
+      } : {};
+
       const { error } = await supabase.from("cards").insert({
-        user_id: user!.id, name: form.name, bank: form.bank || null,
-        closing_day: Number(form.closing_day), due_day: Number(form.due_day),
-        credit_limit: Number(form.credit_limit) || 0, color: form.color,
+        user_id: user!.id, 
+        name: form.name, 
+        bank: form.bank || null,
+        closing_day: Number(form.closing_day), 
+        due_day: Number(form.due_day),
+        credit_limit: Number(form.credit_limit) || 0, 
+        color: form.color,
+        last_digits: form.last_digits || null,
+        metadata
       });
       if (error) throw error;
       toast.success("Cartão cadastrado");
