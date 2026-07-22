@@ -111,7 +111,7 @@ function FinanceiroPage() {
   const baseTx = useMemo(
     () =>
       merged.flatMap((t: any) => {
-        if (t.kind === "expense" && t.person === "Família") {
+        if (t.kind === "expense" && (t.person === "Família" || t._debtPerson === "Família")) {
           const half = Number(t.amount) / 2;
           return [
             { ...t, id: `${t.id}::L`, person: "Família", _owner: "Lorran", amount: half, _familiaSplit: true, _origId: t.id, _originalItem: t._originalItem },
