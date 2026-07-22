@@ -1007,12 +1007,13 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
               {splitPeople.length >= 2 && (
                 <div className="flex items-center justify-between mt-1 px-1">
                   <span className="text-xs text-muted-foreground">Definir valor específico por pessoa</span>
-                  <input 
-                    type="checkbox" 
-                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-                    checked={splitCustom} 
-                    onChange={(e) => setSplitCustom(e.target.checked)} 
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setSplitCustom(!splitCustom)}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 ${splitCustom ? "bg-primary" : "bg-muted"}`}
+                  >
+                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${splitCustom ? "translate-x-5" : "translate-x-1"}`} />
+                  </button>
                 </div>
 
               )}
