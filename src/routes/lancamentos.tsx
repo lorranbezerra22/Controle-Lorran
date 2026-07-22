@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Plus, Trash2, Check, Clock, Pencil, SplitSquareHorizontal, ListOrdered } from "lucide-react";
+import { Plus, Trash2, Check, Clock, Pencil, SplitSquareHorizontal, ListOrdered, Users } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
