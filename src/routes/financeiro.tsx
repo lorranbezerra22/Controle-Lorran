@@ -51,7 +51,7 @@ function FinanceiroPage() {
   const [kindFilter, setKindFilter] = useState<KindFilter>(() => (ls("fin:kind", "all") as KindFilter));
   const [personFilter, setPersonFilter] = useState<string>(() => ls("fin:person", "all"));
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending">(() => ls("fin:status", "all") as any);
-  const [openCat, setOpenCat] = useState<{ kind: "income" | "expense"; categoryId: string | null; name: string; icon: string } | null>(null);
+  const [openCat, setOpenCat] = useState<CatItem | null>(null);
   const [openKpi, setOpenKpi] = useState<null | "receitas" | "despesas" | "balanco" | "paid" | "pending">(null);
 
   useEffect(() => {
