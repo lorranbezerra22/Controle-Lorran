@@ -67,6 +67,7 @@ function LancamentosPage() {
   const { data: tx = [] } = useTransactions();
   const { data: cats = [] } = useCategories();
   const { data: accounts = [] } = useAccounts();
+  const { data: people = [] } = usePeople();
   const { data: adjustments = [] } = useAdjustments();
   const adjMap = useMemo(() => groupAdjustments(adjustments), [adjustments]);
   const invalidate = useInvalidate();
