@@ -47,7 +47,7 @@ function ContaPage() {
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ["accounts"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("accounts").select("*").order("bank");
+      const { data, error } = await supabase.from("contas").select("*").order("bank");
       if (error) throw error;
       return data;
     },
@@ -62,8 +62,8 @@ function ContaPage() {
     queryKey: ["account_yields"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("account_yields")
-        .select("*, accounts(bank, account_name)")
+        .from("conta_rendimentos")
+        .select("*, contas(bank, account_name)")
         .order("date", { ascending: false });
       if (error) throw error;
       return data;
@@ -130,7 +130,7 @@ function ContaPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Excluir esta conta?")) return;
-    const { error } = await supabase.from("accounts").delete().eq("id", id);
+    const { error } = await supabase.from("contas").delete().eq("id", id);
     if (error) toast.error(error.message);
     else {
       toast.success("Conta removida");
@@ -153,8 +153,8 @@ function ContaPage() {
             onEdit={() => setEditing(acc)}
             onDelete={() => handleDelete(acc.id)}
             onRefresh={() => {
-              invalidate("accounts");
-              invalidate("account_yields");
+              invalidate("contas");
+              invalidate("conta_rendimentos");
             }}
           />
         ))}
@@ -358,7 +358,7 @@ function AccountCard({ acc, yields, onEdit, onDelete, onRefresh }: any) {
   const handleDeleteYield = async (yieldItem: any) => {
     if (!confirm("Excluir este rendimento? O saldo será ajustado.")) return;
     try {
-      const { error: err1 } = await supabase.from("account_yields").delete().eq("id", yieldItem.id);
+      const { error: err1 } = await supabase.from("conta_rendimentos").delete().eq("id", yieldItem.id);
       if (err1) throw err1;
 
       toast.success("Rendimento removido");

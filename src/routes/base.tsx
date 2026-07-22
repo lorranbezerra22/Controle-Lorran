@@ -519,7 +519,7 @@ function PersonForm({ onDone }: any) {
         return;
       }
 
-      const { error } = await supabase.from("people").insert({
+      const { error } = await supabase.from("pessoas").insert({
         user_id: user!.id,
         name: parsed.data.name,
         color: parsed.data.color,
@@ -788,7 +788,7 @@ function CatRow({ cat, onChange }: any) {
   });
 
   const save = async () => {
-    const { error } = await supabase.from("categories").update({
+    const { error } = await supabase.from("categorias").update({
       name: form.name.trim(),
       icon: form.icon || null,
       essential: form.essential,
@@ -864,7 +864,10 @@ function CategoryForm({ onDone }: any) {
         return;
       }
 
-      const { error } = await supabase.from("categories").insert({
+    const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const isDuplicate = cats.some((c: any) => norm(c.name) === norm(form.name) && c.kind === form.kind);
+    if (isDuplicate) return toast.error("Já existe uma categoria com este nome para este tipo.");
+    const { error } = await supabase.from("categorias").insert({
         user_id: user!.id,
         name: parsed.data.name,
         kind: parsed.data.kind,

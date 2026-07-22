@@ -367,7 +367,7 @@ function CartoesPage() {
           
           for (const split of splits) {
             // Criar transação para histórico
-            await supabase.from("transactions").insert({
+            await supabase.from("transacoes").insert({
               user_id: user!.id,
               description: `Pagamento ${i.cards?.name || "Cartão"} - ${i.card_purchases?.description}${split.descriptionSuffix}${overrideSuffix}`,
               amount: split.amount,
@@ -386,7 +386,7 @@ function CartoesPage() {
 
             // Compensação só faz sentido quando quem paga é o próprio dono da dívida
             if (!useOverride) {
-              await supabase.from("transactions").insert({
+                await supabase.from("transacoes").insert({
                 user_id: user!.id,
                 description: `Compensação Fatura ${i.cards?.name || "Cartão"} - ${i.card_purchases?.description}${split.descriptionSuffix}`,
                 amount: split.amount,
@@ -436,7 +436,7 @@ function CartoesPage() {
     if (error) toast.error(error.message); else { invalidate("installments"); toast.success("Compra removida"); setDeleting(null); }
   };
   const removeOne = async (i: any) => {
-    const { error } = await supabase.from("card_installments").delete().eq("id", i.id);
+    const { error } = await supabase.from("cartao_parcelas").delete().eq("id", i.id);
     if (error) toast.error(error.message); else { invalidate("installments"); toast.success("Parcela removida"); setDeleting(null); }
   };
 
