@@ -711,7 +711,7 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
             Lançamentos manuais
             <span className="text-[10px] px-2 py-0.5 rounded-full border border-border/50 bg-background/60 text-muted-foreground">{manualItems.length}</span>
           </span>
-          <span className="tabular-nums font-semibold">{brl(cat.manual || 0)}</span>
+          <span className="tabular-nums font-bold">{brl(cat.manual || 0)}</span>
         </button>
         {showManual && (
           manualItems.length === 0 ? (
