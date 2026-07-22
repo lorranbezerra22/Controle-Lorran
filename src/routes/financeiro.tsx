@@ -137,7 +137,7 @@ function FinanceiroPage() {
       })
       .filter((t: any) => personFilter === "all" || (t._owner || t.person).toLowerCase() === personFilter.toLowerCase())
       .filter((t: any) => statusFilter === "all" || t.status === statusFilter)
-  }, [merged, baseTx, kindFilter, selM, selY, personFilter, statusFilter, search]);
+  }, [merged, baseTx, kindFilter, selM, selY, personFilter, statusFilter]);
 
 
   const receitas = lista.filter((t: any) => t.kind === "income");
