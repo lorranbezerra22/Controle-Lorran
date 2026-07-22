@@ -405,23 +405,31 @@ function FinanceiroPage() {
 
       {/* Drill-down dialog (Padronizado com o Dashboard) */}
       <Dialog open={!!openCat} onOpenChange={(o) => !o && setOpenCat(null)}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader className="flex flex-row items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl shrink-0 border border-primary/20">
-              {openCat?.icon}
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto p-0 border-border bg-gradient-to-br from-card via-card to-card/40">
+          <div className="absolute inset-0 opacity-[0.04] pointer-events-none rounded-lg" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, var(--foreground) 1px, transparent 0)", backgroundSize: "22px 22px" }} />
+          <div className="relative px-6 py-5 border-b border-border/60">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="text-[10px] uppercase tracking-[0.2em] text-primary">Detalhamento · {selM === "all" ? "Todos os meses" : MESES[selM]} {selY === "all" ? "" : selY}</span>
             </div>
-            <div>
-              <DialogTitle className="text-xl flex items-center gap-2">
-                {openCat?.name}
+            <DialogHeader className="space-y-1">
+              <DialogTitle className="flex items-center gap-3 text-lg">
+                {openCat && (
+                  <span className="w-9 h-9 rounded-lg flex items-center justify-center border border-border/50 text-base" style={{ background: `color-mix(in oklab, ${colorFromString(openCat.icon || openCat.name)} 15%, transparent)` }}>
+                    {openCat.icon ?? "💰"}
+                  </span>
+                )}
+                <span>{openCat?.name}</span>
                 <Badge variant={openCat?.kind === "income" ? "secondary" : "destructive"} className="ml-1 uppercase tracking-tighter text-[10px]">
                   {openCat?.kind === "income" ? "Receitas" : "Despesas"}
                 </Badge>
               </DialogTitle>
-              <DialogDescription className="text-xs">Detalhamento da categoria no período selecionado</DialogDescription>
-            </div>
-          </DialogHeader>
-
-          {openCat && <CategoryDetail cat={openCat} cardsById={new Map(cards.map(c => [c.id, c]))} />}
+              <DialogDescription className="text-xs">Conforme os filtros ativos no período selecionado</DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="relative px-6 py-4">
+            {openCat && <CategoryDetail cat={openCat} cardsById={new Map(cards.map(c => [c.id, c]))} />}
+          </div>
         </DialogContent>
       </Dialog>
 
