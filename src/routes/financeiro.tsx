@@ -176,12 +176,15 @@ function FinanceiroPage() {
       if (t._isCard) {
         m[k].card += val;
         m[k].cardItems.push({ 
-          inst: t._originalItem || t, // Mantemos o item original com suas relações
+          inst: t._originalItem || t,
           share: val 
         });
       } else {
         m[k].manual += val;
-        m[k].manualItems.push({ tx: t, share: val });
+        m[k].manualItems.push({ 
+          tx: t,
+          share: val 
+        });
       }
     }
     return Object.values(m).sort((a: any, b: any) => b.value - a.value);
@@ -465,11 +468,20 @@ function FinanceiroPage() {
                       )}
                       {items.map((t: any) => {
                         const isIncome = t.kind === "income";
+                        const isCard = !!t._isCard || !!t.card_installment_id;
                         return (
                           <tr key={t.id} className="border-t">
                             <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{fmtDate(t.due_at)}</td>
-                            <td className="px-3 py-2">{isIncome ? "Receita" : "Despesa"}</td>
-                            <td className="px-3 py-2">{t.description || "—"}{t.notes ? <div className="text-xs text-muted-foreground">{t.notes}</div> : null}</td>
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-1.5">
+                                {isCard ? <CreditCard className="w-3 h-3 text-primary" /> : <Wallet className="w-3 h-3 text-muted-foreground" />}
+                                <span>{isIncome ? "Receita" : "Despesa"}</span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="font-medium">{t.description || "—"}</div>
+                              {t.notes && <div className="text-[10px] text-muted-foreground">{t.notes}</div>}
+                            </td>
                             <td className="px-3 py-2">{t.person || "—"}</td>
                             <td className="px-3 py-2">{t.status === "paid" ? (isIncome ? "Recebido" : "Pago") : "Pendente"}</td>
                             <td className={`px-3 py-2 text-right font-semibold tabular-nums ${isIncome ? "text-success" : "text-destructive"}`}>
