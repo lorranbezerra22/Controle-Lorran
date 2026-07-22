@@ -51,7 +51,7 @@ function FinanceiroPage() {
   const [kindFilter, setKindFilter] = useState<KindFilter>(() => (ls("fin:kind", "all") as KindFilter));
   const [personFilter, setPersonFilter] = useState<string>(() => ls("fin:person", "all"));
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending">(() => ls("fin:status", "all") as any);
-  const [openCat, setOpenCat] = useState<{ kind: "income" | "expense"; categoryId: string | null; name: string; icon: string } | null>(null);
+  const [openCat, setOpenCat] = useState<CatItem | null>(null);
   const [openKpi, setOpenKpi] = useState<null | "receitas" | "despesas" | "balanco" | "paid" | "pending">(null);
 
   useEffect(() => {
@@ -169,7 +169,8 @@ function FinanceiroPage() {
       const k = t.category_id || "none";
       if (!m[k]) {
         m[k] = { 
-          id: t.category_id || null, 
+          categoryId: t.category_id || null, 
+          id: t.category_id || null,
           name: c.name, 
           icon: c.icon || "💰", 
           value: 0, 
@@ -389,7 +390,7 @@ function FinanceiroPage() {
           data={catReceitas}
           total={totalReceita}
           tone="success"
-          onSelect={(c) => setOpenCat({ kind: "income", categoryId: c.id, name: c.name, icon: c.icon })}
+          onSelect={(c) => setOpenCat(c)}
         />
         <CategoryCard
           title="Despesas por categoria"
@@ -397,7 +398,7 @@ function FinanceiroPage() {
           data={catDespesas}
           total={totalDespesa}
           tone="danger"
-          onSelect={(c) => setOpenCat({ kind: "expense", categoryId: c.id, name: c.name, icon: c.icon })}
+          onSelect={(c) => setOpenCat(c)}
         />
       </div>
 
@@ -723,6 +724,7 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
 }
 
 type CatItem = { 
+  categoryId: string | null;
   id: string | null; 
   name: string; 
   icon: string; 
