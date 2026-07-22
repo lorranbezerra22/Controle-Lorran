@@ -1049,8 +1049,8 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
                 </thead>
                 <tbody>
                   {cardItems.map(({ inst, share }: any) => {
-                    const cp = inst.card_purchases || {};
-                    const card = inst.cards || cardsById.get(inst.card_id) || {};
+                    const cp = inst.card_purchases || inst._originalItem?.card_purchases || {};
+                    const card = inst.cards || inst._originalItem?.cards || cardsById.get(inst.card_id) || {};
                     return (
                       <tr key={inst.id} className="border-t border-border/60 hover:bg-muted/20">
                         <td className="p-2 whitespace-nowrap">{fmtDate(inst.due_at)}</td>
@@ -1065,7 +1065,7 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
                           </span>
                         </td>
                         <td className="p-2 whitespace-nowrap text-muted-foreground">{inst.installment_number}/{cp.installments_count ?? "?"}</td>
-                        <td className="p-2 whitespace-nowrap">{cp.person ?? "—"}</td>
+                        <td className="p-2 whitespace-nowrap">{cp.person || inst.person || "—"}</td>
                         <td className="p-2 text-right tabular-nums font-medium">{brl(share)}</td>
                       </tr>
                     );
