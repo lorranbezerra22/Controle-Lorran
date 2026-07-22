@@ -26,9 +26,20 @@ export function PersonSelect({
 }: Props) {
   const { data: people = [] } = usePeople();
   const names = new Set<string>();
-  people.forEach((p: any) => p?.name && names.add(p.name));
+  people.forEach((p: any) => {
+    if (!p?.name) return;
+    // Se a pessoa for "Familia" ou "Família", não adicionamos aqui 
+    // porque ela será adicionada manualmente com a capitalização correta abaixo
+    if (p.name.toLowerCase().trim() === "familia") return;
+    names.add(p.name);
+  });
+  
   if (includeFamilia) names.add("Família");
-  extras.forEach((n) => n && names.add(n));
+  extras.forEach((n) => {
+    if (!n) return;
+    if (n.toLowerCase().trim() === "familia") return;
+    names.add(n);
+  });
   const list = Array.from(names);
 
   if (multiSelect) {
