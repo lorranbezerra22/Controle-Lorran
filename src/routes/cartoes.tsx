@@ -1721,6 +1721,7 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
           </div>
           <div className="text-[10px] text-muted-foreground italic text-center">
             Informações de faturas e limites serão centralizadas no cartão mestre.
+          </div>
         </div>
       )}
 
