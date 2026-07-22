@@ -140,9 +140,6 @@ function FinanceiroPage() {
       })
       .filter((t: any) => personFilter === "all" || (t._owner || t.person).toLowerCase() === personFilter.toLowerCase())
       .filter((t: any) => statusFilter === "all" || t.status === statusFilter)
-      .filter((t: any) =>
-        !search.trim() || (t.description || "").toLowerCase().includes(search.toLowerCase()),
-      );
   }, [merged, baseTx, kindFilter, selM, selY, personFilter, statusFilter, search]);
 
 
@@ -291,10 +288,6 @@ function FinanceiroPage() {
             </>
           );
         })()}
-        <div className="relative col-span-2 sm:col-span-3 lg:col-span-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
       </div>
 
       {/* KPI cards */}
