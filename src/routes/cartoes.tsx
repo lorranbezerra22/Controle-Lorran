@@ -1603,28 +1603,29 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
         <Label>Bandeira</Label>
         <Select 
           value={form.last_digits && !isSU ? "standard" : isSU ? "multi" : undefined}
-          onValueChange={(v) => {
-             // Apenas um trigger visual ou para facilitar o entendimento do usuário
-             // se necessário, podemos adicionar um campo 'brand' no schema depois.
-          }}
+          onValueChange={() => {}}
         >
           <SelectTrigger><SelectValue placeholder="Selecione a bandeira" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="standard">Padrão (Visa/Master/Elo)</SelectItem>
-            <SelectItem value="multi">Múltiplas (Santander Unlimited)</SelectItem>
+            <SelectItem value="standard">Visa / Mastercard / Elo</SelectItem>
+            <SelectItem value="multi">Múltiplas (Visa + Master)</SelectItem>
           </SelectContent>
         </Select>
       </div>
+      {(!isSU && (form.last_digits || form.bank)) && (
+        <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+          <Label>Últimos 4 dígitos</Label>
+          <Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} />
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5"><Label>Fechamento</Label><Input type="number" min={1} max={31} value={form.closing_day} onChange={e => setForm({ ...form, closing_day: Number(e.target.value) })} required /></div>
         <div className="space-y-1.5"><Label>Vencimento</Label><Input type="number" min={1} max={31} value={form.due_day} onChange={e => setForm({ ...form, due_day: Number(e.target.value) })} required /></div>
       </div>
       <div className="space-y-1.5"><Label>Limite total</Label><Input type="number" step="0.01" value={form.credit_limit} onChange={e => setForm({ ...form, credit_limit: e.target.value })} required /></div>
       
-      {!isSU ? (
-        <div className="space-y-1.5"><Label>Últimos 4 dígitos</Label><Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} /></div>
-      ) : (
-        <div className="grid grid-cols-2 gap-3">
+      {isSU && (
+        <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
           <div className="space-y-1.5"><Label>Final Visa</Label><Input maxLength={4} placeholder="Ex: 2054" value={form.visa_last_digits} onChange={e => setForm({ ...form, visa_last_digits: e.target.value })} /></div>
           <div className="space-y-1.5"><Label>Final Master</Label><Input maxLength={4} placeholder="Ex: 3019" value={form.master_last_digits} onChange={e => setForm({ ...form, master_last_digits: e.target.value })} /></div>
         </div>
