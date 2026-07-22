@@ -33,7 +33,7 @@ export interface RequestRow {
 export async function logHistory(requestId: string, action: string, changes: any) {
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) return;
-  await supabase.from("financial_request_history").insert({
+  await supabase.from("requisicao_financeira_historico").insert({
     request_id: requestId,
     user_id: u.user.id,
     action,
@@ -51,7 +51,7 @@ export async function approveRequest(req: RequestRow) {
   if (req.kind === "card") {
     if (!req.suggested_card_id) throw new Error("Cartão obrigatório para pedido de cartão");
     const { data: cp, error } = await supabase
-      .from("card_purchases")
+      .from("cartao_compras")
       .insert({
         user_id: uid,
         card_id: req.suggested_card_id,
@@ -82,10 +82,10 @@ export async function approveRequest(req: RequestRow) {
         status: "pending",
       });
     }
-    await supabase.from("card_installments").insert(insts);
+    await supabase.from("cartao_parcelas").insert(insts);
   } else {
     const { data: tx, error } = await supabase
-      .from("transactions")
+      .from("transacoes")
       .insert({
         user_id: uid,
         description: req.description,
@@ -106,7 +106,7 @@ export async function approveRequest(req: RequestRow) {
   }
 
   if (req.is_recurring && req.kind !== "card" && req.recurring_day) {
-    await supabase.from("recurring_rules").insert({
+    await supabase.from("regras_recorrentes").insert({
       user_id: uid,
       description: req.description,
       amount: req.amount,
@@ -119,7 +119,7 @@ export async function approveRequest(req: RequestRow) {
   }
 
   await supabase
-    .from("financial_requests")
+    .from("requisicoes_financeiras")
     .update({ status: "aprovado", approved_transaction_id: approvedId })
     .eq("id", req.id);
 
@@ -129,7 +129,7 @@ export async function approveRequest(req: RequestRow) {
 
 export async function rejectRequest(id: string, reason: string) {
   await supabase
-    .from("financial_requests")
+    .from("requisicoes_financeiras")
     .update({ status: "rejeitado", rejected_reason: reason })
     .eq("id", id);
   await logHistory(id, "rejected", { reason });

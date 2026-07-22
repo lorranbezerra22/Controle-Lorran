@@ -36,7 +36,7 @@ function AnotacoesPage() {
     queryKey: ["notes"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("notes")
+        .from("notas")
         .select("*")
         .order("pinned", { ascending: false })
         .order("updated_at", { ascending: false });
@@ -59,7 +59,7 @@ function AnotacoesPage() {
       ? Array.from({ length: 12 }, () => Array.from({ length: 6 }, () => ({ value: "" })))
       : [];
     const { data, error } = await supabase
-      .from("notes")
+      .from("notas")
       .insert({
         user_id: user!.id,
         title: type === "sheet" ? "Nova planilha" : "Nova anotação",
@@ -76,14 +76,14 @@ function AnotacoesPage() {
 
   const remove = async (id: string) => {
     if (!confirm("Excluir esta anotação?")) return;
-    const { error } = await supabase.from("notes").delete().eq("id", id);
+    const { error } = await supabase.from("notas").delete().eq("id", id);
     if (error) return toast.error(error.message);
     if (selectedId === id) setSelectedId(null);
     invalidate();
   };
 
   const togglePin = async (n: Note) => {
-    const { error } = await supabase.from("notes").update({ pinned: !n.pinned }).eq("id", n.id);
+    const { error } = await supabase.from("notas").update({ pinned: !n.pinned }).eq("id", n.id);
     if (error) return toast.error(error.message);
     invalidate();
   };
@@ -185,7 +185,7 @@ function NoteEditor({ note, onSaved, onPin, onDelete }: { note: Note; onSaved: (
     const t = setTimeout(async () => {
       setSaving(true);
       const { error } = await supabase
-        .from("notes")
+        .from("notas")
         .update({ title, content, updated_at: new Date().toISOString() })
         .eq("id", note.id);
       setSaving(false);
@@ -248,7 +248,7 @@ function SheetEditor({ note, onSaved, onPin, onDelete }: { note: Note; onSaved: 
     const t = setTimeout(async () => {
       setSaving(true);
       const { error } = await supabase
-        .from("notes")
+        .from("notas")
         .update({ title, sheet_data: data, updated_at: new Date().toISOString() } as any)
         .eq("id", note.id);
       setSaving(false);

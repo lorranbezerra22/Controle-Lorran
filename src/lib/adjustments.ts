@@ -18,9 +18,9 @@ export interface Share {
 
 export const useAdjustments = () =>
   useQuery({
-    queryKey: ["transaction_adjustments"],
+    queryKey: ["transacao_ajustes"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("transaction_adjustments").select("*").limit(5000);
+      const { data, error } = await supabase.from("transacao_ajustes").select("*").limit(5000);
       if (error) throw error;
       return (data ?? []) as AdjustmentRow[];
     },
