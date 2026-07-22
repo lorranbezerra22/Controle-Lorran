@@ -1575,15 +1575,44 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
   return (
     <form onSubmit={submit} className="space-y-3">
       <div className="space-y-1.5"><Label>Nome</Label><SmartInput value={form.name} onChange={(v) => setForm({ ...form, name: v })} required /></div>
-      <div className="space-y-1.5"><Label>Banco</Label>
-        <Select value={form.bank || undefined} onValueChange={(v) => { 
-          const b = findBank(v); 
-          let newName = form.name;
-          if (b.id === "santander" && !form.name) newName = "Santander Unlimited";
-          setForm({ ...form, bank: b.name, name: newName }); 
-        }}>
+      <div className="space-y-1.5">
+        <Label>Banco</Label>
+        <Select 
+          value={form.bank || undefined} 
+          onValueChange={(v) => { 
+            const b = findBank(v); 
+            let newName = form.name;
+            if (b.id === "santander" && !form.name) newName = "Santander Unlimited";
+            setForm({ ...form, bank: b.name, name: newName }); 
+          }}
+        >
           <SelectTrigger><SelectValue placeholder="Selecione o banco" /></SelectTrigger>
-          <SelectContent>{BANKS.map((b) => <SelectItem key={b.id} value={b.name}><div className="flex items-center gap-2"><BankIcon bank={b.name} size={18} square /><span>{b.name}</span></div></SelectItem>)}</SelectContent>
+          <SelectContent>
+            {BANKS.map((b) => (
+              <SelectItem key={b.id} value={b.name}>
+                <div className="flex items-center gap-2">
+                  <BankIcon bank={b.name} size={18} square />
+                  <span>{b.name}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label>Bandeira</Label>
+        <Select 
+          value={form.last_digits && !isSU ? "standard" : isSU ? "multi" : undefined}
+          onValueChange={(v) => {
+             // Apenas um trigger visual ou para facilitar o entendimento do usuário
+             // se necessário, podemos adicionar um campo 'brand' no schema depois.
+          }}
+        >
+          <SelectTrigger><SelectValue placeholder="Selecione a bandeira" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="standard">Padrão (Visa/Master/Elo)</SelectItem>
+            <SelectItem value="multi">Múltiplas (Santander Unlimited)</SelectItem>
+          </SelectContent>
         </Select>
       </div>
       <div className="grid grid-cols-2 gap-3">
