@@ -3,9 +3,8 @@ import { ProtectedShell } from "@/components/ProtectedShell";
 import { useTransactions, useCategories, usePeople, useAccounts, useInstallments, useCards } from "@/lib/queries";
 import { brl, fmtDate } from "@/lib/format";
 import { useMemo, useState, useEffect } from "react";
-import { TrendingUp, TrendingDown, Wallet, Calendar, Users, ArrowUpRight, Search, Scale, Undo2, CreditCard, ChevronDown, ChevronRight } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Calendar, Users, ArrowUpRight, Scale, Undo2, CreditCard, ChevronDown, ChevronRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
@@ -52,7 +51,6 @@ function FinanceiroPage() {
   const [kindFilter, setKindFilter] = useState<KindFilter>(() => (ls("fin:kind", "all") as KindFilter));
   const [personFilter, setPersonFilter] = useState<string>(() => ls("fin:person", "all"));
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending">(() => ls("fin:status", "all") as any);
-  const [search, setSearch] = useState<string>(() => ls("fin:search", ""));
   const [openCat, setOpenCat] = useState<{ kind: "income" | "expense"; categoryId: string | null; name: string; icon: string } | null>(null);
   const [openKpi, setOpenKpi] = useState<null | "receitas" | "despesas" | "balanco" | "paid" | "pending">(null);
 
@@ -63,8 +61,7 @@ function FinanceiroPage() {
     window.localStorage.setItem("fin:kind", kindFilter);
     window.localStorage.setItem("fin:person", personFilter);
     window.localStorage.setItem("fin:status", statusFilter);
-    window.localStorage.setItem("fin:search", search);
-  }, [selM, selY, kindFilter, personFilter, statusFilter, search]);
+  }, [selM, selY, kindFilter, personFilter, statusFilter]);
 
   const catMap = useMemo(() => Object.fromEntries(cats.map((c: any) => [c.id, c])), [cats]);
   const accMap = useMemo(() => Object.fromEntries(accounts.map((a: any) => [a.id, a])), [accounts]);
