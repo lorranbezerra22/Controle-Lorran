@@ -1481,47 +1481,32 @@ function EditPurchaseForm({ purchase, cats, onDone }: any) {
     purchase_date: purchase.purchase_date ?? "",
     brand: initialBrand,
   });
-  // Por padrão, edita SOMENTE a parcela clicada (ideal para reembolsos/descontos).
-  // Marcar para propagar valor+data a todas as parcelas (compra inteira).
   const [applyAll, setApplyAll] = useState(false);
-
   const [saving, setSaving] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!__tryLock()) return; setSaving(true);
     try {
       const newAmount = Number(form.amount);
+      const { data: list } = await supabase.from("card_installments").select("id, installment_number, amount").eq("purchase_id", purchase.id).order("installment_number");
 
-      // Buscar todas as parcelas para recalcular total
-      const { data: list } = await supabase
-        .from("card_installments")
-        .select("id, installment_number, amount")
-        .eq("purchase_id", purchase.id)
-        .order("installment_number");
-
-      // Calcular novo total_amount
       let newTotal = Number(purchase.total_amount ?? 0);
       if (list) {
-        if (applyAll) {
-          newTotal = newAmount * list.length;
-        } else {
-          newTotal = list.reduce((s, it) => s + (it.installment_number === clickedNum ? newAmount : Number(it.amount)), 0);
-        }
+        if (applyAll) newTotal = newAmount * list.length;
+        else newTotal = list.reduce((s, it) => s + (it.installment_number === clickedNum ? newAmount : Number(it.amount)), 0);
       }
 
-      const { error: pErr } = await supabase.from("card_purchases").update({
+      await supabase.from("card_purchases").update({
         description: form.description,
         person: form.person || null,
         category_id: form.category_id || null,
         total_amount: newTotal,
         purchase_date: form.purchase_date || null,
-        brand: isSantanderUnlimited ? (form.brand || null) : null,
+        brand: form.brand || null,
       }).eq("id", purchase.id);
-      if (pErr) throw pErr;
 
       if (list && form.due_at) {
         if (applyAll) {
-          // Propaga valor + data a todas as parcelas, mantendo intervalo mensal
           const clickedDate = new Date(form.due_at + "T00:00:00");
           for (const it of list) {
             const offset = (it.installment_number ?? 1) - clickedNum;
@@ -1532,29 +1517,23 @@ function EditPurchaseForm({ purchase, cats, onDone }: any) {
             }).eq("id", it.id);
           }
         } else {
-          // Edita SOMENTE a parcela clicada — não mexe nas outras
           const target = list.find((it) => it.installment_number === clickedNum);
           if (target) {
-            await supabase.from("card_installments").update({
-              amount: newAmount,
-              due_at: form.due_at,
-            }).eq("id", target.id);
+            await supabase.from("card_installments").update({ amount: newAmount, due_at: form.due_at }).eq("id", target.id);
           }
         }
       }
 
-      // Persistir bandeira (apenas relevante p/ Santander Unlimited)
       if (typeof window !== "undefined") {
         try {
           const map = JSON.parse(window.localStorage.getItem("cartoes:purchaseBrands") || "{}");
-          if (form.brand) map[purchase.id] = form.brand;
-          else delete map[purchase.id];
+          if (form.brand) map[purchase.id] = form.brand; else delete map[purchase.id];
           window.localStorage.setItem("cartoes:purchaseBrands", JSON.stringify(map));
           window.dispatchEvent(new Event("purchaseBrands:changed"));
         } catch {}
       }
 
-      toast.success(applyAll ? "Compra atualizada (todas as parcelas)" : `Parcela ${clickedNum}/${purchase.installments_count ?? 1} atualizada`);
+      toast.success(applyAll ? "Compra atualizada (todas as parcelas)" : `Parcela ${clickedNum} atualizada`);
       onDone();
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); __release(); }
   };
@@ -1583,6 +1562,8 @@ function EditPurchaseForm({ purchase, cats, onDone }: any) {
       {(() => {
         const isSU = /santander/i.test(purchase.cards?.bank || "") && /unlimited/i.test(purchase.cards?.name || "");
         if (!isSU) return null;
+        const vNum = purchase.cards?.metadata?.brands?.visa || "2054";
+        const mNum = purchase.cards?.metadata?.brands?.master || "3019";
         return (
           <div className="space-y-1.5">
             <Label>Bandeira (Santander Unlimited)</Label>
@@ -1590,38 +1571,26 @@ function EditPurchaseForm({ purchase, cats, onDone }: any) {
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Sem bandeira</SelectItem>
-                {(() => {
-                  const vNum = purchase.cards?.metadata?.brands?.visa || "2054";
-                  const mNum = purchase.cards?.metadata?.brands?.master || "3019";
-                  return (
-                    <>
-                      <SelectItem value={`Visa ${vNum}`}>Visa • {vNum}</SelectItem>
-                      <SelectItem value={`Master ${mNum}`}>Master • {mNum}</SelectItem>
-                    </>
-                  );
-                })()}
+                <SelectItem value={`Visa ${vNum}`}>Visa • {vNum}</SelectItem>
+                <SelectItem value={`Master ${mNum}`}>Master • {mNum}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         );
       })()}
+      <label className="flex items-start gap-2 rounded-md border border-border p-2.5 cursor-pointer hover:bg-muted/50">
         <input type="checkbox" checked={applyAll} onChange={e => setApplyAll(e.target.checked)} className="mt-0.5" />
         <div className="text-xs">
           <div className="font-medium text-foreground">Aplicar a todas as parcelas</div>
           <div className="text-muted-foreground">
-            {applyAll
-              ? "O valor e a data serão propagados para todas as parcelas (mantendo intervalo mensal)."
-              : `Somente a parcela ${clickedNum}/${purchase.installments_count ?? 1} será alterada. Ideal para reembolsos ou descontos pontuais.`}
+            {applyAll ? "O valor e a data serão propagados para todas as parcelas." : `Somente a parcela ${clickedNum} será alterada.`}
           </div>
         </div>
       </label>
-
       <Button type="submit" disabled={saving} className="w-full">{saving ? "Salvando…" : "Salvar alterações"}</Button>
     </form>
   );
 }
-
-
 
 function EditCardForm({ card, onDone, onDelete }: any) {
   const [form, setForm] = useState({
