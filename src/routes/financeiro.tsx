@@ -26,7 +26,7 @@ type KindFilter = "all" | "income" | "expense";
 function colorFromString(s: string): string {
   let h = 0;
   for (let i = 0; i < (s || "").length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return `oklch(0.7 0.18 ${h % 360})`;
+  return `oklch(0.68 0.18 ${h % 360})`;
 }
 
 function FinanceiroPage() {
