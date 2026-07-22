@@ -483,17 +483,17 @@ function CartoesPage() {
                   <div className="flex items-center gap-2">
                     <div className="font-semibold text-lg truncate">{c.name}</div>
                   </div>
-                  <div className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-medium opacity-80">
+                  <div className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-medium opacity-80 leading-tight">
                     {c.bank ? `${findBank(c.bank).name} • ` : ""}
                     {c.metadata?.brands?.length > 0 ? (
-                      <span>{c.metadata.brands.length} Bandeiras • </span>
+                      <span className="text-primary/70 font-bold">{c.metadata.brands.length} Bandeiras</span>
                     ) : (
                       <>
                         {c.metadata?.brand && <span className="capitalize">{c.metadata.brand} </span>}
-                        {c.last_digits && `•••• ${c.last_digits} • `}
+                        {c.last_digits && `•••• ${c.last_digits}`}
                       </>
                     )}
-                    F. {c.closing_day} • V. {c.due_day}
+                    <div className="mt-0.5 opacity-60">F. {c.closing_day} • V. {c.due_day}</div>
                   </div>
 
                 </div>
