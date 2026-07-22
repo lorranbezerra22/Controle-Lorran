@@ -449,7 +449,7 @@ function CartoesPage() {
             <Dialog open={newCardOpen} onOpenChange={setNewCardOpen}>
               <DialogTrigger asChild><Button variant="outline" size="sm" className="rounded-full"><Plus className="w-4 h-4 mr-1" /> Novo cartão</Button></DialogTrigger>
               <DialogContent>
-                <DialogHeader><DialogTitle>Cadastrar cartão</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>Novo cartão</DialogTitle></DialogHeader>
                 <CardForm onDone={() => { setNewCardOpen(false); invalidate("cards"); }} />
               </DialogContent>
             </Dialog>
