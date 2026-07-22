@@ -388,7 +388,7 @@ function LancamentosPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as pessoas</SelectItem>
-              {personOptions.map((p) => (
+              {personOptions.map((p: string) => (
                 <SelectItem key={p} value={p}>{p}</SelectItem>
               ))}
             </SelectContent>
