@@ -155,7 +155,10 @@ function LancamentosPage() {
     });
   };
 
-  const personOptions = Array.from(new Set(tx.map((t: any) => t.person).filter(Boolean) as string[])).sort();
+  const personOptions = useMemo(() => {
+    // Retorna apenas as pessoas cadastradas no sistema
+    return people.map((p: any) => p.name).sort();
+  }, [people]);
 
   const filtered = tx.filter((t: any) => {
     if (filter !== "all" && t.kind !== filter) return false;
