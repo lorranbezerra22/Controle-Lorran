@@ -483,13 +483,37 @@ function CartoesPage() {
           const usado = inst.filter((i: any) => i.card_id === c.id && i.status === "pending").reduce((s: number, i: any) => s + Number(i.amount), 0);
           const pct = c.credit_limit > 0 ? Math.min(100, (usado / Number(c.credit_limit)) * 100) : 0;
           return (
-            <motion.div key={c.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: idx * 0.06, ease: [0.22, 1, 0.36, 1] }} whileHover={{ y: -3, transition: { duration: 0.2 } }} onClick={() => setEditingCard(c)} className="rounded-xl p-5 border border-border cursor-pointer hover:border-primary/50 transition-colors" style={{ background: "var(--gradient-card)", boxShadow: "var(--shadow-elegant)" }} title="Clique para editar">
+            <motion.div 
+              key={c.id} 
+              initial={{ opacity: 0, y: 16 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              transition={{ duration: 0.4, delay: idx * 0.06, ease: [0.22, 1, 0.36, 1] }} 
+              whileHover={{ y: -3, transition: { duration: 0.2 } }} 
+              className="rounded-xl p-5 border border-border cursor-pointer hover:border-primary/50 transition-colors group relative" 
+              style={{ background: "var(--gradient-card)", boxShadow: "var(--shadow-elegant)" }} 
+            >
               <div className="flex items-start justify-between mb-4">
-                <div>
-                  <div className="font-semibold text-lg">{c.name}</div>
-                  <div className="text-xs text-muted-foreground">{c.bank ? `${findBank(c.bank).name} • ` : ""}Fech. {c.closing_day} • Venc. {c.due_day}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <div className="font-semibold text-lg truncate">{c.name}</div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="w-6 h-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-background/50 hover:bg-background border border-border"
+                      onClick={(e) => { e.stopPropagation(); setEditingCard(c); }}
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {c.bank ? `${findBank(c.bank).name} • ` : ""}
+                    {c.last_digits ? `•••• ${c.last_digits} • ` : ""}
+                    Fech. {c.closing_day} • Venc. {c.due_day}
+                  </div>
                 </div>
-                <BankIcon bank={c.bank} size={48} square />
+                <div onClick={() => setEditingCard(c)} className="shrink-0 cursor-pointer">
+                  <BankIcon bank={c.bank} size={48} square />
+                </div>
               </div>
               <div className="text-xs text-muted-foreground flex justify-between mb-1">
                 <span>Limite usado</span><span>{brl(usado)} de {brl(c.credit_limit)}</span>
@@ -995,16 +1019,36 @@ function CartoesPage() {
 
 
 function CardForm({ onDone }: any) {
-  const [form, setForm] = useState({ name: "", bank: "", closing_day: 1, due_day: 10, credit_limit: "", color: "#6366f1" });
+  const [form, setForm] = useState({ 
+    name: "", bank: "", closing_day: 1, due_day: 10, credit_limit: "", color: "#6366f1",
+    last_digits: "",
+    visa_last_digits: "",
+    master_last_digits: ""
+  });
   const [saving, setSaving] = useState(false);
+  const isSU = /santander/i.test(form.bank || "") && /unlimited/i.test(form.name || "");
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!__tryLock()) return; setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const metadata = isSU ? { 
+        brands: { 
+          visa: form.visa_last_digits, 
+          master: form.master_last_digits 
+        } 
+      } : {};
+
       const { error } = await supabase.from("cards").insert({
-        user_id: user!.id, name: form.name, bank: form.bank || null,
-        closing_day: Number(form.closing_day), due_day: Number(form.due_day),
-        credit_limit: Number(form.credit_limit) || 0, color: form.color,
+        user_id: user!.id, 
+        name: form.name, 
+        bank: form.bank || null,
+        closing_day: Number(form.closing_day), 
+        due_day: Number(form.due_day),
+        credit_limit: Number(form.credit_limit) || 0, 
+        color: form.color,
+        last_digits: form.last_digits || null,
+        metadata
       });
       if (error) throw error;
       toast.success("Cartão cadastrado");
@@ -1031,6 +1075,15 @@ function CardForm({ onDone }: any) {
         <div className="space-y-1.5"><Label>Cor</Label><Input type="color" value={form.color} onChange={e => setForm({ ...form, color: e.target.value })} /></div>
       </div>
       <div className="space-y-1.5"><Label>Limite total</Label><Input type="number" step="0.01" value={form.credit_limit} onChange={e => setForm({ ...form, credit_limit: e.target.value })} required /></div>
+      
+      {!isSU ? (
+        <div className="space-y-1.5"><Label>Últimos 4 dígitos</Label><Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} /></div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5"><Label>Final Visa</Label><Input maxLength={4} placeholder="Ex: 2054" value={form.visa_last_digits} onChange={e => setForm({ ...form, visa_last_digits: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label>Final Master</Label><Input maxLength={4} placeholder="Ex: 3019" value={form.master_last_digits} onChange={e => setForm({ ...form, master_last_digits: e.target.value })} /></div>
+        </div>
+      )}
       <Button type="submit" disabled={saving} className="w-full">{saving ? "Salvando…" : "Salvar cartão"}</Button>
     </form>
   );
@@ -1385,25 +1438,30 @@ function PurchaseForm({ cards, cats, onDone }: any) {
         const sel = cards.find((c: any) => c.id === form.card_id);
         const isSU = sel && /santander/i.test(sel.name || "") && /unlimited/i.test(sel.name || "");
         if (!isSU) return null;
+        
+        const visaNum = sel.metadata?.brands?.visa || "2054";
+        const masterNum = sel.metadata?.brands?.master || "3019";
+        
         return (
           <div className="space-y-1.5">
             <Label>Bandeira (Santander Unlimited)</Label>
             <Select value={form.brand} onValueChange={(v) => setForm({ ...form, brand: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="Visa 2054">Visa • Santander Unlimited</SelectItem>
-                <SelectItem value="Master 3019">Master • Santander Unlimited</SelectItem>
+                <SelectItem value={`Visa ${visaNum}`}>Visa • {visaNum}</SelectItem>
+                <SelectItem value={`Master ${masterNum}`}>Master • {masterNum}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         );
+
       })()}
       <Button type="submit" disabled={saving || (splitMode && splitPeople.length < 2)} className="w-full">{saving ? "Salvando…" : "Salvar compra"}</Button>
     </form>
   );
 }
 
-function EditPurchaseForm({ purchase, cats, onDone, isSantanderUnlimited }: any) {
+function EditPurchaseForm({ purchase, cats, onDone }: any) {
   const clicked = purchase._installment;
   const clickedNum = clicked?.installment_number ?? 1;
   const initialBrand = (() => {
@@ -1423,47 +1481,32 @@ function EditPurchaseForm({ purchase, cats, onDone, isSantanderUnlimited }: any)
     purchase_date: purchase.purchase_date ?? "",
     brand: initialBrand,
   });
-  // Por padrão, edita SOMENTE a parcela clicada (ideal para reembolsos/descontos).
-  // Marcar para propagar valor+data a todas as parcelas (compra inteira).
   const [applyAll, setApplyAll] = useState(false);
-
   const [saving, setSaving] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!__tryLock()) return; setSaving(true);
     try {
       const newAmount = Number(form.amount);
+      const { data: list } = await supabase.from("card_installments").select("id, installment_number, amount").eq("purchase_id", purchase.id).order("installment_number");
 
-      // Buscar todas as parcelas para recalcular total
-      const { data: list } = await supabase
-        .from("card_installments")
-        .select("id, installment_number, amount")
-        .eq("purchase_id", purchase.id)
-        .order("installment_number");
-
-      // Calcular novo total_amount
       let newTotal = Number(purchase.total_amount ?? 0);
       if (list) {
-        if (applyAll) {
-          newTotal = newAmount * list.length;
-        } else {
-          newTotal = list.reduce((s, it) => s + (it.installment_number === clickedNum ? newAmount : Number(it.amount)), 0);
-        }
+        if (applyAll) newTotal = newAmount * list.length;
+        else newTotal = list.reduce((s, it) => s + (it.installment_number === clickedNum ? newAmount : Number(it.amount)), 0);
       }
 
-      const { error: pErr } = await supabase.from("card_purchases").update({
+      await supabase.from("card_purchases").update({
         description: form.description,
         person: form.person || null,
         category_id: form.category_id || null,
         total_amount: newTotal,
         purchase_date: form.purchase_date || null,
-        brand: isSantanderUnlimited ? (form.brand || null) : null,
+        brand: form.brand || null,
       }).eq("id", purchase.id);
-      if (pErr) throw pErr;
 
       if (list && form.due_at) {
         if (applyAll) {
-          // Propaga valor + data a todas as parcelas, mantendo intervalo mensal
           const clickedDate = new Date(form.due_at + "T00:00:00");
           for (const it of list) {
             const offset = (it.installment_number ?? 1) - clickedNum;
@@ -1474,29 +1517,23 @@ function EditPurchaseForm({ purchase, cats, onDone, isSantanderUnlimited }: any)
             }).eq("id", it.id);
           }
         } else {
-          // Edita SOMENTE a parcela clicada — não mexe nas outras
           const target = list.find((it) => it.installment_number === clickedNum);
           if (target) {
-            await supabase.from("card_installments").update({
-              amount: newAmount,
-              due_at: form.due_at,
-            }).eq("id", target.id);
+            await supabase.from("card_installments").update({ amount: newAmount, due_at: form.due_at }).eq("id", target.id);
           }
         }
       }
 
-      // Persistir bandeira (apenas relevante p/ Santander Unlimited)
       if (typeof window !== "undefined") {
         try {
           const map = JSON.parse(window.localStorage.getItem("cartoes:purchaseBrands") || "{}");
-          if (form.brand) map[purchase.id] = form.brand;
-          else delete map[purchase.id];
+          if (form.brand) map[purchase.id] = form.brand; else delete map[purchase.id];
           window.localStorage.setItem("cartoes:purchaseBrands", JSON.stringify(map));
           window.dispatchEvent(new Event("purchaseBrands:changed"));
         } catch {}
       }
 
-      toast.success(applyAll ? "Compra atualizada (todas as parcelas)" : `Parcela ${clickedNum}/${purchase.installments_count ?? 1} atualizada`);
+      toast.success(applyAll ? "Compra atualizada (todas as parcelas)" : `Parcela ${clickedNum} atualizada`);
       onDone();
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); __release(); }
   };
@@ -1522,37 +1559,38 @@ function EditPurchaseForm({ purchase, cats, onDone, isSantanderUnlimited }: any)
           </SelectContent>
         </Select>
       </div>
-      {isSantanderUnlimited && (
-        <div className="space-y-1.5">
-          <Label>Bandeira (Santander Unlimited)</Label>
-          <Select value={form.brand || "none"} onValueChange={(v) => setForm({ ...form, brand: v === "none" ? "" : v })}>
-            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Sem bandeira</SelectItem>
-              <SelectItem value="Visa 2054">Visa • Santander Unlimited</SelectItem>
-              <SelectItem value="Master 3019">Master • Santander Unlimited</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+      {(() => {
+        const isSU = /santander/i.test(purchase.cards?.bank || "") && /unlimited/i.test(purchase.cards?.name || "");
+        if (!isSU) return null;
+        const vNum = purchase.cards?.metadata?.brands?.visa || "2054";
+        const mNum = purchase.cards?.metadata?.brands?.master || "3019";
+        return (
+          <div className="space-y-1.5">
+            <Label>Bandeira (Santander Unlimited)</Label>
+            <Select value={form.brand || "none"} onValueChange={(v) => setForm({ ...form, brand: v === "none" ? "" : v })}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sem bandeira</SelectItem>
+                <SelectItem value={`Visa ${vNum}`}>Visa • {vNum}</SelectItem>
+                <SelectItem value={`Master ${mNum}`}>Master • {mNum}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      })()}
       <label className="flex items-start gap-2 rounded-md border border-border p-2.5 cursor-pointer hover:bg-muted/50">
         <input type="checkbox" checked={applyAll} onChange={e => setApplyAll(e.target.checked)} className="mt-0.5" />
         <div className="text-xs">
           <div className="font-medium text-foreground">Aplicar a todas as parcelas</div>
           <div className="text-muted-foreground">
-            {applyAll
-              ? "O valor e a data serão propagados para todas as parcelas (mantendo intervalo mensal)."
-              : `Somente a parcela ${clickedNum}/${purchase.installments_count ?? 1} será alterada. Ideal para reembolsos ou descontos pontuais.`}
+            {applyAll ? "O valor e a data serão propagados para todas as parcelas." : `Somente a parcela ${clickedNum} será alterada.`}
           </div>
         </div>
       </label>
-
       <Button type="submit" disabled={saving} className="w-full">{saving ? "Salvando…" : "Salvar alterações"}</Button>
     </form>
   );
 }
-
-
 
 function EditCardForm({ card, onDone, onDelete }: any) {
   const [form, setForm] = useState({
@@ -1562,11 +1600,24 @@ function EditCardForm({ card, onDone, onDelete }: any) {
     due_day: card.due_day ?? 10,
     credit_limit: String(card.credit_limit ?? ""),
     color: card.color ?? "#6366f1",
+    last_digits: card.last_digits ?? "",
+    visa_last_digits: card.metadata?.brands?.visa ?? "",
+    master_last_digits: card.metadata?.brands?.master ?? ""
   });
   const [saving, setSaving] = useState(false);
+  const isSU = /santander/i.test(form.bank || "") && /unlimited/i.test(form.name || "");
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!__tryLock()) return; setSaving(true);
     try {
+      const metadata = isSU ? { 
+        ...card.metadata,
+        brands: { 
+          visa: form.visa_last_digits, 
+          master: form.master_last_digits 
+        } 
+      } : (card.metadata || {});
+
       const { error } = await supabase.from("cards").update({
         name: form.name,
         bank: form.bank || null,
@@ -1574,7 +1625,10 @@ function EditCardForm({ card, onDone, onDelete }: any) {
         due_day: Number(form.due_day),
         credit_limit: Number(form.credit_limit) || 0,
         color: form.color,
+        last_digits: form.last_digits || null,
+        metadata
       }).eq("id", card.id);
+
       if (error) throw error;
       toast.success("Cartão atualizado");
       onDone();
@@ -1600,6 +1654,15 @@ function EditCardForm({ card, onDone, onDelete }: any) {
         <div className="space-y-1.5"><Label>Cor</Label><Input type="color" value={form.color} onChange={e => setForm({ ...form, color: e.target.value })} /></div>
       </div>
       <div className="space-y-1.5"><Label>Limite total</Label><Input type="number" step="0.01" value={form.credit_limit} onChange={e => setForm({ ...form, credit_limit: e.target.value })} required /></div>
+      
+      {!isSU ? (
+        <div className="space-y-1.5"><Label>Últimos 4 dígitos</Label><Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} /></div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5"><Label>Final Visa</Label><Input maxLength={4} placeholder="Ex: 2054" value={form.visa_last_digits} onChange={e => setForm({ ...form, visa_last_digits: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label>Final Master</Label><Input maxLength={4} placeholder="Ex: 3019" value={form.master_last_digits} onChange={e => setForm({ ...form, master_last_digits: e.target.value })} /></div>
+        </div>
+      )}
       <div className="flex gap-2">
         <Button type="submit" disabled={saving} className="flex-1">{saving ? "Salvando…" : "Salvar"}</Button>
         <Button type="button" variant="destructive" onClick={remove}>Excluir</Button>
