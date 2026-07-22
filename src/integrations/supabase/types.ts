@@ -14,78 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
-      account_yields: {
+      cartao_compras: {
         Row: {
-          account_id: string
-          amount: number
+          brand: string | null
+          card_id: string
+          category_id: string | null
           created_at: string
-          date: string
-          description: string | null
+          description: string
           id: string
-          updated_at: string
+          import_batch_id: string | null
+          installments_count: number
+          person: string | null
+          purchase_date: string
+          total_amount: number
+          user_id: string
         }
         Insert: {
-          account_id: string
-          amount: number
+          brand?: string | null
+          card_id: string
+          category_id?: string | null
           created_at?: string
-          date?: string
-          description?: string | null
+          description: string
           id?: string
-          updated_at?: string
+          import_batch_id?: string | null
+          installments_count?: number
+          person?: string | null
+          purchase_date: string
+          total_amount: number
+          user_id: string
         }
         Update: {
-          account_id?: string
-          amount?: number
+          brand?: string | null
+          card_id?: string
+          category_id?: string | null
           created_at?: string
-          date?: string
-          description?: string | null
+          description?: string
           id?: string
-          updated_at?: string
+          import_batch_id?: string | null
+          installments_count?: number
+          person?: string | null
+          purchase_date?: string
+          total_amount?: number
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "account_yields_account_id_fkey"
-            columns: ["account_id"]
+            foreignKeyName: "card_purchases_card_id_fkey"
+            columns: ["card_id"]
             isOneToOne: false
-            referencedRelation: "accounts"
+            referencedRelation: "cartoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "card_purchases_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "card_purchases_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "lotes_importacao"
             referencedColumns: ["id"]
           },
         ]
       }
-      accounts: {
-        Row: {
-          account_name: string
-          balance: number
-          bank: string | null
-          created_at: string
-          id: string
-          updated_at: string
-          user_id: string
-          yield_percentage: number
-        }
-        Insert: {
-          account_name: string
-          balance?: number
-          bank?: string | null
-          created_at?: string
-          id?: string
-          updated_at?: string
-          user_id: string
-          yield_percentage?: number
-        }
-        Update: {
-          account_name?: string
-          balance?: number
-          bank?: string | null
-          created_at?: string
-          id?: string
-          updated_at?: string
-          user_id?: string
-          yield_percentage?: number
-        }
-        Relationships: []
-      }
-      card_installment_payments: {
+      cartao_parcela_pagamentos: {
         Row: {
           account_id: string | null
           amount: number
@@ -130,19 +126,19 @@ export type Database = {
             foreignKeyName: "card_installment_payments_account_id_fkey"
             columns: ["account_id"]
             isOneToOne: false
-            referencedRelation: "accounts"
+            referencedRelation: "contas"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "card_installment_payments_installment_id_fkey"
             columns: ["installment_id"]
             isOneToOne: false
-            referencedRelation: "card_installments"
+            referencedRelation: "cartao_parcelas"
             referencedColumns: ["id"]
           },
         ]
       }
-      card_installments: {
+      cartao_parcelas: {
         Row: {
           amount: number
           card_id: string
@@ -193,93 +189,26 @@ export type Database = {
             foreignKeyName: "card_installments_card_id_fkey"
             columns: ["card_id"]
             isOneToOne: false
-            referencedRelation: "cards"
+            referencedRelation: "cartoes"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "card_installments_import_batch_id_fkey"
             columns: ["import_batch_id"]
             isOneToOne: false
-            referencedRelation: "import_batches"
+            referencedRelation: "lotes_importacao"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "card_installments_purchase_id_fkey"
             columns: ["purchase_id"]
             isOneToOne: false
-            referencedRelation: "card_purchases"
+            referencedRelation: "cartao_compras"
             referencedColumns: ["id"]
           },
         ]
       }
-      card_purchases: {
-        Row: {
-          brand: string | null
-          card_id: string
-          category_id: string | null
-          created_at: string
-          description: string
-          id: string
-          import_batch_id: string | null
-          installments_count: number
-          person: string | null
-          purchase_date: string
-          total_amount: number
-          user_id: string
-        }
-        Insert: {
-          brand?: string | null
-          card_id: string
-          category_id?: string | null
-          created_at?: string
-          description: string
-          id?: string
-          import_batch_id?: string | null
-          installments_count?: number
-          person?: string | null
-          purchase_date: string
-          total_amount: number
-          user_id: string
-        }
-        Update: {
-          brand?: string | null
-          card_id?: string
-          category_id?: string | null
-          created_at?: string
-          description?: string
-          id?: string
-          import_batch_id?: string | null
-          installments_count?: number
-          person?: string | null
-          purchase_date?: string
-          total_amount?: number
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "card_purchases_card_id_fkey"
-            columns: ["card_id"]
-            isOneToOne: false
-            referencedRelation: "cards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "card_purchases_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "card_purchases_import_batch_id_fkey"
-            columns: ["import_batch_id"]
-            isOneToOne: false
-            referencedRelation: "import_batches"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      cards: {
+      cartoes: {
         Row: {
           bank: string | null
           closing_day: number
@@ -321,7 +250,7 @@ export type Database = {
         }
         Relationships: []
       }
-      categories: {
+      categorias: {
         Row: {
           budget: number | null
           created_at: string
@@ -354,7 +283,596 @@ export type Database = {
         }
         Relationships: []
       }
-      financial_request_history: {
+      configuracoes_globais: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string | null
+          value: string | null
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string | null
+          value?: string | null
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string | null
+          value?: string | null
+        }
+        Relationships: []
+      }
+      conta_rendimentos: {
+        Row: {
+          account_id: string
+          amount: number
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_yields_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "contas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contas: {
+        Row: {
+          account_name: string
+          balance: number
+          bank: string | null
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          yield_percentage: number
+        }
+        Insert: {
+          account_name: string
+          balance?: number
+          bank?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          yield_percentage?: number
+        }
+        Update: {
+          account_name?: string
+          balance?: number
+          bank?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          yield_percentage?: number
+        }
+        Relationships: []
+      }
+      emprestimo_pagamentos: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          loan_id: string
+          notes: string | null
+          paid_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          loan_id: string
+          notes?: string | null
+          paid_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          loan_id?: string
+          notes?: string | null
+          paid_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_payments_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "emprestimos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      emprestimos: {
+        Row: {
+          borrower_name: string
+          card_cost: number
+          cost_basis: number | null
+          created_at: string
+          due_date: string | null
+          fixed_rate: number
+          funding_source: string
+          id: string
+          installments: number
+          interest_rate: number
+          interest_type: string
+          notes: string | null
+          potential_gain: number
+          principal: number
+          start_date: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          borrower_name: string
+          card_cost?: number
+          cost_basis?: number | null
+          created_at?: string
+          due_date?: string | null
+          fixed_rate?: number
+          funding_source?: string
+          id?: string
+          installments?: number
+          interest_rate?: number
+          interest_type?: string
+          notes?: string | null
+          potential_gain?: number
+          principal: number
+          start_date?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          borrower_name?: string
+          card_cost?: number
+          cost_basis?: number | null
+          created_at?: string
+          due_date?: string | null
+          fixed_rate?: number
+          funding_source?: string
+          id?: string
+          installments?: number
+          interest_rate?: number
+          interest_type?: string
+          notes?: string | null
+          potential_gain?: number
+          principal?: number
+          start_date?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      lotes_importacao: {
+        Row: {
+          created_at: string
+          id: string
+          source_filename: string | null
+          summary: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          source_filename?: string | null
+          summary?: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          source_filename?: string | null
+          summary?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
+      membros_acesso_compartilhado: {
+        Row: {
+          added_at: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      milhas_ganhos: {
+        Row: {
+          bonus_percent: number | null
+          cost: number | null
+          created_at: string
+          id: string
+          month: string
+          note: string | null
+          parity: number | null
+          points: number
+          program_id: string
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bonus_percent?: number | null
+          cost?: number | null
+          created_at?: string
+          id?: string
+          month: string
+          note?: string | null
+          parity?: number | null
+          points?: number
+          program_id: string
+          source: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bonus_percent?: number | null
+          cost?: number | null
+          created_at?: string
+          id?: string
+          month?: string
+          note?: string | null
+          parity?: number | null
+          points?: number
+          program_id?: string
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milhas_earnings_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "milhas_programas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      milhas_programas: {
+        Row: {
+          balance: number
+          category: string
+          color: string
+          created_at: string
+          id: string
+          monthly_goal: number | null
+          name: string
+          updated_at: string
+          user_id: string
+          value_per_thousand: number
+        }
+        Insert: {
+          balance?: number
+          category: string
+          color?: string
+          created_at?: string
+          id?: string
+          monthly_goal?: number | null
+          name: string
+          updated_at?: string
+          user_id: string
+          value_per_thousand?: number
+        }
+        Update: {
+          balance?: number
+          category?: string
+          color?: string
+          created_at?: string
+          id?: string
+          monthly_goal?: number | null
+          name?: string
+          updated_at?: string
+          user_id?: string
+          value_per_thousand?: number
+        }
+        Relationships: []
+      }
+      milhas_resgates: {
+        Row: {
+          cash_equivalent: number | null
+          cash_value: number | null
+          created_at: string
+          date: string
+          destination: string | null
+          id: string
+          miles_cost: number | null
+          note: string | null
+          points: number
+          program_id: string
+          screenshot_url: string | null
+          taxes: number | null
+          travel_date: string | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cash_equivalent?: number | null
+          cash_value?: number | null
+          created_at?: string
+          date: string
+          destination?: string | null
+          id?: string
+          miles_cost?: number | null
+          note?: string | null
+          points?: number
+          program_id: string
+          screenshot_url?: string | null
+          taxes?: number | null
+          travel_date?: string | null
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cash_equivalent?: number | null
+          cash_value?: number | null
+          created_at?: string
+          date?: string
+          destination?: string | null
+          id?: string
+          miles_cost?: number | null
+          note?: string | null
+          points?: number
+          program_id?: string
+          screenshot_url?: string | null
+          taxes?: number | null
+          travel_date?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milhas_redemptions_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "milhas_programas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      milhas_transferencias: {
+        Row: {
+          bonus_percent: number
+          cash_value: number
+          created_at: string
+          date: string
+          from_program_id: string
+          id: string
+          note: string | null
+          points_received: number
+          points_sent: number
+          to_program_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bonus_percent?: number
+          cash_value?: number
+          created_at?: string
+          date: string
+          from_program_id: string
+          id?: string
+          note?: string | null
+          points_received?: number
+          points_sent?: number
+          to_program_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bonus_percent?: number
+          cash_value?: number
+          created_at?: string
+          date?: string
+          from_program_id?: string
+          id?: string
+          note?: string | null
+          points_received?: number
+          points_sent?: number
+          to_program_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milhas_transfers_from_program_id_fkey"
+            columns: ["from_program_id"]
+            isOneToOne: false
+            referencedRelation: "milhas_programas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notas: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          pinned: boolean
+          sheet_data: Json | null
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          id?: string
+          pinned?: boolean
+          sheet_data?: Json | null
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          pinned?: boolean
+          sheet_data?: Json | null
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      perfis: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pessoas: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          phone: string | null
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          phone?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      regras_recorrentes: {
+        Row: {
+          active: boolean
+          amount: number
+          category_id: string | null
+          created_at: string
+          day_of_month: number
+          description: string
+          id: string
+          import_batch_id: string | null
+          kind: string
+          notes: string | null
+          person: string | null
+          start_month: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          day_of_month: number
+          description: string
+          id?: string
+          import_batch_id?: string | null
+          kind?: string
+          notes?: string | null
+          person?: string | null
+          start_month?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          day_of_month?: number
+          description?: string
+          id?: string
+          import_batch_id?: string | null
+          kind?: string
+          notes?: string | null
+          person?: string | null
+          start_month?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_rules_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_rules_import_batch_id_fkey"
+            columns: ["import_batch_id"]
+            isOneToOne: false
+            referencedRelation: "lotes_importacao"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      requisicao_financeira_historico: {
         Row: {
           action: string
           changes: Json
@@ -384,12 +902,12 @@ export type Database = {
             foreignKeyName: "financial_request_history_request_id_fkey"
             columns: ["request_id"]
             isOneToOne: false
-            referencedRelation: "financial_requests"
+            referencedRelation: "requisicoes_financeiras"
             referencedColumns: ["id"]
           },
         ]
       }
-      financial_requests: {
+      requisicoes_financeiras: {
         Row: {
           ai_confidence: number | null
           ai_reason: string | null
@@ -485,551 +1003,33 @@ export type Database = {
             foreignKeyName: "financial_requests_import_batch_id_fkey"
             columns: ["import_batch_id"]
             isOneToOne: false
-            referencedRelation: "import_batches"
+            referencedRelation: "lotes_importacao"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "financial_requests_suggested_account_id_fkey"
             columns: ["suggested_account_id"]
             isOneToOne: false
-            referencedRelation: "accounts"
+            referencedRelation: "contas"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "financial_requests_suggested_card_id_fkey"
             columns: ["suggested_card_id"]
             isOneToOne: false
-            referencedRelation: "cards"
+            referencedRelation: "cartoes"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "financial_requests_suggested_category_id_fkey"
             columns: ["suggested_category_id"]
             isOneToOne: false
-            referencedRelation: "categories"
+            referencedRelation: "categorias"
             referencedColumns: ["id"]
           },
         ]
       }
-      global_settings: {
-        Row: {
-          id: string
-          key: string
-          updated_at: string | null
-          value: string | null
-        }
-        Insert: {
-          id?: string
-          key: string
-          updated_at?: string | null
-          value?: string | null
-        }
-        Update: {
-          id?: string
-          key?: string
-          updated_at?: string | null
-          value?: string | null
-        }
-        Relationships: []
-      }
-      import_batches: {
-        Row: {
-          created_at: string
-          id: string
-          source_filename: string | null
-          summary: Json
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          source_filename?: string | null
-          summary?: Json
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          source_filename?: string | null
-          summary?: Json
-          user_id?: string
-        }
-        Relationships: []
-      }
-      loan_payments: {
-        Row: {
-          amount: number
-          created_at: string
-          id: string
-          loan_id: string
-          notes: string | null
-          paid_at: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          id?: string
-          loan_id: string
-          notes?: string | null
-          paid_at?: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          id?: string
-          loan_id?: string
-          notes?: string | null
-          paid_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "loan_payments_loan_id_fkey"
-            columns: ["loan_id"]
-            isOneToOne: false
-            referencedRelation: "loans"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      loans: {
-        Row: {
-          borrower_name: string
-          card_cost: number
-          cost_basis: number | null
-          created_at: string
-          due_date: string | null
-          fixed_rate: number
-          funding_source: string
-          id: string
-          installments: number
-          interest_rate: number
-          interest_type: string
-          notes: string | null
-          potential_gain: number
-          principal: number
-          start_date: string
-          status: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          borrower_name: string
-          card_cost?: number
-          cost_basis?: number | null
-          created_at?: string
-          due_date?: string | null
-          fixed_rate?: number
-          funding_source?: string
-          id?: string
-          installments?: number
-          interest_rate?: number
-          interest_type?: string
-          notes?: string | null
-          potential_gain?: number
-          principal: number
-          start_date?: string
-          status?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          borrower_name?: string
-          card_cost?: number
-          cost_basis?: number | null
-          created_at?: string
-          due_date?: string | null
-          fixed_rate?: number
-          funding_source?: string
-          id?: string
-          installments?: number
-          interest_rate?: number
-          interest_type?: string
-          notes?: string | null
-          potential_gain?: number
-          principal?: number
-          start_date?: string
-          status?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      milhas_earnings: {
-        Row: {
-          bonus_percent: number | null
-          cost: number | null
-          created_at: string
-          id: string
-          month: string
-          note: string | null
-          parity: number | null
-          points: number
-          program_id: string
-          source: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          bonus_percent?: number | null
-          cost?: number | null
-          created_at?: string
-          id?: string
-          month: string
-          note?: string | null
-          parity?: number | null
-          points?: number
-          program_id: string
-          source: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          bonus_percent?: number | null
-          cost?: number | null
-          created_at?: string
-          id?: string
-          month?: string
-          note?: string | null
-          parity?: number | null
-          points?: number
-          program_id?: string
-          source?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "milhas_earnings_program_id_fkey"
-            columns: ["program_id"]
-            isOneToOne: false
-            referencedRelation: "milhas_programs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      milhas_programs: {
-        Row: {
-          balance: number
-          category: string
-          color: string
-          created_at: string
-          id: string
-          monthly_goal: number | null
-          name: string
-          updated_at: string
-          user_id: string
-          value_per_thousand: number
-        }
-        Insert: {
-          balance?: number
-          category: string
-          color?: string
-          created_at?: string
-          id?: string
-          monthly_goal?: number | null
-          name: string
-          updated_at?: string
-          user_id: string
-          value_per_thousand?: number
-        }
-        Update: {
-          balance?: number
-          category?: string
-          color?: string
-          created_at?: string
-          id?: string
-          monthly_goal?: number | null
-          name?: string
-          updated_at?: string
-          user_id?: string
-          value_per_thousand?: number
-        }
-        Relationships: []
-      }
-      milhas_redemptions: {
-        Row: {
-          cash_equivalent: number | null
-          cash_value: number | null
-          created_at: string
-          date: string
-          destination: string | null
-          id: string
-          miles_cost: number | null
-          note: string | null
-          points: number
-          program_id: string
-          screenshot_url: string | null
-          taxes: number | null
-          travel_date: string | null
-          type: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          cash_equivalent?: number | null
-          cash_value?: number | null
-          created_at?: string
-          date: string
-          destination?: string | null
-          id?: string
-          miles_cost?: number | null
-          note?: string | null
-          points?: number
-          program_id: string
-          screenshot_url?: string | null
-          taxes?: number | null
-          travel_date?: string | null
-          type: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          cash_equivalent?: number | null
-          cash_value?: number | null
-          created_at?: string
-          date?: string
-          destination?: string | null
-          id?: string
-          miles_cost?: number | null
-          note?: string | null
-          points?: number
-          program_id?: string
-          screenshot_url?: string | null
-          taxes?: number | null
-          travel_date?: string | null
-          type?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "milhas_redemptions_program_id_fkey"
-            columns: ["program_id"]
-            isOneToOne: false
-            referencedRelation: "milhas_programs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      milhas_transfers: {
-        Row: {
-          bonus_percent: number
-          cash_value: number
-          created_at: string
-          date: string
-          from_program_id: string
-          id: string
-          note: string | null
-          points_received: number
-          points_sent: number
-          to_program_name: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          bonus_percent?: number
-          cash_value?: number
-          created_at?: string
-          date: string
-          from_program_id: string
-          id?: string
-          note?: string | null
-          points_received?: number
-          points_sent?: number
-          to_program_name: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          bonus_percent?: number
-          cash_value?: number
-          created_at?: string
-          date?: string
-          from_program_id?: string
-          id?: string
-          note?: string | null
-          points_received?: number
-          points_sent?: number
-          to_program_name?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "milhas_transfers_from_program_id_fkey"
-            columns: ["from_program_id"]
-            isOneToOne: false
-            referencedRelation: "milhas_programs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      notes: {
-        Row: {
-          content: string
-          created_at: string
-          id: string
-          pinned: boolean
-          sheet_data: Json | null
-          title: string
-          type: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          content?: string
-          created_at?: string
-          id?: string
-          pinned?: boolean
-          sheet_data?: Json | null
-          title?: string
-          type?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          id?: string
-          pinned?: boolean
-          sheet_data?: Json | null
-          title?: string
-          type?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      people: {
-        Row: {
-          color: string | null
-          created_at: string
-          id: string
-          name: string
-          phone: string | null
-          user_id: string
-        }
-        Insert: {
-          color?: string | null
-          created_at?: string
-          id?: string
-          name: string
-          phone?: string | null
-          user_id: string
-        }
-        Update: {
-          color?: string | null
-          created_at?: string
-          id?: string
-          name?: string
-          phone?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          created_at: string
-          display_name: string | null
-          id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          display_name?: string | null
-          id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          display_name?: string | null
-          id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      recurring_rules: {
-        Row: {
-          active: boolean
-          amount: number
-          category_id: string | null
-          created_at: string
-          day_of_month: number
-          description: string
-          id: string
-          import_batch_id: string | null
-          kind: string
-          notes: string | null
-          person: string | null
-          start_month: string
-          user_id: string
-        }
-        Insert: {
-          active?: boolean
-          amount: number
-          category_id?: string | null
-          created_at?: string
-          day_of_month: number
-          description: string
-          id?: string
-          import_batch_id?: string | null
-          kind?: string
-          notes?: string | null
-          person?: string | null
-          start_month?: string
-          user_id: string
-        }
-        Update: {
-          active?: boolean
-          amount?: number
-          category_id?: string | null
-          created_at?: string
-          day_of_month?: number
-          description?: string
-          id?: string
-          import_batch_id?: string | null
-          kind?: string
-          notes?: string | null
-          person?: string | null
-          start_month?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "recurring_rules_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "recurring_rules_import_batch_id_fkey"
-            columns: ["import_batch_id"]
-            isOneToOne: false
-            referencedRelation: "import_batches"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      shared_access_members: {
-        Row: {
-          added_at: string
-          user_id: string
-        }
-        Insert: {
-          added_at?: string
-          user_id: string
-        }
-        Update: {
-          added_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      transaction_adjustments: {
+      transacao_ajustes: {
         Row: {
           amount: number
           created_at: string
@@ -1062,12 +1062,12 @@ export type Database = {
             foreignKeyName: "transaction_adjustments_transaction_id_fkey"
             columns: ["transaction_id"]
             isOneToOne: false
-            referencedRelation: "transactions"
+            referencedRelation: "transacoes"
             referencedColumns: ["id"]
           },
         ]
       }
-      transactions: {
+      transacoes: {
         Row: {
           account_id: string | null
           account_tayane_id: string | null
@@ -1145,49 +1145,49 @@ export type Database = {
             foreignKeyName: "transactions_account_id_fkey"
             columns: ["account_id"]
             isOneToOne: false
-            referencedRelation: "accounts"
+            referencedRelation: "contas"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "transactions_account_tayane_id_fkey"
             columns: ["account_tayane_id"]
             isOneToOne: false
-            referencedRelation: "accounts"
+            referencedRelation: "contas"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "transactions_card_id_fkey"
             columns: ["card_id"]
             isOneToOne: false
-            referencedRelation: "cards"
+            referencedRelation: "cartoes"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "transactions_card_installment_id_fkey"
             columns: ["card_installment_id"]
             isOneToOne: false
-            referencedRelation: "card_installments"
+            referencedRelation: "cartao_parcelas"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "transactions_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
-            referencedRelation: "categories"
+            referencedRelation: "categorias"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "transactions_import_batch_id_fkey"
             columns: ["import_batch_id"]
             isOneToOne: false
-            referencedRelation: "import_batches"
+            referencedRelation: "lotes_importacao"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "transactions_rule_id_fkey"
             columns: ["rule_id"]
             isOneToOne: false
-            referencedRelation: "recurring_rules"
+            referencedRelation: "regras_recorrentes"
             referencedColumns: ["id"]
           },
         ]
