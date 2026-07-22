@@ -123,8 +123,7 @@ function PeopleListSection() {
   const remove = async (id: string, name: string) => {
     if (!confirm(`Excluir pessoa "${name}"? Todos os lançamentos vinculados a esta pessoa também serão excluídos.`)) return;
     
-    // Primeiro deletamos as parcelas de cartão vinculadas (via compras)
-    // Nota: O schema indica que card_purchases tem o campo 'person'
+    // Deletamos as parcelas de cartão vinculadas (via compras)
     const { data: purchases } = await supabase.from("card_purchases").select("id").eq("person", name);
     if (purchases && purchases.length > 0) {
       const pIds = purchases.map(p => p.id);
@@ -137,7 +136,12 @@ function PeopleListSection() {
 
     // Finalmente deletamos a pessoa
     const { error } = await supabase.from("people").delete().eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Pessoa e lançamentos removidos"); invalidate("people"); invalidate("transactions"); invalidate("installments"); }
+    if (error) toast.error(error.message); else { 
+      toast.success("Pessoa e lançamentos removidos"); 
+      invalidate("people"); 
+      invalidate("transactions"); 
+      invalidate("installments"); 
+    }
   };
   const [open, setOpen] = useLsBool("peopleList", true);
   return (
