@@ -1029,7 +1029,7 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
             Pago via cartão
             <span className="text-[10px] px-2 py-0.5 rounded-full border border-border/50 bg-background/60 text-muted-foreground">{cardItems.length}</span>
           </span>
-          <span className="tabular-nums font-semibold">{brl(cat.card)}</span>
+          <span className="tabular-nums font-bold">{brl(cat.card)}</span>
         </button>
         {showCard && (
           cardItems.length === 0 ? (
