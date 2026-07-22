@@ -245,7 +245,7 @@ function CartoesPage() {
   }, [people]);
 
   const totals = useMemo(() => {
-    const map: Record<string, { fatura: number; restante: number; brandTotals: Record<string, number> }> = {};
+    const map: Record<string, { fatura: number; restante: number; brandTotals: Record<string, { fatura: number; restante: number }> }> = {};
     const isFamilia = (s: string) => (s || "").toLowerCase().trim() === "familia";
 
     monthInst.forEach((i: any) => {
@@ -274,20 +274,20 @@ function CartoesPage() {
         m.fatura += valueForFilter;
         
         const b = i.cartao_compras?.brand || "Default";
-        m.brandTotals[b] = (m.brandTotals[b] ?? 0) + valueForFilter;
+        m.brandTotals[b] = m.brandTotals[b] ?? { fatura: 0, restante: 0 };
+        m.brandTotals[b].fatura += valueForFilter;
 
         if (statusFilter !== "paid" && payment.hasPending) {
           let pendingForFilter = payment.remaining;
           
           if (isFamilia && (filter !== "all" || filter2 !== "all")) {
-            // No caso de pagamento parcial de conta família, 
-            // assumimos que o que foi pago abate do total e o restante divide.
-            // Se já foi pago mais que a metade do total, a pessoa do filtro já pagou sua parte?
-            // Para simplificar: (Total - Pago) / 2
             pendingForFilter = payment.remaining / 2;
           }
           
           m.restante += pendingForFilter;
+          const b = i.cartao_compras?.brand || "Default";
+          m.brandTotals[b] = m.brandTotals[b] ?? { fatura: 0, restante: 0 };
+          m.brandTotals[b].restante += pendingForFilter;
         }
       }
     });
@@ -491,10 +491,15 @@ function CartoesPage() {
                   </div>
                   {totals[c.id]?.brandTotals && Object.keys(totals[c.id].brandTotals).length > 1 && (
                     <div className="flex flex-col gap-1 pr-3 border-r border-border/50">
-                      {Object.entries(totals[c.id].brandTotals).map(([brand, val], bi) => (
+                      {Object.entries(totals[c.id].brandTotals).map(([brand, data], bi) => (
                         <div key={bi} className="flex flex-col">
                           <span className="text-[8px] uppercase text-muted-foreground font-bold">{brand}</span>
-                          <span className="text-[11px] font-semibold">{brl(val)}</span>
+                          <div className="flex flex-col leading-none">
+                            <span className="text-[10px] font-semibold">{brl(data.fatura)}</span>
+                            {data.restante > 0.01 && (
+                              <span className="text-[8px] text-destructive font-medium">Rest. {brl(data.restante)}</span>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
