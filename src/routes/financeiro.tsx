@@ -692,7 +692,7 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
                         </td>
                         <td className="p-2 whitespace-nowrap text-muted-foreground">{inst.installment_number}/{cp.installments_count ?? "?"}</td>
                         <td className="p-2 whitespace-nowrap">{cp.person || inst.person || "—"}</td>
-                        <td className="p-2 text-right tabular-nums font-medium">{brl(share)}</td>
+                        <td className="p-2 text-right tabular-nums font-bold">{brl(share)}</td>
                       </tr>
                     );
                   })}
