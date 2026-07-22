@@ -111,7 +111,7 @@ function FinanceiroPage() {
   const baseTx = useMemo(
     () =>
       merged.flatMap((t: any) => {
-        if (t.kind === "expense" && t.person === "Família") {
+        if (t.kind === "expense" && (t.person === "Família" || t._debtPerson === "Família")) {
           const half = Number(t.amount) / 2;
           return [
             { ...t, id: `${t.id}::L`, person: "Família", _owner: "Lorran", amount: half, _familiaSplit: true, _origId: t.id, _originalItem: t._originalItem },
@@ -127,7 +127,8 @@ function FinanceiroPage() {
   // Quando filtrar por "Família", mostramos os lançamentos originais com valor cheio.
   // Nos demais casos usamos baseTx (com split 50/50 de Família p/ Lorran e Tayane).
   const lista = useMemo(() => {
-    const source = personFilter === "Família" ? merged : baseTx;
+    const isFamilyFilter = personFilter.toLowerCase() === "família";
+    const source = isFamilyFilter ? merged : baseTx;
     return source
       .filter((t: any) => kindFilter === "all" || t.kind === kindFilter)
       .filter((t: any) => {
@@ -137,7 +138,7 @@ function FinanceiroPage() {
         if (selY !== "all" && d.getFullYear() !== selY) return false;
         return true;
       })
-      .filter((t: any) => personFilter === "all" || (t._owner || t.person) === personFilter)
+      .filter((t: any) => personFilter === "all" || (t._owner || t.person).toLowerCase() === personFilter.toLowerCase())
       .filter((t: any) => statusFilter === "all" || t.status === statusFilter)
       .filter((t: any) =>
         !search.trim() || (t.description || "").toLowerCase().includes(search.toLowerCase()),
