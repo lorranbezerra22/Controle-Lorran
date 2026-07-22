@@ -964,19 +964,34 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
             <Input type="number" min="1" max="60" value={form.installments} onChange={(e) => setForm({ ...form, installments: e.target.value })} />
           </div>
         )}
-        <div className="space-y-1.5 flex items-end">
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.is_fixed} onChange={(e) => setForm({ ...form, is_fixed: e.target.checked })} />
-            Despesa fixa
-          </label>
+        <div className="space-y-1.5 flex items-center justify-between p-3 rounded-xl border border-border/50 bg-muted/20">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-medium">Despesa fixa</span>
+            <span className="text-[10px] text-muted-foreground">Repetir mensalmente</span>
+          </div>
+          <input 
+            type="checkbox" 
+            className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
+            checked={form.is_fixed} 
+            onChange={(e) => setForm({ ...form, is_fixed: e.target.checked })} 
+          />
         </div>
       </div>
       {!isEdit && (
         <>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={splitMode} onChange={(e) => setSplitMode(e.target.checked)} />
-            Dividir entre várias pessoas
-          </label>
+          <div className="space-y-1.5 flex items-center justify-between p-3 rounded-xl border border-border/50 bg-muted/20">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-sm font-medium">Dividir entre pessoas</span>
+              <span className="text-[10px] text-muted-foreground">Rachar a compra em partes</span>
+            </div>
+            <input 
+              type="checkbox" 
+              className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
+              checked={splitMode} 
+              onChange={(e) => setSplitMode(e.target.checked)} 
+            />
+          </div>
+
           {splitMode && (
             <div className="space-y-2 rounded-xl border border-border bg-gradient-to-br from-muted/30 to-transparent p-2.5">
               <Label className="text-xs">Selecione as pessoas</Label>
