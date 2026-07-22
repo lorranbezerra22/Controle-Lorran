@@ -510,9 +510,9 @@ function CartoesPage() {
                     const rest = totals[c.id]?.restante ?? 0;
                     const paid = rest === 0;
                     return (
-                      <div className={`flex flex-col items-end px-2.5 py-1.5 rounded-lg border ${paid ? "border-success/30 bg-success/10" : "border-destructive/25 bg-destructive/10"}`}>
-                        <span className={`text-[9px] uppercase tracking-[0.18em] font-semibold ${paid ? "text-success" : "text-destructive"}`}>{paid ? "Liquidada" : "Restante"}</span>
-                        <span className={`text-sm font-bold tabular-nums ${paid ? "text-success" : "text-destructive"}`}>{brl(rest)}</span>
+                      <div className={`flex flex-col items-end px-3 py-2 rounded-xl border ${paid ? "border-success/30 bg-success/10" : "border-destructive/25 bg-destructive/10"}`}>
+                        <span className={`text-[10px] uppercase tracking-[0.2em] font-black ${paid ? "text-success" : "text-destructive"}`}>{paid ? "Liquidada" : "Restante"}</span>
+                        <span className={`text-base font-black tabular-nums ${paid ? "text-success" : "text-destructive"}`}>{brl(rest)}</span>
                       </div>
                     );
                   })()}
