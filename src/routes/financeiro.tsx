@@ -3,7 +3,7 @@ import { ProtectedShell } from "@/components/ProtectedShell";
 import { useTransactions, useCategories, usePeople, useAccounts, useInstallments, useCards } from "@/lib/queries";
 import { brl, fmtDate } from "@/lib/format";
 import { useMemo, useState, useEffect } from "react";
-import { TrendingUp, TrendingDown, Wallet, Calendar, Users, ArrowUpRight, Search, Scale, Undo2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Calendar, Users, ArrowUpRight, Search, Scale, Undo2, CreditCard, ChevronDown, ChevronRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -409,7 +409,7 @@ function FinanceiroPage() {
             <div>
               <DialogTitle className="text-xl flex items-center gap-2">
                 {openCat?.name}
-                <Badge variant={openCat?.kind === "income" ? "success" : "destructive"} className="ml-1 uppercase tracking-tighter text-[10px]">
+                <Badge variant={openCat?.kind === "income" ? "secondary" : "destructive"} className="ml-1 uppercase tracking-tighter text-[10px]">
                   {openCat?.kind === "income" ? "Receitas" : "Despesas"}
                 </Badge>
               </DialogTitle>
