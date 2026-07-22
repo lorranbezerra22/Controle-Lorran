@@ -662,15 +662,15 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
             <div className="text-xs text-muted-foreground p-4 text-center border-t border-border/60">Nenhuma compra no cartão para esta categoria.</div>
           ) : (
             <div className="overflow-x-auto border-t border-border/60">
-              <table className="w-full text-xs text-left">
+              <table className="w-full text-[11px] text-left">
                 <thead className="bg-muted/20 text-muted-foreground">
                   <tr>
-                    <th className="p-2 font-medium">Data</th>
-                    <th className="p-2 font-medium">Descrição</th>
-                    <th className="p-2 font-medium">Cartão</th>
-                    <th className="p-2 font-medium">Parcela</th>
-                    <th className="p-2 font-medium">Pessoa</th>
-                    <th className="p-2 text-right font-medium">Valor</th>
+                    <th className="p-2 font-semibold">Data</th>
+                    <th className="p-2 font-semibold">Descrição</th>
+                    <th className="p-2 font-semibold">Cartão</th>
+                    <th className="p-2 font-semibold">Parcela</th>
+                    <th className="p-2 font-semibold">Pessoa</th>
+                    <th className="p-2 text-right font-semibold">Valor</th>
                   </tr>
                 </thead>
                 <tbody>
