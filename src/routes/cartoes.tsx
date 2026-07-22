@@ -1015,7 +1015,12 @@ function CardForm({ onDone }: any) {
     <form onSubmit={submit} className="space-y-3">
       <div className="space-y-1.5"><Label>Nome do cartão</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required placeholder="Nubank, Santander…" /></div>
       <div className="space-y-1.5"><Label>Banco</Label>
-        <Select value={form.bank || undefined} onValueChange={(v) => { const b = findBank(v); setForm({ ...form, bank: b.name, color: b.color }); }}>
+        <Select value={form.bank || undefined} onValueChange={(v) => { 
+          const b = findBank(v); 
+          let newName = form.name;
+          if (b.id === "santander" && !form.name) newName = "Santander Unlimited";
+          setForm({ ...form, bank: b.name, color: b.color, name: newName }); 
+        }}>
           <SelectTrigger><SelectValue placeholder="Selecione o banco" /></SelectTrigger>
           <SelectContent>{BANKS.map((b) => <SelectItem key={b.id} value={b.name}><div className="flex items-center gap-2"><BankIcon bank={b.name} size={18} square /><span>{b.name}</span></div></SelectItem>)}</SelectContent>
         </Select>
