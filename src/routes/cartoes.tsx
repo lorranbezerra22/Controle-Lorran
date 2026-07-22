@@ -493,7 +493,7 @@ function CartoesPage() {
                     </div>
                   </div>
                   {totals[c.id]?.brandTotals && Object.keys(totals[c.id].brandTotals).length > 1 && (
-                    <div className="flex flex-col gap-1.5 pr-4 border-r border-border/60">
+                    <div className="flex flex-col gap-1.5 pr-6 border-r border-border/60">
                       {Object.entries(totals[c.id].brandTotals).map(([brand, data], bi) => (
                         <div key={bi} className="flex flex-col">
                           <span className="text-[9px] uppercase text-muted-foreground font-black tracking-wider">{brand}</span>
