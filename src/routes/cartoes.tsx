@@ -1716,9 +1716,24 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
               <div className="text-xs font-medium">Vincular Sub-Cartões</div>
               <div className="text-[10px] text-muted-foreground">Adicione sub-cartões que serão agregados a este principal</div>
             </div>
-            <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] gap-1">
-              <Plus className="w-3 h-3" /> Adicionar Sub-Cartão
-            </Button>
+            <div className="w-full space-y-2">
+              <Label className="text-[10px] text-muted-foreground uppercase">Cartão Principal</Label>
+              <Select value={form.pai_id} onValueChange={(v) => setForm({ ...form, pai_id: v })}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Selecione o mestre" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cards.filter((c: any) => c.id !== initialData?.id && !c.pai_id).map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <div className="flex items-center gap-2">
+                        <BankIcon bank={c.bank} size={14} square />
+                        <span>{c.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="text-[10px] text-muted-foreground italic text-center">
             Informações de faturas e limites serão centralizadas no cartão mestre.
