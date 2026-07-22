@@ -1521,7 +1521,6 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
     closing_day: initialData?.closing_day ?? 1,
     due_day: initialData?.due_day ?? 10,
     credit_limit: String(initialData?.credit_limit ?? ""),
-    color: initialData?.color ?? "#6366f1",
     last_digits: initialData?.last_digits ?? "",
     visa_last_digits: initialData?.metadata?.brands?.visa ?? "",
     master_last_digits: initialData?.metadata?.brands?.master ?? ""
@@ -1532,6 +1531,7 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!__tryLock()) return; setSaving(true);
     try {
+      const bInfo = findBank(form.bank);
       const metadata = isSU ? { 
         ...(initialData?.metadata || {}),
         brands: { 
@@ -1546,7 +1546,7 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
         closing_day: Number(form.closing_day),
         due_day: Number(form.due_day),
         credit_limit: Number(form.credit_limit) || 0,
-        color: form.color,
+        color: bInfo.color,
         last_digits: form.last_digits || null,
         metadata
       };
@@ -1576,7 +1576,12 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
     <form onSubmit={submit} className="space-y-3">
       <div className="space-y-1.5"><Label>Nome</Label><SmartInput value={form.name} onChange={(v) => setForm({ ...form, name: v })} required /></div>
       <div className="space-y-1.5"><Label>Banco</Label>
-        <Select value={form.bank || undefined} onValueChange={(v) => { const b = findBank(v); setForm({ ...form, bank: b.name, color: b.color }); }}>
+        <Select value={form.bank || undefined} onValueChange={(v) => { 
+          const b = findBank(v); 
+          let newName = form.name;
+          if (b.id === "santander" && !form.name) newName = "Santander Unlimited";
+          setForm({ ...form, bank: b.name, name: newName }); 
+        }}>
           <SelectTrigger><SelectValue placeholder="Selecione o banco" /></SelectTrigger>
           <SelectContent>{BANKS.map((b) => <SelectItem key={b.id} value={b.name}><div className="flex items-center gap-2"><BankIcon bank={b.name} size={18} square /><span>{b.name}</span></div></SelectItem>)}</SelectContent>
         </Select>
