@@ -483,9 +483,12 @@ function CartoesPage() {
 
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {cards.map((c: any, idx: number) => {
-          const usado = inst.filter((i: any) => i.card_id === c.id && i.status === "pending").reduce((s: number, i: any) => s + Number(i.amount), 0);
+        {cards.filter((c: any) => !c.pai_id).map((c: any, idx: number) => {
+          const subcardIds = cards.filter((sc: any) => sc.pai_id === c.id).map((sc: any) => sc.id);
+          const allRelevantIds = [c.id, ...subcardIds];
+          const usado = inst.filter((i: any) => allRelevantIds.includes(i.card_id) && i.status === "pending").reduce((s: number, i: any) => s + Number(i.amount), 0);
           const pct = c.credit_limit > 0 ? Math.min(100, (usado / Number(c.credit_limit)) * 100) : 0;
+          const subcards = cards.filter((sc: any) => sc.pai_id === c.id);
           return (
             <motion.div 
               key={c.id} 
@@ -524,6 +527,7 @@ function CartoesPage() {
                     {c.metadata?.brands?.visa && `Visa • ${c.metadata.brands.visa} • `}
                     {c.metadata?.brands?.master && `Master • ${c.metadata.brands.master} • `}
                     F. {c.closing_day} • V. {c.due_day}
+                    {subcards.length > 0 && ` • ${subcards.length} Sub-Cartões`}
                   </div>
 
                 </div>
@@ -541,7 +545,15 @@ function CartoesPage() {
                 <div className="flex items-end justify-between gap-3">
                   <div className="min-w-0">
                     <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-medium">Fatura {monthLabel(monthN-1)}{personFilter !== "all" && ` • ${personFilter}`}</div>
-                    <div className="text-xl font-bold text-foreground tabular-nums mt-0.5"><CountUp value={totals[c.id]?.fatura ?? 0} format={brl} /></div>
+                    <div className="text-xl font-bold text-foreground tabular-nums mt-0.5">
+                      <CountUp value={totals[c.id]?.fatura ?? 0} format={brl} />
+                      {subcards.length > 0 && (
+                        <div className="text-[9px] text-muted-foreground font-normal flex gap-1 items-center mt-1">
+                          <Users className="w-2.5 h-2.5" />
+                          <span>Inclui faturas de {subcards.length} sub-cartões</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   {(() => {
                     const rest = totals[c.id]?.restante ?? 0;
