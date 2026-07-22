@@ -452,19 +452,19 @@ function CartoesPage() {
               style={{ background: "var(--gradient-card)", boxShadow: "var(--shadow-elegant)" }} 
               onClick={() => setEditingCard(c)}
             >
-              <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-4 z-10">
+              <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-background/90 to-transparent backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2 z-10">
                 <Button 
-                  size="sm" 
+                  size="xs" 
                   variant="outline" 
-                  className="rounded-full shadow-lg border-primary/20 hover:bg-primary hover:text-white transition-all transform translate-y-2 group-hover:translate-y-0 duration-300"
+                  className="h-7 px-3 rounded-lg border-primary/20 hover:bg-primary hover:text-white text-[10px] font-bold uppercase transition-all"
                   onClick={(e) => { e.stopPropagation(); setEditingCard(c); }}
                 >
-                  <Pencil className="w-4 h-4 mr-1.5" /> Editar
+                  <Pencil className="w-3 h-3 mr-1" /> Editar
                 </Button>
                 <Button 
-                  size="sm" 
+                  size="xs" 
                   variant="destructive" 
-                  className="rounded-full shadow-lg hover:bg-destructive transition-all transform translate-y-2 group-hover:translate-y-0 duration-300 delay-[50ms]"
+                  className="h-7 px-3 rounded-lg text-[10px] font-bold uppercase transition-all"
                   onClick={(e) => { 
                     e.stopPropagation(); 
                     if (confirm(`Deseja realmente excluir o cartão ${c.name}?`)) {
@@ -475,7 +475,7 @@ function CartoesPage() {
                     }
                   }}
                 >
-                  <Trash2 className="w-4 h-4 mr-1.5" /> Excluir
+                  <Trash2 className="w-3 h-3 mr-1" /> Excluir
                 </Button>
               </div>
               <div className="flex items-start justify-between mb-4">
