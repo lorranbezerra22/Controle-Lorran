@@ -7,7 +7,7 @@ import { TrendingUp, TrendingDown, Wallet, Calendar, Users, ArrowUpRight, Search
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
 import { personColor } from "@/lib/people";
 import { motion } from "framer-motion";
@@ -772,8 +772,5 @@ function KpiCard({ icon, label, value, sub, accent, index = 0, onClick }: { icon
   return <KpiTile icon={icon} label={label} value={value} sub={sub} tone={tone} index={index} onClick={onClick} />;
 }
 
-function DialogDescription({ children, className = "" }: any) {
-  return <p className={`text-sm text-muted-foreground ${className}`}>{children}</p>;
-}
 
 
