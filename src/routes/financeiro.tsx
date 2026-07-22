@@ -128,8 +128,10 @@ function FinanceiroPage() {
   // Quando filtrar por "Família", mostramos os lançamentos originais com valor cheio.
   // Nos demais casos usamos baseTx (com split 50/50 de Família p/ Lorran e Tayane).
   const lista = useMemo(() => {
-    const isFamilyFilter = personFilter.toLowerCase() === "família";
+    const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const isFamilyFilter = norm(personFilter) === "familia";
     const source = isFamilyFilter ? merged : baseTx;
+    
     return source
       .filter((t: any) => kindFilter === "all" || t.kind === kindFilter)
       .filter((t: any) => {
@@ -139,7 +141,13 @@ function FinanceiroPage() {
         if (selY !== "all" && d.getFullYear() !== selY) return false;
         return true;
       })
-      .filter((t: any) => personFilter === "all" || (t._owner || t.person).toLowerCase() === personFilter.toLowerCase())
+      .filter((t: any) => {
+        if (personFilter === "all") return true;
+        const pFilter = norm(personFilter);
+        const pOwner = norm(t._owner || t.person);
+        const pDebt = norm(t._debtPerson);
+        return pOwner === pFilter || pDebt === pFilter;
+      })
       .filter((t: any) => statusFilter === "all" || t.status === statusFilter)
   }, [merged, baseTx, kindFilter, selM, selY, personFilter, statusFilter]);
 
