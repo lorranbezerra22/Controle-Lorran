@@ -135,7 +135,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
     enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("milhas_programs")
+        .from("milhas_programas")
         .select("*")
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -148,7 +148,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
     enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("milhas_earnings")
+        .from("milhas_ganhos")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -161,7 +161,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
     enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("milhas_transfers")
+        .from("milhas_transferencias")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -174,7 +174,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
     enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("milhas_redemptions")
+        .from("milhas_resgates")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -200,7 +200,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
     async (programId: string, delta: number) => {
       if (!delta) return;
       const { data: currentRow, error: readError } = await supabase
-        .from("milhas_programs")
+        .from("milhas_programas")
         .select("*")
         .eq("id", programId)
         .single();
@@ -211,7 +211,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
       const current = rowToProgram(currentRow);
       const next = Math.max(0, current.balance + delta);
       const { data: updatedRow, error } = await supabase
-        .from("milhas_programs")
+        .from("milhas_programas")
         .update({ balance: next })
         .eq("id", programId)
         .select("*")
@@ -266,7 +266,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
       const count = programs.length;
       const fallbackColor = p.color ?? PROGRAM_COLORS[count % PROGRAM_COLORS.length];
       const color = brandColor(p.name, fallbackColor);
-      const { error } = await supabase.from("milhas_programs").insert({
+      const { error } = await supabase.from("milhas_programas").insert({
         user_id: userId,
         name: p.name,
         category: p.category,
@@ -293,7 +293,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
         const current = programs.find((program) => program.id === id);
         dbPatch.color = brandColor(patch.name, patch.color ?? current?.color ?? PROGRAM_COLORS[0]);
       } else if (patch.color !== undefined) dbPatch.color = patch.color;
-      const { error } = await supabase.from("milhas_programs").update(dbPatch as any).eq("id", id);
+      const { error } = await supabase.from("milhas_programas").update(dbPatch as any).eq("id", id);
       if (error) throw error;
       invalidate(["programs"]);
     },
@@ -302,7 +302,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
 
   const deleteProgram: DataContextValue["deleteProgram"] = useCallback(
     async (id) => {
-      const { error } = await supabase.from("milhas_programs").delete().eq("id", id);
+      const { error } = await supabase.from("milhas_programas").delete().eq("id", id);
       if (error) throw error;
       invalidate(["programs", "earnings", "transfers", "redemptions"]);
     },
@@ -315,7 +315,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
   const addEarning: DataContextValue["addEarning"] = useCallback(
     async (e) => {
       if (!userId) throw new Error("Usuário não autenticado");
-      const { error } = await supabase.from("milhas_earnings").insert({
+      const { error } = await supabase.from("milhas_ganhos").insert({
         user_id: userId,
         program_id: e.programId,
         month: e.month,
@@ -348,7 +348,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
       if (patch.parity !== undefined) dbPatch.parity = patch.parity ?? null;
       if (patch.bonusPercent !== undefined) dbPatch.bonus_percent = patch.bonusPercent ?? null;
       if (patch.note !== undefined) dbPatch.note = patch.note ?? null;
-      const { error } = await supabase.from("milhas_earnings").update(dbPatch as any).eq("id", id);
+      const { error } = await supabase.from("milhas_ganhos").update(dbPatch as any).eq("id", id);
       if (error) throw error;
       await applyBalanceMovements(getEarningBalanceMovements(target), -1);
       await applyBalanceMovements(
@@ -367,7 +367,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
   const deleteEarning: DataContextValue["deleteEarning"] = useCallback(
     async (id) => {
       const target = earnings.find((e) => e.id === id);
-      const { error } = await supabase.from("milhas_earnings").delete().eq("id", id);
+      const { error } = await supabase.from("milhas_ganhos").delete().eq("id", id);
       if (error) throw error;
       if (target) await applyBalanceMovements(getEarningBalanceMovements(target), -1);
       invalidate(["earnings", "programs"]);
@@ -441,7 +441,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
       if (!to) throw new Error("Programa de destino não encontrado.");
       if (to.id === from.id) throw new Error("Programa de origem e destino não podem ser iguais.");
       const cashValue = to ? (pointsReceived / 1000) * to.valuePerThousand : 0;
-      const { error } = await supabase.from("milhas_transfers").insert({
+      const { error } = await supabase.from("milhas_transferencias").insert({
         user_id: userId,
         from_program_id: t.fromProgramId,
         to_program_name: t.toProgramName,
