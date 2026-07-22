@@ -3,7 +3,7 @@ import { ProtectedShell } from "@/components/ProtectedShell";
 import { useTransactions, useCategories, usePeople, useAccounts, useInstallments, useCards } from "@/lib/queries";
 import { brl, fmtDate } from "@/lib/format";
 import { useMemo, useState, useEffect } from "react";
-import { TrendingUp, TrendingDown, Wallet, Calendar, Users, ArrowUpRight, Search, Scale, Undo2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Calendar, Users, ArrowUpRight, Search, Scale, Undo2, CreditCard, ChevronDown, ChevronRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -154,19 +154,50 @@ function FinanceiroPage() {
   const totalPendente = lista.reduce((s: number, t: any) => s + Number(t.amount), 0) - totalPago;
 
   // Por categoria — separado receita / despesa
-  const buildByCat = (arr: any[]) => {
-    const m: Record<string, { id: string | null; name: string; icon: string; value: number; count: number }> = {};
+  const buildByCat = (arr: any[], kind: "income" | "expense") => {
+    const m: Record<string, any> = {};
     for (const t of arr) {
       const c = (t.category_id ? catMap[t.category_id] : null) || { name: "Sem categoria", icon: "💰" };
       const k = t.category_id || "none";
-      if (!m[k]) m[k] = { id: t.category_id || null, name: c.name, icon: c.icon || "💰", value: 0, count: 0 };
-      m[k].value += Number(t.amount);
+      if (!m[k]) {
+        m[k] = { 
+          id: t.category_id || null, 
+          name: c.name, 
+          icon: c.icon || "💰", 
+          value: 0, 
+          count: 0,
+          manual: 0,
+          card: 0,
+          manualItems: [],
+          cardItems: [],
+          kind
+        };
+      }
+      const val = Number(t.amount);
+      m[k].value += val;
       m[k].count += 1;
+      
+      if (t._isCard) {
+        m[k].card += val;
+        // Mocking structure to match index.tsx's CategoryDetail
+        m[k].cardItems.push({ 
+          inst: { 
+            ...t, 
+            due_at: t.due_at,
+            card_purchases: { description: t.description, installments_count: 1 },
+            cards: { name: t.notes?.replace("Cartão ", "") || "Cartão" }
+          }, 
+          share: val 
+        });
+      } else {
+        m[k].manual += val;
+        m[k].manualItems.push({ tx: t, share: val });
+      }
     }
-    return Object.values(m).sort((a, b) => b.value - a.value);
+    return Object.values(m).sort((a: any, b: any) => b.value - a.value);
   };
-  const catReceitas = useMemo(() => buildByCat(receitas), [receitas, catMap]);
-  const catDespesas = useMemo(() => buildByCat(despesas), [despesas, catMap]);
+  const catReceitas = useMemo(() => buildByCat(receitas, "income"), [receitas, catMap]);
+  const catDespesas = useMemo(() => buildByCat(despesas, "expense"), [despesas, catMap]);
 
   // Por pessoa (com receita / despesa / saldo)
   const byPerson = useMemo(() => {
@@ -368,64 +399,25 @@ function FinanceiroPage() {
         />
       </div>
 
-      {/* Drill-down dialog */}
+      {/* Drill-down dialog (Padronizado com o Dashboard) */}
       <Dialog open={!!openCat} onOpenChange={(o) => !o && setOpenCat(null)}>
         <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <span className="text-xl">{openCat?.icon}</span>
-              {openCat?.name} <Badge variant="outline" className="ml-2">{openCat?.kind === "income" ? "Receitas" : "Despesas"}</Badge>
-            </DialogTitle>
+          <DialogHeader className="flex flex-row items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl shrink-0 border border-primary/20">
+              {openCat?.icon}
+            </div>
+            <div>
+              <DialogTitle className="text-xl flex items-center gap-2">
+                {openCat?.name}
+                <Badge variant={openCat?.kind === "income" ? "secondary" : "destructive"} className="ml-1 uppercase tracking-tighter text-[10px]">
+                  {openCat?.kind === "income" ? "Receitas" : "Despesas"}
+                </Badge>
+              </DialogTitle>
+              <DialogDescription className="text-xs">Detalhamento da categoria no período selecionado</DialogDescription>
+            </div>
           </DialogHeader>
-          {(() => {
-            if (!openCat) return null;
-            const items = lista.filter(
-              (t: any) => t.kind === openCat.kind && (t.category_id || null) === openCat.categoryId,
-            );
-            const total = items.reduce((s: number, t: any) => s + Number(t.amount), 0);
-            return (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">{items.length} lançamento(s)</span>
-                  <span className={`font-semibold tabular-nums ${openCat.kind === "income" ? "text-success" : "text-destructive"}`}>{brl(total)}</span>
-                </div>
-                <div className="max-h-[60vh] overflow-auto rounded-lg border">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/50 text-muted-foreground sticky top-0">
-                      <tr className="text-left">
-                        <th className="px-3 py-2 font-medium">Data</th>
-                        <th className="px-3 py-2 font-medium">Descrição</th>
-                        <th className="px-3 py-2 font-medium">Pessoa</th>
-                        <th className="px-3 py-2 font-medium">Status</th>
-                        <th className="px-3 py-2 font-medium text-right">Valor</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.length === 0 && (
-                        <tr><td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">Sem lançamentos.</td></tr>
-                      )}
-                      {items.map((t: any) => (
-                        <tr key={t.id} className="border-t">
-                          <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{fmtDate(t.due_at)}</td>
-                          <td className="px-3 py-2">{t.description || "—"}</td>
-                          <td className="px-3 py-2">
-                            {t._debtPerson || t.person || "—"}
-                            {t._debtPerson && t.person && t._debtPerson !== t.person && (
-                              <div className="text-[10px] text-muted-foreground mt-0.5">Pago por {t.person}</div>
-                            )}
-                          </td>
-                          <td className="px-3 py-2">{t.status === "paid" ? (openCat.kind === "income" ? "Recebido" : "Pago") : "Pendente"}</td>
-                          <td className={`px-3 py-2 text-right font-semibold tabular-nums ${openCat.kind === "income" ? "text-success" : "text-destructive"}`}>
-                            {openCat.kind === "income" ? "+" : "−"} {brl(Number(t.amount))}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            );
-          })()}
+
+          {openCat && <CategoryDetail cat={openCat} cardsById={new Map(cards.map(c => [c.id, c]))} />}
         </DialogContent>
       </Dialog>
 
@@ -590,7 +582,148 @@ function FinanceiroPage() {
   );
 }
 
-type CatItem = { id: string | null; name: string; icon: string; value: number; count: number };
+function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, any> }) {
+  const [showCard, setShowCard] = useState(true);
+  const [showManual, setShowManual] = useState(true);
+  const cardItems = (cat.cardItems ?? []).slice().sort((a: any, b: any) => (b.inst.due_at || "").localeCompare(a.inst.due_at || ""));
+  const manualItems = (cat.manualItems ?? []).slice().sort((a: any, b: any) => (b.tx.due_at || "").localeCompare(a.tx.due_at || ""));
+  return (
+    <div className="space-y-3 pt-1">
+      <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-xl border border-border/60 bg-background/40 backdrop-blur px-3 py-2">
+          <div className="text-[9px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><CreditCard className="w-3 h-3" /> Cartão</div>
+          <div className="text-sm font-semibold tabular-nums text-foreground">{brl(cat.card || 0)}</div>
+        </div>
+        <div className="rounded-xl border border-border/60 bg-background/40 backdrop-blur px-3 py-2">
+          <div className="text-[9px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><Wallet className="w-3 h-3" /> Manual</div>
+          <div className="text-sm font-semibold tabular-nums text-foreground">{brl(cat.manual || 0)}</div>
+        </div>
+        <div className="rounded-xl border border-primary/40 bg-primary/10 px-3 py-2">
+          <div className="text-[9px] uppercase tracking-wider text-primary">Total</div>
+          <div className="text-sm font-bold tabular-nums text-foreground">{brl(cat.value)}</div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border/60 overflow-hidden bg-background/30">
+        <button type="button" onClick={() => setShowCard(!showCard)} className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-muted/40 text-sm font-medium transition-colors">
+          <span className="flex items-center gap-2">
+            {showCard ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            <CreditCard className="w-4 h-4 text-primary" />
+            Pago via cartão
+            <span className="text-[10px] px-2 py-0.5 rounded-full border border-border/50 bg-background/60 text-muted-foreground">{cardItems.length}</span>
+          </span>
+          <span className="tabular-nums font-semibold">{brl(cat.card || 0)}</span>
+        </button>
+        {showCard && (
+          cardItems.length === 0 ? (
+            <div className="text-xs text-muted-foreground p-4 text-center border-t border-border/60">Nenhuma compra no cartão para esta categoria.</div>
+          ) : (
+            <div className="overflow-x-auto border-t border-border/60">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-muted/20 text-muted-foreground">
+                  <tr>
+                    <th className="p-2 font-medium">Data</th>
+                    <th className="p-2 font-medium">Descrição</th>
+                    <th className="p-2 font-medium">Cartão</th>
+                    <th className="p-2 font-medium">Parcela</th>
+                    <th className="p-2 font-medium">Pessoa</th>
+                    <th className="p-2 text-right font-medium">Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cardItems.map(({ inst, share }: any) => {
+                    const cp = inst.card_purchases || {};
+                    const card = inst.cards || cardsById.get(inst.card_id) || {};
+                    return (
+                      <tr key={inst.id} className="border-t border-border/60 hover:bg-muted/20">
+                        <td className="p-2 whitespace-nowrap text-muted-foreground">{fmtDate(inst.due_at)}</td>
+                        <td className="p-2">
+                          <div className="font-medium truncate max-w-[150px]">{cp.description ?? "—"}</div>
+                          {cp.purchase_date && <div className="text-[10px] text-muted-foreground">Compra: {fmtDate(cp.purchase_date)}</div>}
+                        </td>
+                        <td className="p-2 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full" style={{ background: card.color || "#6366f1" }} />
+                            {card.name ?? "—"}
+                          </span>
+                        </td>
+                        <td className="p-2 whitespace-nowrap text-muted-foreground">{inst.installment_number}/{cp.installments_count ?? "?"}</td>
+                        <td className="p-2 whitespace-nowrap">{cp.person || inst.person || "—"}</td>
+                        <td className="p-2 text-right tabular-nums font-medium">{brl(share)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
+      </div>
+
+      <div className="rounded-xl border border-border/60 overflow-hidden bg-background/30">
+        <button type="button" onClick={() => setShowManual(!showManual)} className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-muted/40 text-sm font-medium transition-colors">
+          <span className="flex items-center gap-2">
+            {showManual ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            <Wallet className="w-4 h-4 text-primary" />
+            Lançamentos manuais
+            <span className="text-[10px] px-2 py-0.5 rounded-full border border-border/50 bg-background/60 text-muted-foreground">{manualItems.length}</span>
+          </span>
+          <span className="tabular-nums font-semibold">{brl(cat.manual || 0)}</span>
+        </button>
+        {showManual && (
+          manualItems.length === 0 ? (
+            <div className="text-xs text-muted-foreground p-4 text-center border-t border-border/60">Nenhum lançamento manual para esta categoria.</div>
+          ) : (
+            <div className="overflow-x-auto border-t border-border/60">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-muted/20 text-muted-foreground">
+                  <tr>
+                    <th className="p-2 font-medium">Data</th>
+                    <th className="p-2 font-medium">Descrição</th>
+                    <th className="p-2 font-medium">Pessoa</th>
+                    <th className="p-2 font-medium">Status</th>
+                    <th className="p-2 font-medium">Observações</th>
+                    <th className="p-2 text-right font-medium">Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {manualItems.map(({ tx, share }: any) => (
+                    <tr key={tx.id} className="border-t border-border/60 hover:bg-muted/20">
+                      <td className="p-2 whitespace-nowrap text-muted-foreground">{fmtDate(tx.due_at)}</td>
+                      <td className="p-2 font-medium truncate max-w-[150px]">{tx.description}</td>
+                      <td className="p-2 whitespace-nowrap">{tx.person ?? "—"}</td>
+                      <td className="p-2 whitespace-nowrap">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${tx.status === "paid" ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>
+                          {tx.status === "paid" ? "Pago" : "Pendente"}
+                        </span>
+                      </td>
+                      <td className="p-2 max-w-[150px] truncate text-muted-foreground" title={tx.notes ?? ""}>{tx.notes ?? "—"}</td>
+                      <td className="p-2 text-right tabular-nums font-medium">{brl(share)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
+type CatItem = { 
+  id: string | null; 
+  name: string; 
+  icon: string; 
+  value: number; 
+  count: number; 
+  manual: number; 
+  card: number; 
+  manualItems: any[]; 
+  cardItems: any[]; 
+  kind: "income" | "expense" 
+};
+
 function CategoryCard({ title, icon, data, total, tone, onSelect }: { title: string; icon: string; data: CatItem[]; total: number; tone: "success" | "danger"; onSelect?: (c: CatItem) => void }) {
   const barColor = tone === "success" ? "var(--success)" : "var(--destructive)";
   return (
@@ -637,6 +770,10 @@ function KpiCard({ icon, label, value, sub, accent, index = 0, onClick }: { icon
     accent === "danger" ? "text-destructive" :
     "text-foreground";
   return <KpiTile icon={icon} label={label} value={value} sub={sub} tone={tone} index={index} onClick={onClick} />;
+}
+
+function DialogDescription({ children, className = "" }: any) {
+  return <p className={`text-sm text-muted-foreground ${className}`}>{children}</p>;
 }
 
 
