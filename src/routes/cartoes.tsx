@@ -1604,36 +1604,74 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
         </Select>
       </div>
       <div className="space-y-1.5">
-        <Label>Bandeira</Label>
+        <Label>Tipo de Cartão</Label>
         <Select 
-          value={form.last_digits && !isSU ? "standard" : isSU ? "multi" : undefined}
-          onValueChange={() => {}}
+          value={effectiveMode}
+          onValueChange={(v: any) => setForm({ ...form, mode: v })}
+          disabled={isSU}
         >
-          <SelectTrigger><SelectValue placeholder="Selecione a bandeira" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="standard">Visa / Mastercard / Elo</SelectItem>
-            <SelectItem value="multi">Múltiplas (Visa + Master)</SelectItem>
+            <SelectItem value="standard">Bandeira Única (Visa, Master...)</SelectItem>
+            <SelectItem value="multi">Múltiplas Bandeiras (Combo)</SelectItem>
           </SelectContent>
         </Select>
       </div>
-      {(!isSU && (form.last_digits || form.bank)) && (
-        <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
-          <Label>Últimos 4 dígitos</Label>
-          <Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} />
+
+      {effectiveMode === "standard" && (
+        <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="space-y-1.5">
+            <Label>Bandeira</Label>
+            <Select value={form.brand} onValueChange={(v) => setForm({ ...form, brand: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="visa">Visa</SelectItem>
+                <SelectItem value="mastercard">Mastercard</SelectItem>
+                <SelectItem value="elo">Elo</SelectItem>
+                <SelectItem value="amex">Amex</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Últimos 4 dígitos</Label>
+            <Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} />
+          </div>
         </div>
       )}
+
+      {effectiveMode === "multi" && (
+        <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="space-y-1.5">
+            <Label>Final Visa</Label>
+            <div className="relative group">
+              <Input maxLength={4} placeholder="Ex: 2054" value={form.visa_last_digits} onChange={e => setForm({ ...form, visa_last_digits: e.target.value })} />
+              {form.visa_last_digits && (
+                <button type="button" onClick={() => setForm({...form, visa_last_digits: ""})} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Final Master</Label>
+            <div className="relative group">
+              <Input maxLength={4} placeholder="Ex: 3019" value={form.master_last_digits} onChange={e => setForm({ ...form, master_last_digits: e.target.value })} />
+              {form.master_last_digits && (
+                <button type="button" onClick={() => setForm({...form, master_last_digits: ""})} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5"><Label>Fechamento</Label><Input type="number" min={1} max={31} value={form.closing_day} onChange={e => setForm({ ...form, closing_day: Number(e.target.value) })} required /></div>
         <div className="space-y-1.5"><Label>Vencimento</Label><Input type="number" min={1} max={31} value={form.due_day} onChange={e => setForm({ ...form, due_day: Number(e.target.value) })} required /></div>
       </div>
       <div className="space-y-1.5"><Label>Limite total</Label><Input type="number" step="0.01" value={form.credit_limit} onChange={e => setForm({ ...form, credit_limit: e.target.value })} required /></div>
-      
-      {isSU && (
-        <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
-          <div className="space-y-1.5"><Label>Final Visa</Label><Input maxLength={4} placeholder="Ex: 2054" value={form.visa_last_digits} onChange={e => setForm({ ...form, visa_last_digits: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label>Final Master</Label><Input maxLength={4} placeholder="Ex: 3019" value={form.master_last_digits} onChange={e => setForm({ ...form, master_last_digits: e.target.value })} /></div>
-        </div>
-      )}
+
       <div className="flex gap-2">
         <Button type="submit" disabled={saving} className="flex-1">{saving ? "Salvando…" : initialData?.id ? "Salvar alterações" : "Salvar"}</Button>
         {initialData?.id && <Button type="button" variant="destructive" onClick={remove}>Excluir</Button>}
