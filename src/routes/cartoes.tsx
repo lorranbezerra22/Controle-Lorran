@@ -452,32 +452,6 @@ function CartoesPage() {
               style={{ background: "var(--gradient-card)", boxShadow: "var(--shadow-elegant)" }} 
               onClick={() => setEditingCard(c)}
             >
-              <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-background/95 to-transparent backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2 z-10">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="h-7 px-2.5 rounded-lg border-primary/20 hover:bg-primary hover:text-white text-[10px] font-bold uppercase transition-all shadow-sm"
-                  onClick={(e) => { e.stopPropagation(); setEditingCard(c); }}
-                >
-                  <Pencil className="w-3 h-3 mr-1" /> Editar
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="destructive" 
-                  className="h-7 px-2.5 rounded-lg text-[10px] font-bold uppercase transition-all shadow-sm"
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    if (confirm(`Deseja realmente excluir o cartão ${c.name}?`)) {
-                      supabase.from("cartoes").delete().eq("id", c.id).then(({ error }) => {
-                        if (error) toast.error(error.message);
-                        else { toast.success("Cartão removido"); invalidate("cards"); }
-                      });
-                    }
-                  }}
-                >
-                  <Trash2 className="w-3 h-3 mr-1" /> Excluir
-                </Button>
-              </div>
               <div className="flex items-start justify-between mb-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -1673,70 +1647,72 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
           </div>
         </div>
       ) : (
-        <div className="space-y-3 p-3 border rounded-lg bg-muted/20 border-border/40 animate-in fade-in slide-in-from-top-1 duration-200">
+        <div className="space-y-2.5 p-2.5 border rounded-lg bg-muted/20 border-border/40 animate-in fade-in slide-in-from-top-1 duration-200">
           <div className="flex items-center justify-between">
             <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Bandeiras do Combo</Label>
             <Button 
               type="button" 
               variant="outline" 
               size="sm" 
-              className="h-7 text-[10px] font-bold border-primary/20 hover:bg-primary hover:text-white"
+              className="h-6 text-[9px] font-bold border-primary/20 hover:bg-primary hover:text-white px-2"
               onClick={() => setForm({ ...form, brands: [...form.brands, { brand: "visa", last_digits: "" }] })}
             >
               <Plus className="w-3 h-3 mr-1" /> Add Bandeira
             </Button>
           </div>
           
-          {form.brands.map((b: any, idx: number) => (
-            <div key={idx} className="relative p-2.5 border border-border/50 rounded-lg bg-background/50 space-y-2.5 group/brand">
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="icon" 
-                className="absolute top-1 right-1 h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover/brand:opacity-100 transition-opacity"
-                onClick={() => setForm({ ...form, brands: form.brands.filter((_: any, i: number) => i !== idx) })}
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
+          <div className="grid grid-cols-1 gap-2">
+            {form.brands.map((b: any, idx: number) => (
+              <div key={idx} className="relative p-2 border border-border/50 rounded-lg bg-background/50 flex items-center gap-3 group/brand">
+                <div className="flex-1 space-y-1">
+                  <Label className="text-[9px] uppercase font-bold text-muted-foreground/70">Bandeira</Label>
+                  <Select 
+                    value={b.brand} 
+                    onValueChange={(v) => {
+                      const next = [...form.brands];
+                      next[idx].brand = v;
+                      setForm({ ...form, brands: next });
+                    }}
+                  >
+                    <SelectTrigger className="h-7 text-[10px] bg-background px-2"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="visa">Visa</SelectItem>
+                      <SelectItem value="mastercard">Mastercard</SelectItem>
+                      <SelectItem value="elo">Elo</SelectItem>
+                      <SelectItem value="amex">Amex</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-1">
-                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Bandeira</Label>
-                <Select 
-                  value={b.brand} 
-                  onValueChange={(v) => {
-                    const next = [...form.brands];
-                    next[idx].brand = v;
-                    setForm({ ...form, brands: next });
-                  }}
+                <div className="w-20 space-y-1">
+                  <Label className="text-[9px] uppercase font-bold text-muted-foreground/70">Dígitos</Label>
+                  <Input 
+                    className="h-7 text-[10px] bg-background px-2" 
+                    maxLength={4}
+                    placeholder="1234"
+                    value={b.last_digits}
+                    onChange={(e) => {
+                      const next = [...form.brands];
+                      next[idx].last_digits = e.target.value;
+                      setForm({ ...form, brands: next });
+                    }}
+                  />
+                </div>
+
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive self-end mb-0.5"
+                  onClick={() => setForm({ ...form, brands: form.brands.filter((_: any, i: number) => i !== idx) })}
                 >
-                  <SelectTrigger className="h-9 text-xs bg-background"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="visa">Visa</SelectItem>
-                    <SelectItem value="mastercard">Mastercard</SelectItem>
-                    <SelectItem value="elo">Elo</SelectItem>
-                    <SelectItem value="amex">Amex</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
               </div>
-
-              <div className="space-y-1">
-                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Dígitos</Label>
-                <Input 
-                  className="h-9 text-xs bg-background" 
-                  maxLength={4} 
-                  placeholder="Últimos 4 dígitos" 
-                  value={b.last_digits} 
-                  onChange={e => {
-                    const next = [...form.brands];
-                    next[idx].last_digits = e.target.value;
-                    setForm({ ...form, brands: next });
-                  }} 
-                />
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
           {form.brands.length === 0 && (
-            <div className="text-center py-4 text-xs text-muted-foreground border border-dashed rounded-md">
+            <div className="text-center py-4 text-[10px] text-muted-foreground border border-dashed rounded-md opacity-60">
               Nenhuma bandeira adicionada
             </div>
           )}
