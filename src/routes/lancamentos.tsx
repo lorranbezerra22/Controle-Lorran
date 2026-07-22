@@ -609,7 +609,13 @@ function LancamentosPage() {
                 {!(paying.kind === "expense" && norm(paying.person || "") === "familia") && (
                   <div className="grid gap-2">
                     <Label className="text-xs font-medium">Pago por</Label>
-                    <PersonSelect value={payBy} onChange={setPayBy} extras={paying.person ? [paying.person] : []} />
+                    <PersonSelect 
+                      multiSelect 
+                      selectedValues={payBy ? payBy.split(",") : []} 
+                      onChange={(v) => setPayBy(v)} 
+                      includeFamilia={false}
+                      extras={paying.person ? [paying.person] : []} 
+                    />
                   </div>
                 )}
 
