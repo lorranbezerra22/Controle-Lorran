@@ -457,7 +457,7 @@ function CartoesPage() {
                   <div className="flex items-center gap-2">
                     <div className="font-semibold text-lg truncate">{c.name}</div>
                   </div>
-                  <div className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-medium opacity-80 leading-tight">
+                  <div className="text-[11px] text-muted-foreground truncate uppercase tracking-wider font-semibold opacity-90 leading-tight">
                     {c.bank ? `${findBank(c.bank).name} • ` : ""}
                     {c.metadata?.brands?.length > 0 ? (
                       <span className="text-primary/70 font-bold">{c.metadata.brands.length} Bandeiras</span>
@@ -484,7 +484,7 @@ function CartoesPage() {
               <div className="pt-3 border-t border-border space-y-2">
                 <div className="flex items-end justify-between gap-4">
                   <div className="min-w-0">
-                    <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-medium">Fatura {monthLabel(monthN-1)}{personFilter !== "all" && ` • ${personFilter}`}</div>
+                    <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">Fatura {monthLabel(monthN-1)}{personFilter !== "all" && ` • ${personFilter}`}</div>
                     <div className="text-xl font-bold text-foreground tabular-nums mt-1.5">
                       <CountUp value={totals[c.id]?.fatura ?? 0} format={brl} />
                     </div>
@@ -493,11 +493,11 @@ function CartoesPage() {
                     <div className="flex flex-col gap-3 pr-3 border-r border-border/50">
                       {Object.entries(totals[c.id].brandTotals).map(([brand, data], bi) => (
                         <div key={bi} className="flex flex-col gap-1.5">
-                          <span className="text-[8px] uppercase text-muted-foreground font-bold leading-none">{brand}</span>
+                          <span className="text-[9px] uppercase text-muted-foreground font-bold leading-none">{brand}</span>
                           <div className="flex flex-col leading-tight">
-                            <span className="text-[10px] font-semibold">{brl(data.fatura)}</span>
+                            <span className="text-[11px] font-bold">{brl(data.fatura)}</span>
                             {data.restante > 0.01 && (
-                              <span className="text-[8px] text-destructive font-medium mt-1">Rest. {brl(data.restante)}</span>
+                              <span className="text-[9px] text-destructive font-semibold mt-1">Rest. {brl(data.restante)}</span>
                             )}
                           </div>
                         </div>
@@ -509,7 +509,7 @@ function CartoesPage() {
                     const paid = rest === 0;
                     return (
                       <div className={`flex flex-col items-end px-2.5 py-1.5 rounded-lg border gap-0.5 ${paid ? "border-success/30 bg-success/10" : "border-destructive/25 bg-destructive/10"}`}>
-                        <span className={`text-[9px] uppercase tracking-[0.18em] font-semibold ${paid ? "text-success" : "text-destructive"}`}>{paid ? "Liquidada" : "Restante"}</span>
+                        <span className={`text-[10px] uppercase tracking-[0.18em] font-bold ${paid ? "text-success" : "text-destructive"}`}>{paid ? "Liquidada" : "Restante"}</span>
                         <span className={`text-sm font-bold tabular-nums ${paid ? "text-success" : "text-destructive"}`}>{brl(rest)}</span>
                       </div>
                     );

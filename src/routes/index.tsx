@@ -634,10 +634,10 @@ function Dashboard() {
         <div className="relative px-5 py-4 border-b border-border/60 flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            <span className="text-[10px] uppercase tracking-[0.2em] text-primary">Live</span>
+            <span className="text-[11px] uppercase tracking-[0.2em] text-primary font-bold">Live</span>
             <h3 className="ml-2 text-sm font-semibold flex items-center gap-2"><CreditCard className="w-4 h-4 text-primary" /> Cartões de crédito</h3>
           </div>
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Fatura atual · Pago vs restante</span>
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Fatura atual · Pago vs restante</span>
         </div>
         <div className="relative p-4">
           {cards.length === 0 ? (
@@ -659,9 +659,9 @@ function Dashboard() {
                       <BankIcon bank={c.bank || c.name} size={28} square />
                       <div className="min-w-0 flex-1 flex flex-col gap-0.5">
                         <div className="text-sm font-medium truncate text-foreground">{c.name}</div>
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{isPaid ? "Quitado" : `${pctPago.toFixed(0)}% pago`}</div>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">{isPaid ? "Quitado" : `${pctPago.toFixed(0)}% pago`}</div>
                       </div>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full border ${isPaid ? "border-success/40 text-success bg-success/10" : "border-primary/40 text-primary bg-primary/10"}`}>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${isPaid ? "border-success/40 text-success bg-success/10" : "border-primary/40 text-primary bg-primary/10"}`}>
                         {isPaid ? "OK" : "Aberto"}
                       </span>
                     </div>
@@ -671,11 +671,11 @@ function Dashboard() {
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div className="rounded-lg bg-background/60 border border-border/50 px-2 py-1.5 flex flex-col gap-1">
-                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Fatura</div>
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Fatura</div>
                         <div className="font-semibold tabular-nums text-foreground">{brl(fat)}</div>
                       </div>
                       <div className="rounded-lg bg-background/60 border border-border/50 px-2 py-1.5 flex flex-col gap-1">
-                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Restante</div>
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Restante</div>
                         <div className={`font-semibold tabular-nums ${isPaid ? "text-success" : "text-destructive"}`}>{brl(restante)}</div>
                       </div>
                     </div>
