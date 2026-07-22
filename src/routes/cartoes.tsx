@@ -1194,7 +1194,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
           description: splits.length > 1 ? `${form.description} (${s.person})` : form.description,
           purchase_date: form.purchase_date, total_amount: s.amount, installments_count: n,
           category_id: form.category_id || null, person: s.person,
-          brand: null,
+          brand: form.brand || null,
         }).select().single();
         if (pErr) throw pErr;
 
