@@ -108,14 +108,18 @@ function FinanceiroPage() {
   const baseTx = useMemo(
     () =>
       merged.flatMap((t: any) => {
-        if (t.kind === "expense" && (t.person === "Família" || t._debtPerson === "Família")) {
+        // Se a pessoa original é Família, fazemos o split 50/50
+        const isFamily = (t.person || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === "familia" ||
+                        (t._debtPerson || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === "familia";
+
+        if (t.kind === "expense" && isFamily) {
           const half = Number(t.amount) / 2;
           return [
-            { ...t, id: `${t.id}::L`, person: "Família", _owner: "Lorran", amount: half, _familiaSplit: true, _origId: t.id, _originalItem: t._originalItem },
-            { ...t, id: `${t.id}::T`, person: "Família", _owner: "Tayane", amount: half, _familiaSplit: true, _origId: t.id, _originalItem: t._originalItem },
+            { ...t, id: `${t.id}::L`, _owner: "Lorran", amount: half, _familiaSplit: true, _origId: t.id, _originalItem: t._originalItem },
+            { ...t, id: `${t.id}::T`, _owner: "Tayane", amount: half, _familiaSplit: true, _origId: t.id, _originalItem: t._originalItem },
           ];
         }
-        return [t];
+        return [{ ...t, _owner: t.person }];
       }),
     [merged],
   );
@@ -124,8 +128,10 @@ function FinanceiroPage() {
   // Quando filtrar por "Família", mostramos os lançamentos originais com valor cheio.
   // Nos demais casos usamos baseTx (com split 50/50 de Família p/ Lorran e Tayane).
   const lista = useMemo(() => {
-    const isFamilyFilter = personFilter.toLowerCase() === "família";
+    const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const isFamilyFilter = norm(personFilter) === "familia";
     const source = isFamilyFilter ? merged : baseTx;
+    
     return source
       .filter((t: any) => kindFilter === "all" || t.kind === kindFilter)
       .filter((t: any) => {
@@ -135,7 +141,13 @@ function FinanceiroPage() {
         if (selY !== "all" && d.getFullYear() !== selY) return false;
         return true;
       })
-      .filter((t: any) => personFilter === "all" || (t._owner || t.person).toLowerCase() === personFilter.toLowerCase())
+      .filter((t: any) => {
+        if (personFilter === "all") return true;
+        const pFilter = norm(personFilter);
+        const pOwner = norm(t._owner || t.person);
+        const pDebt = norm(t._debtPerson);
+        return pOwner === pFilter || pDebt === pFilter;
+      })
       .filter((t: any) => statusFilter === "all" || t.status === statusFilter)
   }, [merged, baseTx, kindFilter, selM, selY, personFilter, statusFilter]);
 
@@ -211,9 +223,10 @@ function FinanceiroPage() {
     const year = selY === "all" ? now.getFullYear() : selY;
     const arr = MESES.map((m) => ({ mes: m, receita: 0, despesa: 0, balanco: 0 }));
     baseTx.forEach((t: any) => {
+      const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
       const d = new Date(t.due_at + "T00:00:00");
       if (d.getFullYear() !== year) return;
-      if (personFilter !== "all" && (t._owner || t.person) !== personFilter) return;
+      if (personFilter !== "all" && norm(t._owner || t.person) !== norm(personFilter) && norm(t._debtPerson) !== norm(personFilter)) return;
       const idx = d.getMonth();
       if (t.kind === "income") arr[idx].receita += Number(t.amount);
       else if (t.kind === "expense") arr[idx].despesa += Number(t.amount);
