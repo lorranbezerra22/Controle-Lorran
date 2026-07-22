@@ -209,12 +209,12 @@ function CartoesPage() {
       const d = new Date(i.due_at + "T00:00:00");
       if (d.getFullYear() !== year || d.getMonth() !== monthN - 1) return false;
       if (cardFilter !== "all" && i.card_id !== cardFilter) return false;
-      if (categoryFilter !== "all" && i.card_purchases?.category_id !== categoryFilter) return false;
+      if (categoryFilter !== "all" && i.cartao_compras?.category_id !== categoryFilter) return false;
       const payment = getInstallmentPaymentState(i);
       if (statusFilter === "paid" && !payment.hasPaid) return false;
       if (statusFilter === "pending" && !payment.hasPending) return false;
-      if (!matchPerson(i.card_purchases?.person ?? "")) return false;
-      const pd = i.card_purchases?.purchase_date as string | undefined;
+      if (!matchPerson(i.cartao_compras?.person ?? "")) return false;
+      const pd = i.cartao_compras?.purchase_date as string | undefined;
       if (purchaseFrom && (!pd || pd < purchaseFrom)) return false;
       if (purchaseTo && (!pd || pd > purchaseTo)) return false;
       return true;
@@ -255,7 +255,7 @@ function CartoesPage() {
       const payment = getInstallmentPaymentState(i);
       const v = getStatusFilteredAmount(i, statusFilter);
       
-      const person = (i.card_purchases?.person || "").toLowerCase().trim();
+      const person = (i.cartao_compras?.person || "").toLowerCase().trim();
       const filter = personFilter !== "all" ? personFilter.toLowerCase().trim() : "all";
       const filter2 = personFilter2 !== "all" ? personFilter2.toLowerCase().trim() : "all";
 
@@ -273,7 +273,7 @@ function CartoesPage() {
         
         m.fatura += valueForFilter;
         
-        const b = i.card_purchases?.brand || "Default";
+        const b = i.cartao_compras?.brand || "Default";
         m.brandTotals[b] = (m.brandTotals[b] ?? 0) + valueForFilter;
 
         if (statusFilter !== "paid" && payment.hasPending) {
@@ -310,7 +310,7 @@ function CartoesPage() {
       const amount = Number(i.amount);
       const paidAlready = Number(i.paid_amount || 0);
       const { data: { user } } = await supabase.auth.getUser();
-      const originalPerson = i.card_purchases?.person || "";
+      const originalPerson = i.cartao_compras?.person || "";
       const useOverride = !!(paidByOverride && paidByOverride.trim() && paidByOverride.trim().toLowerCase() !== originalPerson.toLowerCase());
       const costPerson = useOverride ? paidByOverride!.trim() : originalPerson;
       
@@ -324,7 +324,7 @@ function CartoesPage() {
             // Criar transação para histórico
             await supabase.from("transacoes").insert({
               user_id: user!.id,
-              description: `Pagamento ${i.cards?.name || "Cartão"} - ${i.card_purchases?.description}${split.descriptionSuffix}${overrideSuffix}`,
+              description: `Pagamento ${i.cartoes?.name || "Cartão"} - ${i.cartao_compras?.description}${split.descriptionSuffix}${overrideSuffix}`,
               amount: split.amount,
               kind: "expense",
               status: "paid",
@@ -332,7 +332,7 @@ function CartoesPage() {
               posted_at: todayLocalISO(),
               person: split.person,
               paid_by: useOverride ? split.person : null,
-              category_id: i.card_purchases?.category_id || "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
+              category_id: i.cartao_compras?.category_id || "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
               card_installment_id: i.id,
               account_id: split.accountId,
               account_tayane_id: split.accountTayaneId || null,
@@ -343,7 +343,7 @@ function CartoesPage() {
             if (!useOverride) {
                 await supabase.from("transacoes").insert({
                 user_id: user!.id,
-                description: `Compensação Fatura ${i.cards?.name || "Cartão"} - ${i.card_purchases?.description}${split.descriptionSuffix}`,
+                description: `Compensação Fatura ${i.cartoes?.name || "Cartão"} - ${i.cartao_compras?.description}${split.descriptionSuffix}`,
                 amount: split.amount,
                 kind: "income",
                 status: "paid",
@@ -374,9 +374,9 @@ function CartoesPage() {
           paid_by: null,
         } as any).eq("id", i.id);
         await supabase.from("transacoes").delete()
-          .eq("person", i.card_purchases?.person)
+          .eq("person", i.cartao_compras?.person)
           .eq("kind", "income")
-          .ilike("description", `Compensação Fatura ${i.cards?.name || "Cartão"}%`);
+          .ilike("description", `Compensação Fatura ${i.cartoes?.name || "Cartão"}%`);
         toast.success("Pagamento removido");
       }
       invalidate("installments");
@@ -691,16 +691,16 @@ function CartoesPage() {
                 return (
                 <tr key={i.id} className="border-t border-border hover:bg-muted/30">
                   <td className="p-3 whitespace-nowrap text-muted-foreground">{fmtDate(i.due_at)}</td>
-                  <td className="p-3 whitespace-nowrap text-muted-foreground hidden sm:table-cell">{i.card_purchases?.purchase_date ? fmtDate(i.card_purchases.purchase_date) : "—"}</td>
+                  <td className="p-3 whitespace-nowrap text-muted-foreground hidden sm:table-cell">{i.cartao_compras?.purchase_date ? fmtDate(i.cartao_compras.purchase_date) : "—"}</td>
                   <td className="p-3">
                     <div className="flex flex-col gap-0.5">
                       <span className="inline-flex items-center gap-2">
-                        <BankIcon bank={i.cards?.bank || i.cards?.name} size={18} square />
-                        {i.cards?.name}
+                        <BankIcon bank={i.cartoes?.bank || i.cartoes?.name} size={18} square />
+                        {i.cartoes?.name}
                       </span>
-                      {i.card_purchases?.brand && (
+                      {i.cartao_compras?.brand && (
                         <span className="text-[10px] text-muted-foreground ml-6">
-                          {i.card_purchases.brand}
+                          {i.cartao_compras.brand}
                         </span>
                       )}
                     </div>
@@ -708,7 +708,7 @@ function CartoesPage() {
 
                   <td className="p-3 font-medium">
                     <div className="flex flex-col">
-                      <span>{i.card_purchases?.description}</span>
+                      <span>{i.cartao_compras?.description}</span>
                       {isPartial && i.status !== "paid" && (
                         <div 
                           className="mt-1 w-24 cursor-help"
@@ -728,15 +728,15 @@ function CartoesPage() {
                     </div>
                   </td>
                   <td className="p-3 hidden sm:table-cell text-muted-foreground">
-                    {i.card_purchases?.categories ? (
+                    {i.cartao_compras?.categories ? (
                       <span className="inline-flex items-center gap-1.5">
-                        {i.card_purchases.categories.icon && <span>{i.card_purchases.categories.icon}</span>}
-                        <span>{i.card_purchases.categories.name}</span>
+                        {i.cartao_compras.categorias.icon && <span>{i.cartao_compras.categorias.icon}</span>}
+                        <span>{i.cartao_compras.categorias.name}</span>
                       </span>
                     ) : "—"}
                   </td>
-                  <td className="p-3 hidden md:table-cell text-muted-foreground">{i.card_purchases?.person ?? "—"}</td>
-                  <td className="p-3 hidden md:table-cell text-muted-foreground">{i.installment_number}/{i.card_purchases?.installments_count}</td>
+                  <td className="p-3 hidden md:table-cell text-muted-foreground">{i.cartao_compras?.person ?? "—"}</td>
+                  <td className="p-3 hidden md:table-cell text-muted-foreground">{i.installment_number}/{i.cartao_compras?.installments_count}</td>
                   <td className="p-3 text-right">
                     <div className="font-semibold">{brl(displayedValue)}</div>
                     {isPartial && i.status !== "paid" && (
@@ -745,7 +745,7 @@ function CartoesPage() {
                   </td>
                   <td className="p-3">
                     <div className="flex gap-1 justify-end">
-                      <button onClick={() => setEditingPurchase({ id: i.purchase_id, ...i.card_purchases, card_id: i.card_id, _installment: i, cards })} title="Editar compra" className="w-7 h-7 rounded-md flex items-center justify-center bg-muted text-muted-foreground hover:bg-primary/20 hover:text-primary">
+                      <button onClick={() => setEditingPurchase({ id: i.purchase_id, ...i.cartao_compras, card_id: i.card_id, _installment: i, cards })} title="Editar compra" className="w-7 h-7 rounded-md flex items-center justify-center bg-muted text-muted-foreground hover:bg-primary/20 hover:text-primary">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       {Number(i.amount) < 0 ? (
@@ -1005,9 +1005,9 @@ function RefundHelper({ amount, rawAmount, selectedCategoryId, cats, person, pur
   for (const i of inst as any[]) {
     const d = String(i.due_at || "").slice(0, 7);
     if (d !== ym) continue;
-    const cid = i.card_purchases?.category_id;
+    const cid = i.cartao_compras?.category_id;
     if (!cid) continue;
-    const p = i.card_purchases?.person;
+    const p = i.cartao_compras?.person;
     let val = Number(i.amount);
     if (person && person !== "—") {
       if (p === person) {
@@ -1042,9 +1042,9 @@ function RefundHelper({ amount, rawAmount, selectedCategoryId, cats, person, pur
   for (const i of inst as any[]) {
     const d = String(i.due_at || "").slice(0, 7);
     if (d !== prevYm) continue;
-    const cid = i.card_purchases?.category_id;
+    const cid = i.cartao_compras?.category_id;
     if (!cid || !estornoCatIds.has(cid)) continue;
-    const p = i.card_purchases?.person;
+    const p = i.cartao_compras?.person;
     let val = Math.abs(Number(i.amount));
     if (person && person !== "—") {
       if (p === person) {
@@ -1746,12 +1746,12 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null) => void, onDone: () => void }) {
   const [payAmount, setPayAmount] = useState(String(installment.amount));
   const [notes, setNotes] = useState("");
-  const [paidBy, setPaidBy] = useState<string>(installment.card_purchases?.person || "");
+  const [paidBy, setPaidBy] = useState<string>(installment.cartao_compras?.person || "");
   const [saving, setSaving] = useState(false);
   const { data: accounts = [] } = useAccounts();
 
   const { data: people = [] } = usePeople();
-  const originalPerson = installment.card_purchases?.person || "";
+  const originalPerson = installment.cartao_compras?.person || "";
   const overrideActive = !!paidBy && paidBy.trim().toLowerCase() !== originalPerson.toLowerCase();
 
   const handlePartialPay = async (e: React.FormEvent) => {
@@ -1784,7 +1784,7 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
         // 1. Criar transação de pagamento do valor informado
         await supabase.from("transacoes").insert({
           user_id: user!.id,
-          description: `Pagamento Parcial ${installment.cards?.name || "Cartão"} - ${installment.card_purchases?.description}${split.descriptionSuffix}${overrideSuffix}`,
+          description: `Pagamento Parcial ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}${overrideSuffix}`,
           amount: split.amount,
           kind: "expense",
           status: "paid",
@@ -1803,7 +1803,7 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
           // Compensação só quando o próprio dono da dívida paga
           await supabase.from("transacoes").insert({
             user_id: user!.id,
-            description: `Compensação Fatura ${installment.cards?.name || "Cartão"} - ${installment.card_purchases?.description}${split.descriptionSuffix}`,
+            description: `Compensação Fatura ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}`,
             amount: split.amount,
             kind: "income",
             status: "paid",
@@ -1929,7 +1929,7 @@ function RemovePaymentForm({ installment, allTransactions, onDone, transactionId
     if (fromDb.length === 0) {
       const installmentMonth = new Date(installment.due_at).getMonth();
       const installmentYear = new Date(installment.due_at).getFullYear();
-      const purchaseDesc = (installment.card_purchases?.description || "").toLowerCase();
+      const purchaseDesc = (installment.cartao_compras?.description || "").toLowerCase();
       
       const legacyTrans = allTransactions.filter((t: any) => {
         if (t.card_installment_id) return false; // Já tem vínculo novo
@@ -2150,7 +2150,7 @@ function EditPaidForm({ installment, onDone }: { installment: any, onDone: () =>
       
       // Se houver mudança, registre um lançamento; o saldo é ajustado pelo gatilho do banco.
       if (Math.abs(diff) > 0.01) {
-        const originalPerson = installment.card_purchases?.person || "";
+        const originalPerson = installment.cartao_compras?.person || "";
         const { data: { user } } = await supabase.auth.getUser();
 
         const splits = buildPaymentSplits(accounts, originalPerson, Math.abs(diff));
@@ -2158,7 +2158,7 @@ function EditPaidForm({ installment, onDone }: { installment: any, onDone: () =>
         for (const split of splits) {
           await supabase.from("transacoes").insert({
             user_id: user!.id,
-            description: `Ajuste Pagamento ${installment.cards?.name || "Cartão"} - ${installment.card_purchases?.description}${split.descriptionSuffix}`,
+            description: `Ajuste Pagamento ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}`,
             amount: split.amount,
             kind: diff > 0 ? "expense" : "income",
             status: "paid",
