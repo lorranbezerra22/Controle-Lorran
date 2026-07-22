@@ -1535,13 +1535,14 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
     e.preventDefault(); if (!__tryLock()) return; setSaving(true);
     try {
       const bInfo = findBank(form.bank);
-      const metadata = isSU ? { 
+      const metadata = {
         ...(initialData?.metadata || {}),
-        brands: { 
+        brand: effectiveMode === "standard" ? form.brand : null,
+        brands: effectiveMode === "multi" ? { 
           visa: form.visa_last_digits, 
           master: form.master_last_digits 
-        } 
-      } : (initialData?.metadata || {});
+        } : null
+      };
 
       const payload = {
         name: form.name,
@@ -1550,7 +1551,7 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
         due_day: Number(form.due_day),
         credit_limit: Number(form.credit_limit) || 0,
         color: bInfo.color,
-        last_digits: form.last_digits || null,
+        last_digits: effectiveMode === "standard" ? (form.last_digits || null) : null,
         metadata
       };
 
