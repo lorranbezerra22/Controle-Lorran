@@ -274,7 +274,8 @@ function CartoesPage() {
         m.fatura += valueForFilter;
         
         const b = i.cartao_compras?.brand || "Default";
-        m.brandTotals[b] = (m.brandTotals[b] ?? 0) + valueForFilter;
+        m.brandTotals[b] = m.brandTotals[b] ?? { fatura: 0, restante: 0 };
+        m.brandTotals[b].fatura += valueForFilter;
 
         if (statusFilter !== "paid" && payment.hasPending) {
           let pendingForFilter = payment.remaining;
