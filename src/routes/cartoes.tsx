@@ -1309,24 +1309,45 @@ function PurchaseForm({ cards, cats, onDone }: any) {
         <div className="space-y-1.5"><Label>Valor total</Label><Input type="number" step="0.01" value={form.total_amount} onChange={e => setForm({ ...form, total_amount: e.target.value })} required /></div>
         <div className="space-y-1.5"><Label>Parcelas</Label><Input type="number" min={1} max={36} value={form.installments_count} onChange={e => setForm({ ...form, installments_count: Number(e.target.value) })} required /></div>
       </div>
-      <button
-        type="button"
-        onClick={() => setSplitMode(!splitMode)}
-        className={`w-full flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-sm transition-all ${splitMode ? "border-primary/50 bg-primary/5 shadow-sm" : "border-border bg-muted/20 hover:bg-muted/40"}`}
-      >
-        <span className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${splitMode ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-            <Users className="w-4 h-4" />
-          </div>
-          <span className="flex flex-col items-start">
-            <span className="font-medium">Dividir entre pessoas</span>
-            <span className="text-[11px] text-muted-foreground">{splitMode ? `${splitPeople.length} selecionada${splitPeople.length === 1 ? "" : "s"}` : "Rachar a compra em partes"}</span>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => setSplitMode(!splitMode)}
+          className={`flex-1 flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-sm transition-all ${splitMode ? "border-primary/50 bg-primary/5 shadow-sm" : "border-border bg-muted/20 hover:bg-muted/40"}`}
+        >
+          <span className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${splitMode ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+              <Users className="w-4 h-4" />
+            </div>
+            <span className="flex flex-col items-start text-left">
+              <span className="font-medium text-xs">Dividir Pessoas</span>
+              <span className="text-[10px] text-muted-foreground">{splitMode ? `${splitPeople.length} sel.` : "Rachar valor"}</span>
+            </span>
           </span>
-        </span>
-        <div className={`w-9 h-5 rounded-full p-0.5 transition-colors ${splitMode ? "bg-primary" : "bg-muted-foreground/30"}`}>
-          <div className={`w-4 h-4 rounded-full bg-background shadow transition-transform ${splitMode ? "translate-x-4" : ""}`} />
-        </div>
-      </button>
+          <div className={`w-9 h-5 rounded-full p-0.5 transition-colors ${splitMode ? "bg-primary" : "bg-muted-foreground/30"}`}>
+            <div className={`w-4 h-4 rounded-full bg-background shadow transition-transform ${splitMode ? "translate-x-4" : ""}`} />
+          </div>
+        </button>
+
+        <button
+          type="button"
+          className="flex-1 flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-sm transition-all border-border bg-muted/20 hover:bg-muted/40 opacity-50 cursor-not-allowed"
+          title="Funcionalidade em desenvolvimento"
+        >
+          <span className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-muted text-muted-foreground">
+              <CreditCard className="w-4 h-4" />
+            </div>
+            <span className="flex flex-col items-start text-left">
+              <span className="font-medium text-xs">Sub-Cartões</span>
+              <span className="text-[10px] text-muted-foreground">Vincular gastos</span>
+            </span>
+          </span>
+          <div className="w-9 h-5 rounded-full p-0.5 bg-muted-foreground/30">
+            <div className="w-4 h-4 rounded-full bg-background shadow" />
+          </div>
+        </button>
+      </div>
       {splitMode && (
         <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="space-y-2 rounded-xl border border-border bg-gradient-to-br from-muted/30 to-transparent p-2.5">
           <PersonSelect 
