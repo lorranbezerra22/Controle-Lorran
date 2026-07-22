@@ -138,7 +138,7 @@ function FinanceiroPage() {
         if (selY !== "all" && d.getFullYear() !== selY) return false;
         return true;
       })
-      .filter((t: any) => personFilter === "all" || (t._owner || t.person) === personFilter)
+      .filter((t: any) => personFilter === "all" || (t._owner || t.person).toLowerCase() === personFilter.toLowerCase())
       .filter((t: any) => statusFilter === "all" || t.status === statusFilter)
       .filter((t: any) =>
         !search.trim() || (t.description || "").toLowerCase().includes(search.toLowerCase()),
