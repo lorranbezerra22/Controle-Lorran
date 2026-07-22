@@ -14,7 +14,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 const __submitLock = { busy: false };
 const __tryLock = () => { if (__submitLock.busy) return false; __submitLock.busy = true; return true; };
 const __release = () => { __submitLock.busy = false; };
-import { Plus, CreditCard, Check, Clock, Trash2, Pencil, Banknote, Receipt, Undo2, AlertTriangle, Users, Equal, SlidersHorizontal } from "lucide-react";
+import { Plus, CreditCard, Check, Clock, Trash2, Pencil, Banknote, Receipt, Undo2, AlertTriangle, Users, Equal, SlidersHorizontal, X, Trash } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SmartInput } from "@/components/smart-input";
@@ -492,6 +492,21 @@ function CartoesPage() {
               style={{ background: "var(--gradient-card)", boxShadow: "var(--shadow-elegant)" }} 
               onClick={() => setEditingCard(c)}
             >
+              <button 
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  if (confirm(`Deseja realmente excluir o cartão ${c.name}?`)) {
+                    supabase.from("cards").delete().eq("id", c.id).then(({ error }) => {
+                      if (error) toast.error(error.message);
+                      else { toast.success("Cartão removido"); invalidate("cards"); }
+                    });
+                  }
+                }}
+                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-destructive/10 text-destructive flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-destructive hover:text-white z-10"
+                title="Remover cartão"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
               <div className="flex items-start justify-between mb-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -499,7 +514,10 @@ function CartoesPage() {
                   </div>
                   <div className="text-xs text-muted-foreground truncate">
                     {c.bank ? `${findBank(c.bank).name} • ` : ""}
+                    {c.metadata?.brand && <span className="capitalize">{c.metadata.brand} </span>}
                     {c.last_digits ? `•••• ${c.last_digits} • ` : ""}
+                    {c.metadata?.brands?.visa && `Visa •••• ${c.metadata.brands.visa} • `}
+                    {c.metadata?.brands?.master && `Master •••• ${c.metadata.brands.master} • `}
                     Fech. {c.closing_day} • Venc. {c.due_day}
                   </div>
                 </div>
@@ -1523,22 +1541,26 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
     credit_limit: String(initialData?.credit_limit ?? ""),
     last_digits: initialData?.last_digits ?? "",
     visa_last_digits: initialData?.metadata?.brands?.visa ?? "",
-    master_last_digits: initialData?.metadata?.brands?.master ?? ""
+    master_last_digits: initialData?.metadata?.brands?.master ?? "",
+    brand: initialData?.metadata?.brand ?? "visa",
+    mode: (initialData?.metadata?.brands?.visa || initialData?.metadata?.brands?.master) ? "multi" : "standard"
   });
   const [saving, setSaving] = useState(false);
   const isSU = /santander/i.test(form.bank || "") && /unlimited/i.test(form.name || "");
+  const effectiveMode = isSU ? "multi" : form.mode;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!__tryLock()) return; setSaving(true);
     try {
       const bInfo = findBank(form.bank);
-      const metadata = isSU ? { 
+      const metadata = {
         ...(initialData?.metadata || {}),
-        brands: { 
+        brand: effectiveMode === "standard" ? form.brand : null,
+        brands: effectiveMode === "multi" ? { 
           visa: form.visa_last_digits, 
           master: form.master_last_digits 
-        } 
-      } : (initialData?.metadata || {});
+        } : null
+      };
 
       const payload = {
         name: form.name,
@@ -1547,7 +1569,7 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
         due_day: Number(form.due_day),
         credit_limit: Number(form.credit_limit) || 0,
         color: bInfo.color,
-        last_digits: form.last_digits || null,
+        last_digits: effectiveMode === "standard" ? (form.last_digits || null) : null,
         metadata
       };
 
@@ -1600,36 +1622,74 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
         </Select>
       </div>
       <div className="space-y-1.5">
-        <Label>Bandeira</Label>
+        <Label>Tipo de Cartão</Label>
         <Select 
-          value={form.last_digits && !isSU ? "standard" : isSU ? "multi" : undefined}
-          onValueChange={() => {}}
+          value={effectiveMode}
+          onValueChange={(v: any) => setForm({ ...form, mode: v })}
+          disabled={isSU}
         >
-          <SelectTrigger><SelectValue placeholder="Selecione a bandeira" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="standard">Visa / Mastercard / Elo</SelectItem>
-            <SelectItem value="multi">Múltiplas (Visa + Master)</SelectItem>
+            <SelectItem value="standard">Bandeira Única (Visa, Master...)</SelectItem>
+            <SelectItem value="multi">Múltiplas Bandeiras (Combo)</SelectItem>
           </SelectContent>
         </Select>
       </div>
-      {(!isSU && (form.last_digits || form.bank)) && (
-        <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
-          <Label>Últimos 4 dígitos</Label>
-          <Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} />
+
+      {effectiveMode === "standard" && (
+        <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="space-y-1.5">
+            <Label>Bandeira</Label>
+            <Select value={form.brand} onValueChange={(v) => setForm({ ...form, brand: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="visa">Visa</SelectItem>
+                <SelectItem value="mastercard">Mastercard</SelectItem>
+                <SelectItem value="elo">Elo</SelectItem>
+                <SelectItem value="amex">Amex</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Últimos 4 dígitos</Label>
+            <Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} />
+          </div>
         </div>
       )}
+
+      {effectiveMode === "multi" && (
+        <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="space-y-1.5">
+            <Label>Final Visa</Label>
+            <div className="relative group">
+              <Input maxLength={4} placeholder="Ex: 2054" value={form.visa_last_digits} onChange={e => setForm({ ...form, visa_last_digits: e.target.value })} />
+              {form.visa_last_digits && (
+                <button type="button" onClick={() => setForm({...form, visa_last_digits: ""})} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Final Master</Label>
+            <div className="relative group">
+              <Input maxLength={4} placeholder="Ex: 3019" value={form.master_last_digits} onChange={e => setForm({ ...form, master_last_digits: e.target.value })} />
+              {form.master_last_digits && (
+                <button type="button" onClick={() => setForm({...form, master_last_digits: ""})} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5"><Label>Fechamento</Label><Input type="number" min={1} max={31} value={form.closing_day} onChange={e => setForm({ ...form, closing_day: Number(e.target.value) })} required /></div>
         <div className="space-y-1.5"><Label>Vencimento</Label><Input type="number" min={1} max={31} value={form.due_day} onChange={e => setForm({ ...form, due_day: Number(e.target.value) })} required /></div>
       </div>
       <div className="space-y-1.5"><Label>Limite total</Label><Input type="number" step="0.01" value={form.credit_limit} onChange={e => setForm({ ...form, credit_limit: e.target.value })} required /></div>
-      
-      {isSU && (
-        <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
-          <div className="space-y-1.5"><Label>Final Visa</Label><Input maxLength={4} placeholder="Ex: 2054" value={form.visa_last_digits} onChange={e => setForm({ ...form, visa_last_digits: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label>Final Master</Label><Input maxLength={4} placeholder="Ex: 3019" value={form.master_last_digits} onChange={e => setForm({ ...form, master_last_digits: e.target.value })} /></div>
-        </div>
-      )}
+
       <div className="flex gap-2">
         <Button type="submit" disabled={saving} className="flex-1">{saving ? "Salvando…" : initialData?.id ? "Salvar alterações" : "Salvar"}</Button>
         {initialData?.id && <Button type="button" variant="destructive" onClick={remove}>Excluir</Button>}
