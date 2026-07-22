@@ -1377,7 +1377,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
   );
 }
 
-function EditPurchaseForm({ purchase, cats, onDone }: any) {
+function EditPurchaseForm({ purchase, cards, cats, onDone }: any) {
   const clicked = purchase._installment;
   const clickedNum = clicked?.installment_number ?? 1;
   const initialBrand = purchase.brand || "";
