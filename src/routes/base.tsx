@@ -238,9 +238,9 @@ function PeopleReportSection() {
           ? `${i.installment_number}/${i.cartao_compras.installments_count}` 
           : "—";
         return {
-          date: i.card_purchases?.purchase_date || i.due_at,
+          date: i.cartao_compras?.purchase_date || i.due_at,
           type: "Cartão",
-          desc: i.card_purchases?.description || "",
+          desc: i.cartao_compras?.description || "",
           installment: installmentText,
           amount,
           status: amount < 0 ? "Estorno" : (i.status === "paid" ? "Pago" : "Pendente"),
