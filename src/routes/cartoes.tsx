@@ -1542,7 +1542,8 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
     visa_last_digits: initialData?.metadata?.brands?.visa ?? "",
     master_last_digits: initialData?.metadata?.brands?.master ?? "",
     brand: initialData?.metadata?.brand ?? "visa",
-    mode: (initialData?.metadata?.brands?.visa || initialData?.metadata?.brands?.master) ? "multi" : "standard"
+    mode: (initialData?.metadata?.brands?.visa || initialData?.metadata?.brands?.master) ? "multi" : initialData?.pai_id ? "subcard" : "standard",
+    pai_id: initialData?.pai_id ?? "",
   });
   const [saving, setSaving] = useState(false);
   const isSU = /santander/i.test(form.bank || "") && /unlimited/i.test(form.name || "");
