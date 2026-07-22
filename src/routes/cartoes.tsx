@@ -1019,8 +1019,15 @@ function CartoesPage() {
 
 
 function CardForm({ onDone }: any) {
-  const [form, setForm] = useState({ name: "", bank: "", closing_day: 1, due_day: 10, credit_limit: "", color: "#6366f1" });
+  const [form, setForm] = useState({ 
+    name: "", bank: "", closing_day: 1, due_day: 10, credit_limit: "", color: "#6366f1",
+    last_digits: "",
+    visa_last_digits: "",
+    master_last_digits: ""
+  });
   const [saving, setSaving] = useState(false);
+  const isSU = /santander/i.test(form.bank || "") && /unlimited/i.test(form.name || "");
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!__tryLock()) return; setSaving(true);
     try {
@@ -1441,7 +1448,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
   );
 }
 
-function EditPurchaseForm({ purchase, cats, onDone, isSantanderUnlimited }: any) {
+function EditPurchaseForm({ purchase, cats, onDone }: any) {
   const clicked = purchase._installment;
   const clickedNum = clicked?.installment_number ?? 1;
   const initialBrand = (() => {
@@ -1560,7 +1567,31 @@ function EditPurchaseForm({ purchase, cats, onDone, isSantanderUnlimited }: any)
           </SelectContent>
         </Select>
       </div>
-      {isSantanderUnlimited && (
+      {(() => {
+        const isSU = /santander/i.test(purchase.cards?.bank || "") && /unlimited/i.test(purchase.cards?.name || "");
+        if (!isSU) return null;
+        return (
+          <div className="space-y-1.5">
+            <Label>Bandeira (Santander Unlimited)</Label>
+            <Select value={form.brand || "none"} onValueChange={(v) => setForm({ ...form, brand: v === "none" ? "" : v })}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sem bandeira</SelectItem>
+                {(() => {
+                  const vNum = purchase.cards?.metadata?.brands?.visa || "2054";
+                  const mNum = purchase.cards?.metadata?.brands?.master || "3019";
+                  return (
+                    <>
+                      <SelectItem value={`Visa ${vNum}`}>Visa • {vNum}</SelectItem>
+                      <SelectItem value={`Master ${mNum}`}>Master • {mNum}</SelectItem>
+                    </>
+                  );
+                })()}
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      })()}
         <div className="space-y-1.5">
           <Label>Bandeira (Santander Unlimited)</Label>
           <Select value={form.brand || "none"} onValueChange={(v) => setForm({ ...form, brand: v === "none" ? "" : v })}>
@@ -1580,8 +1611,6 @@ function EditPurchaseForm({ purchase, cats, onDone, isSantanderUnlimited }: any)
               })()}
             </SelectContent>
           </Select>
-        </div>
-      )}
       <label className="flex items-start gap-2 rounded-md border border-border p-2.5 cursor-pointer hover:bg-muted/50">
         <input type="checkbox" checked={applyAll} onChange={e => setApplyAll(e.target.checked)} className="mt-0.5" />
         <div className="text-xs">
