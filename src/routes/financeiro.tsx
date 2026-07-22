@@ -108,14 +108,18 @@ function FinanceiroPage() {
   const baseTx = useMemo(
     () =>
       merged.flatMap((t: any) => {
-        if (t.kind === "expense" && (t.person === "Família" || t._debtPerson === "Família")) {
+        // Se a pessoa original é Família, fazemos o split 50/50
+        const isFamily = (t.person || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === "familia" ||
+                        (t._debtPerson || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === "familia";
+
+        if (t.kind === "expense" && isFamily) {
           const half = Number(t.amount) / 2;
           return [
-            { ...t, id: `${t.id}::L`, person: "Família", _owner: "Lorran", amount: half, _familiaSplit: true, _origId: t.id, _originalItem: t._originalItem },
-            { ...t, id: `${t.id}::T`, person: "Família", _owner: "Tayane", amount: half, _familiaSplit: true, _origId: t.id, _originalItem: t._originalItem },
+            { ...t, id: `${t.id}::L`, _owner: "Lorran", amount: half, _familiaSplit: true, _origId: t.id, _originalItem: t._originalItem },
+            { ...t, id: `${t.id}::T`, _owner: "Tayane", amount: half, _familiaSplit: true, _origId: t.id, _originalItem: t._originalItem },
           ];
         }
-        return [t];
+        return [{ ...t, _owner: t.person }];
       }),
     [merged],
   );
