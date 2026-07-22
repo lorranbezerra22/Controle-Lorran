@@ -141,7 +141,6 @@ function CartoesPage() {
   const { data: allTransactions = [] } = useTransactions();
   const [newCardOpen, setNewCardOpen] = useState(false);
   const [newPurchaseOpen, setNewPurchaseOpen] = useState(false);
-  
   const [editingPurchase, setEditingPurchase] = useState<any>(null);
   const [partialPayOpen, setPartialPayOpen] = useState<any>(null);
   const [removePaymentOpen, setRemovePaymentOpen] = useState<any>(null);
@@ -448,9 +447,9 @@ function CartoesPage() {
         actions={
           <>
             <Dialog open={newCardOpen} onOpenChange={setNewCardOpen}>
-              <DialogTrigger asChild><Button variant="outline" size="sm" className="rounded-full"><CreditCard className="w-4 h-4 mr-1" /> Novo cartão</Button></DialogTrigger>
+              <DialogTrigger asChild><Button variant="outline" size="sm" className="rounded-full"><Plus className="w-4 h-4 mr-1" /> Novo cartão</Button></DialogTrigger>
               <DialogContent>
-                <DialogHeader><DialogTitle>Cadastrar cartão</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>Novo cartão</DialogTitle></DialogHeader>
                 <CardForm onDone={() => { setNewCardOpen(false); invalidate("cards"); }} />
               </DialogContent>
             </Dialog>
@@ -491,19 +490,12 @@ function CartoesPage() {
               whileHover={{ y: -3, transition: { duration: 0.2 } }} 
               className="rounded-xl p-5 border border-border cursor-pointer hover:border-primary/50 transition-colors group relative" 
               style={{ background: "var(--gradient-card)", boxShadow: "var(--shadow-elegant)" }} 
+              onClick={() => setEditingCard(c)}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <div className="font-semibold text-lg truncate">{c.name}</div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="w-6 h-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-background/50 hover:bg-background border border-border"
-                      onClick={(e) => { e.stopPropagation(); setEditingCard(c); }}
-                    >
-                      <Pencil className="w-3 h-3" />
-                    </Button>
                   </div>
                   <div className="text-xs text-muted-foreground truncate">
                     {c.bank ? `${findBank(c.bank).name} • ` : ""}
@@ -511,7 +503,7 @@ function CartoesPage() {
                     Fech. {c.closing_day} • Venc. {c.due_day}
                   </div>
                 </div>
-                <div onClick={() => setEditingCard(c)} className="shrink-0 cursor-pointer">
+                <div className="shrink-0">
                   <BankIcon bank={c.bank} size={48} square />
                 </div>
               </div>
@@ -831,8 +823,8 @@ function CartoesPage() {
 
       <Dialog open={!!editingCard} onOpenChange={(o) => !o && setEditingCard(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Editar cartão</DialogTitle></DialogHeader>
-          {editingCard && <EditCardForm card={editingCard} onDone={() => { setEditingCard(null); invalidate("cards"); }} onDelete={() => { setEditingCard(null); invalidate("cards"); invalidate("installments"); }} />}
+          <DialogHeader><DialogTitle>{editingCard?.id ? "Editar cartão" : "Novo cartão"}</DialogTitle></DialogHeader>
+          {editingCard && <CardForm initialData={editingCard} onDone={() => { setEditingCard(null); invalidate("cards"); }} />}
         </DialogContent>
       </Dialog>
 
@@ -1018,76 +1010,6 @@ function CartoesPage() {
 }
 
 
-function CardForm({ onDone }: any) {
-  const [form, setForm] = useState({ 
-    name: "", bank: "", closing_day: 1, due_day: 10, credit_limit: "", color: "#6366f1",
-    last_digits: "",
-    visa_last_digits: "",
-    master_last_digits: ""
-  });
-  const [saving, setSaving] = useState(false);
-  const isSU = /santander/i.test(form.bank || "") && /unlimited/i.test(form.name || "");
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); if (!__tryLock()) return; setSaving(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const metadata = isSU ? { 
-        brands: { 
-          visa: form.visa_last_digits, 
-          master: form.master_last_digits 
-        } 
-      } : {};
-
-      const { error } = await supabase.from("cards").insert({
-        user_id: user!.id, 
-        name: form.name, 
-        bank: form.bank || null,
-        closing_day: Number(form.closing_day), 
-        due_day: Number(form.due_day),
-        credit_limit: Number(form.credit_limit) || 0, 
-        color: form.color,
-        last_digits: form.last_digits || null,
-        metadata
-      });
-      if (error) throw error;
-      toast.success("Cartão cadastrado");
-      onDone();
-    } catch (err: any) { toast.error(err.message); } finally { setSaving(false); __release(); }
-  };
-  return (
-    <form onSubmit={submit} className="space-y-3">
-      <div className="space-y-1.5"><Label>Nome do cartão</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required placeholder="Nubank, Santander…" /></div>
-      <div className="space-y-1.5"><Label>Banco</Label>
-        <Select value={form.bank || undefined} onValueChange={(v) => { 
-          const b = findBank(v); 
-          let newName = form.name;
-          if (b.id === "santander" && !form.name) newName = "Santander Unlimited";
-          setForm({ ...form, bank: b.name, color: b.color, name: newName }); 
-        }}>
-          <SelectTrigger><SelectValue placeholder="Selecione o banco" /></SelectTrigger>
-          <SelectContent>{BANKS.map((b) => <SelectItem key={b.id} value={b.name}><div className="flex items-center gap-2"><BankIcon bank={b.name} size={18} square /><span>{b.name}</span></div></SelectItem>)}</SelectContent>
-        </Select>
-      </div>
-      <div className="grid grid-cols-3 gap-3">
-        <div className="space-y-1.5"><Label>Fechamento</Label><Input type="number" min={1} max={31} value={form.closing_day} onChange={e => setForm({ ...form, closing_day: Number(e.target.value) })} required /></div>
-        <div className="space-y-1.5"><Label>Vencimento</Label><Input type="number" min={1} max={31} value={form.due_day} onChange={e => setForm({ ...form, due_day: Number(e.target.value) })} required /></div>
-        <div className="space-y-1.5"><Label>Cor</Label><Input type="color" value={form.color} onChange={e => setForm({ ...form, color: e.target.value })} /></div>
-      </div>
-      <div className="space-y-1.5"><Label>Limite total</Label><Input type="number" step="0.01" value={form.credit_limit} onChange={e => setForm({ ...form, credit_limit: e.target.value })} required /></div>
-      
-      {!isSU ? (
-        <div className="space-y-1.5"><Label>Últimos 4 dígitos</Label><Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} /></div>
-      ) : (
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5"><Label>Final Visa</Label><Input maxLength={4} placeholder="Ex: 2054" value={form.visa_last_digits} onChange={e => setForm({ ...form, visa_last_digits: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label>Final Master</Label><Input maxLength={4} placeholder="Ex: 3019" value={form.master_last_digits} onChange={e => setForm({ ...form, master_last_digits: e.target.value })} /></div>
-        </div>
-      )}
-      <Button type="submit" disabled={saving} className="w-full">{saving ? "Salvando…" : "Salvar cartão"}</Button>
-    </form>
-  );
-}
 
 function RefundHelper({ amount, rawAmount, selectedCategoryId, cats, person, purchaseDate, card, onPick }: { amount: number; rawAmount?: string; selectedCategoryId: string; cats: any[]; person?: string; purchaseDate?: string; card?: any; onPick: (id: string) => void }) {
   const { data: inst = [] } = useInstallments();
@@ -1592,17 +1514,16 @@ function EditPurchaseForm({ purchase, cats, onDone }: any) {
   );
 }
 
-function EditCardForm({ card, onDone, onDelete }: any) {
+function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: any }) {
   const [form, setForm] = useState({
-    name: card.name ?? "",
-    bank: card.bank ?? "",
-    closing_day: card.closing_day ?? 1,
-    due_day: card.due_day ?? 10,
-    credit_limit: String(card.credit_limit ?? ""),
-    color: card.color ?? "#6366f1",
-    last_digits: card.last_digits ?? "",
-    visa_last_digits: card.metadata?.brands?.visa ?? "",
-    master_last_digits: card.metadata?.brands?.master ?? ""
+    name: initialData?.name ?? "",
+    bank: initialData?.bank ?? "",
+    closing_day: initialData?.closing_day ?? 1,
+    due_day: initialData?.due_day ?? 10,
+    credit_limit: String(initialData?.credit_limit ?? ""),
+    last_digits: initialData?.last_digits ?? "",
+    visa_last_digits: initialData?.metadata?.brands?.visa ?? "",
+    master_last_digits: initialData?.metadata?.brands?.master ?? ""
   });
   const [saving, setSaving] = useState(false);
   const isSU = /santander/i.test(form.bank || "") && /unlimited/i.test(form.name || "");
@@ -1610,62 +1531,108 @@ function EditCardForm({ card, onDone, onDelete }: any) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!__tryLock()) return; setSaving(true);
     try {
+      const bInfo = findBank(form.bank);
       const metadata = isSU ? { 
-        ...card.metadata,
+        ...(initialData?.metadata || {}),
         brands: { 
           visa: form.visa_last_digits, 
           master: form.master_last_digits 
         } 
-      } : (card.metadata || {});
+      } : (initialData?.metadata || {});
 
-      const { error } = await supabase.from("cards").update({
+      const payload = {
         name: form.name,
         bank: form.bank || null,
         closing_day: Number(form.closing_day),
         due_day: Number(form.due_day),
         credit_limit: Number(form.credit_limit) || 0,
-        color: form.color,
+        color: bInfo.color,
         last_digits: form.last_digits || null,
         metadata
-      }).eq("id", card.id);
+      };
 
-      if (error) throw error;
-      toast.success("Cartão atualizado");
+      if (initialData?.id) {
+        const { error } = await supabase.from("cards").update(payload).eq("id", initialData.id);
+        if (error) throw error;
+        toast.success("Cartão atualizado");
+      } else {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { error } = await supabase.from("cards").insert({ ...payload, user_id: user!.id });
+        if (error) throw error;
+        toast.success("Cartão cadastrado");
+      }
       onDone();
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); __release(); }
   };
+
   const remove = async () => {
+    if (!initialData?.id) return;
     if (!confirm("Excluir cartão e todas as compras/parcelas vinculadas?")) return;
-    const { error } = await supabase.from("cards").delete().eq("id", card.id);
-    if (error) toast.error(error.message); else { toast.success("Cartão removido"); onDelete(); }
+    const { error } = await supabase.from("cards").delete().eq("id", initialData.id);
+    if (error) toast.error(error.message); else { toast.success("Cartão removido"); onDone(); }
   };
+
   return (
     <form onSubmit={submit} className="space-y-3">
       <div className="space-y-1.5"><Label>Nome</Label><SmartInput value={form.name} onChange={(v) => setForm({ ...form, name: v })} required /></div>
-      <div className="space-y-1.5"><Label>Banco</Label>
-        <Select value={form.bank || undefined} onValueChange={(v) => { const b = findBank(v); setForm({ ...form, bank: b.name, color: b.color }); }}>
+      <div className="space-y-1.5">
+        <Label>Banco</Label>
+        <Select 
+          value={form.bank || undefined} 
+          onValueChange={(v) => { 
+            const b = findBank(v); 
+            let newName = form.name;
+            if (b.id === "santander" && !form.name) newName = "Santander Unlimited";
+            setForm({ ...form, bank: b.name, name: newName }); 
+          }}
+        >
           <SelectTrigger><SelectValue placeholder="Selecione o banco" /></SelectTrigger>
-          <SelectContent>{BANKS.map((b) => <SelectItem key={b.id} value={b.name}><div className="flex items-center gap-2"><BankIcon bank={b.name} size={18} square /><span>{b.name}</span></div></SelectItem>)}</SelectContent>
+          <SelectContent>
+            {BANKS.map((b) => (
+              <SelectItem key={b.id} value={b.name}>
+                <div className="flex items-center gap-2">
+                  <BankIcon bank={b.name} size={18} square />
+                  <span>{b.name}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="space-y-1.5">
+        <Label>Bandeira</Label>
+        <Select 
+          value={form.last_digits && !isSU ? "standard" : isSU ? "multi" : undefined}
+          onValueChange={() => {}}
+        >
+          <SelectTrigger><SelectValue placeholder="Selecione a bandeira" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="standard">Visa / Mastercard / Elo</SelectItem>
+            <SelectItem value="multi">Múltiplas (Visa + Master)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {(!isSU && (form.last_digits || form.bank)) && (
+        <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+          <Label>Últimos 4 dígitos</Label>
+          <Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} />
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5"><Label>Fechamento</Label><Input type="number" min={1} max={31} value={form.closing_day} onChange={e => setForm({ ...form, closing_day: Number(e.target.value) })} required /></div>
         <div className="space-y-1.5"><Label>Vencimento</Label><Input type="number" min={1} max={31} value={form.due_day} onChange={e => setForm({ ...form, due_day: Number(e.target.value) })} required /></div>
-        <div className="space-y-1.5"><Label>Cor</Label><Input type="color" value={form.color} onChange={e => setForm({ ...form, color: e.target.value })} /></div>
       </div>
       <div className="space-y-1.5"><Label>Limite total</Label><Input type="number" step="0.01" value={form.credit_limit} onChange={e => setForm({ ...form, credit_limit: e.target.value })} required /></div>
       
-      {!isSU ? (
-        <div className="space-y-1.5"><Label>Últimos 4 dígitos</Label><Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} /></div>
-      ) : (
-        <div className="grid grid-cols-2 gap-3">
+      {isSU && (
+        <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
           <div className="space-y-1.5"><Label>Final Visa</Label><Input maxLength={4} placeholder="Ex: 2054" value={form.visa_last_digits} onChange={e => setForm({ ...form, visa_last_digits: e.target.value })} /></div>
           <div className="space-y-1.5"><Label>Final Master</Label><Input maxLength={4} placeholder="Ex: 3019" value={form.master_last_digits} onChange={e => setForm({ ...form, master_last_digits: e.target.value })} /></div>
         </div>
       )}
       <div className="flex gap-2">
-        <Button type="submit" disabled={saving} className="flex-1">{saving ? "Salvando…" : "Salvar"}</Button>
-        <Button type="button" variant="destructive" onClick={remove}>Excluir</Button>
+        <Button type="submit" disabled={saving} className="flex-1">{saving ? "Salvando…" : initialData?.id ? "Salvar alterações" : "Salvar"}</Button>
+        {initialData?.id && <Button type="button" variant="destructive" onClick={remove}>Excluir</Button>}
       </div>
     </form>
   );
