@@ -10,7 +10,7 @@ export const useTransactions = () =>
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transacoes")
-        .select("*, categorias(name, icon)")
+        .select("*, categorias:category_id(name, icon)")
         .order("due_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
