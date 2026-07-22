@@ -9,8 +9,8 @@ export const useTransactions = () =>
     staleTime: STALE_60S,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("transactions")
-        .select("*, categories(name, icon)")
+        .from("transacoes")
+        .select("*, categorias(name, icon)")
         .order("due_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
@@ -23,7 +23,7 @@ export const useCategories = () =>
     queryKey: ["categories"],
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("categories").select("*").order("name");
+      const { data, error } = await supabase.from("categorias").select("*").order("name");
       if (error) throw error;
       return data ?? [];
     },
@@ -34,7 +34,7 @@ export const usePeople = () =>
     queryKey: ["people"],
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("people").select("*").order("name");
+      const { data, error } = await supabase.from("pessoas").select("*").order("name");
       if (error) throw error;
       return data ?? [];
     },
@@ -45,7 +45,7 @@ export const useCards = () =>
     queryKey: ["cards"],
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("cards").select("*").order("name");
+      const { data, error } = await supabase.from("cartoes").select("*").order("name");
       if (error) throw error;
       return data ?? [];
     },
@@ -57,8 +57,8 @@ export const useInstallments = () =>
     staleTime: STALE_60S,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("card_installments")
-        .select("*, card_purchases(description, person, total_amount, installments_count, purchase_date, category_id, brand, categories(name, icon)), cards(name, color)")
+        .from("cartao_parcelas")
+        .select("*, cartao_compras(description, person, total_amount, installments_count, purchase_date, category_id, brand, categorias(name, icon)), cartoes(name, color)")
         .order("due_at", { ascending: false })
         .limit(2000);
       if (error) throw error;
@@ -70,7 +70,7 @@ export const useAccounts = () =>
   useQuery({
     queryKey: ["accounts"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("accounts").select("*").order("bank");
+      const { data, error } = await supabase.from("contas").select("*").order("bank");
       if (error) throw error;
       return data ?? [];
     },

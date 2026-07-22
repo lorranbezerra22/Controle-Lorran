@@ -1,0 +1,53 @@
+-- 1. Renomear tabelas (Inglês -> Português)
+ALTER TABLE public.account_yields RENAME TO conta_rendimentos;
+ALTER TABLE public.accounts RENAME TO contas;
+ALTER TABLE public.card_installment_payments RENAME TO cartao_parcela_pagamentos;
+ALTER TABLE public.card_installments RENAME TO cartao_parcelas;
+ALTER TABLE public.card_purchases RENAME TO cartao_compras;
+ALTER TABLE public.cards RENAME TO cartoes;
+ALTER TABLE public.categories RENAME TO categorias;
+ALTER TABLE public.financial_request_history RENAME TO requisicao_financeira_historico;
+ALTER TABLE public.financial_requests RENAME TO requisicoes_financeiras;
+ALTER TABLE public.global_settings RENAME TO configuracoes_globais;
+ALTER TABLE public.import_batches RENAME TO lotes_importacao;
+ALTER TABLE public.loan_payments RENAME TO emprestimo_pagamentos;
+ALTER TABLE public.loans RENAME TO emprestimos;
+ALTER TABLE public.milhas_earnings RENAME TO milhas_ganhos;
+ALTER TABLE public.milhas_programs RENAME TO milhas_programas;
+ALTER TABLE public.milhas_redemptions RENAME TO milhas_resgates;
+ALTER TABLE public.milhas_transfers RENAME TO milhas_transferencias;
+ALTER TABLE public.notes RENAME TO notas;
+ALTER TABLE public.people RENAME TO pessoas;
+ALTER TABLE public.profiles RENAME TO perfis;
+ALTER TABLE public.recurring_rules RENAME TO regras_recorrentes;
+ALTER TABLE public.shared_access_members RENAME TO membros_acesso_compartilhado;
+ALTER TABLE public.transaction_adjustments RENAME TO transacao_ajustes;
+ALTER TABLE public.transactions RENAME TO transacoes;
+
+-- 2. Garantir permissões nas tabelas renomeadas
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.conta_rendimentos TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.contas TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.cartao_parcela_pagamentos TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.cartao_parcelas TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.cartao_compras TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.cartoes TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.categorias TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.requisicao_financeira_historico TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.requisicoes_financeiras TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.configuracoes_globais TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.lotes_importacao TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.emprestimo_pagamentos TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.emprestimos TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.milhas_ganhos TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.milhas_programas TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.milhas_resgates TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.milhas_transferencias TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.notas TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.pessoas TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.perfis TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.regras_recorrentes TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.membros_acesso_compartilhado TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.transacao_ajustes TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.transacoes TO authenticated;
+
+GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;

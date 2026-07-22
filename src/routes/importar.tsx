@@ -147,7 +147,7 @@ function ImportPage() {
   const { data: batches = [], refetch: refetchBatches } = useQuery({
     queryKey: ["import_batches"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("import_batches").select("*").order("created_at", { ascending: false }).limit(10);
+      const { data, error } = await supabase.from("lotes_importacao").select("*").order("created_at", { ascending: false }).limit(10);
       if (error) throw error;
       return data ?? [];
     },
@@ -247,7 +247,7 @@ function ImportPage() {
       if (!uid) throw new Error("não autenticado");
 
       // Create batch
-      const { data: batch, error: bErr } = await supabase.from("import_batches").insert({ user_id: uid, source_filename: filename, summary: {} }).select().single();
+      const { data: batch, error: bErr } = await supabase.from("lotes_importacao").insert({ user_id: uid, source_filename: filename, summary: {} }).select().single();
       if (bErr) throw bErr;
       const batchId = batch.id;
 
@@ -258,7 +258,7 @@ function ImportPage() {
         if (!name) return null;
         const key = name.toLowerCase().trim();
         if (catMap.has(key)) return catMap.get(key);
-        const { data, error } = await supabase.from("categories").insert({ user_id: uid, name, kind }).select().single();
+        const { data, error } = await supabase.from("categorias").insert({ user_id: uid, name, kind }).select().single();
         if (error) return null;
         catMap.set(key, data.id);
         return data.id;
@@ -266,7 +266,7 @@ function ImportPage() {
       const ensureCard = async (name: string) => {
         const key = name.toLowerCase().trim();
         if (cardMap.has(key)) return cardMap.get(key);
-        const { data, error } = await supabase.from("cards").insert({ user_id: uid, name, closing_day: 1, due_day: 10, credit_limit: 0 }).select().single();
+        const { data, error } = await supabase.from("cartoes").insert({ user_id: uid, name, closing_day: 1, due_day: 10, credit_limit: 0 }).select().single();
         if (error) return null;
         cardMap.set(key, data.id);
         return data.id;
@@ -314,7 +314,7 @@ function ImportPage() {
           }));
           for (let i = 0; i < reqRows.length; i += 500) {
             const chunk = reqRows.slice(i, i + 500);
-            const { error } = await supabase.from("financial_requests").insert(chunk);
+            const { error } = await supabase.from("requisicoes_financeiras").insert(chunk);
             if (!error) txCount += chunk.length;
           }
           continue;
@@ -335,7 +335,7 @@ function ImportPage() {
           })));
           for (let i = 0; i < rows.length; i += 500) {
             const chunk = rows.slice(i, i + 500);
-            const { error } = await supabase.from("transactions").insert(chunk);
+            const { error } = await supabase.from("transacoes").insert(chunk);
             if (!error) txCount += chunk.length;
           }
         } else if (sheet.kind === "card_purchases") {
@@ -343,7 +343,7 @@ function ImportPage() {
             const cardId = await ensureCard(r.data.card_name);
             if (!cardId) continue;
             const catId = await ensureCategory(r.data.category_name);
-            const { data: cp, error } = await supabase.from("card_purchases").insert({
+            const { data: cp, error } = await supabase.from("cartao_compras").insert({
               user_id: uid, card_id: cardId, category_id: catId,
               description: r.data.description, total_amount: r.data.total_amount,
               installments_count: r.data.installments_count, purchase_date: r.data.purchase_date,
@@ -363,7 +363,7 @@ function ImportPage() {
                 status: "pending", import_batch_id: batchId,
               });
             }
-            const { error: iErr } = await supabase.from("card_installments").insert(installments);
+            const { error: iErr } = await supabase.from("cartao_parcelas").insert(installments);
             if (!iErr) ciCount += installments.length;
           }
         } else if (sheet.kind === "recurring") {
@@ -377,12 +377,12 @@ function ImportPage() {
             active: true,
             import_batch_id: batchId,
           })));
-          const { error } = await supabase.from("recurring_rules").insert(rows);
+          const { error } = await supabase.from("regras_recorrentes").insert(rows);
           if (!error) rrCount += rows.length;
         }
       }
 
-      await supabase.from("import_batches").update({
+      await supabase.from("lotes_importacao").update({
         summary: { transactions: txCount, card_purchases: cpCount, installments: ciCount, recurring: rrCount, skipped },
       }).eq("id", batchId);
 
@@ -403,11 +403,11 @@ function ImportPage() {
 
   const undoBatch = async (id: string) => {
     if (!confirm("Desfazer essa importação? Tudo que foi criado por ela será removido.")) return;
-    await supabase.from("transactions").delete().eq("import_batch_id", id);
-    await supabase.from("card_installments").delete().eq("import_batch_id", id);
-    await supabase.from("card_purchases").delete().eq("import_batch_id", id);
-    await supabase.from("recurring_rules").delete().eq("import_batch_id", id);
-    await supabase.from("import_batches").delete().eq("id", id);
+    await supabase.from("transacoes").delete().eq("import_batch_id", id);
+    await supabase.from("cartao_parcelas").delete().eq("import_batch_id", id);
+    await supabase.from("cartao_compras").delete().eq("import_batch_id", id);
+    await supabase.from("regras_recorrentes").delete().eq("import_batch_id", id);
+    await supabase.from("lotes_importacao").delete().eq("id", id);
     toast.success("Importação desfeita");
     invalidate("transactions"); invalidate("installments"); invalidate("recurring_rules");
     refetchBatches();

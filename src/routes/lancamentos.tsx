@@ -195,7 +195,7 @@ function LancamentosPage() {
   const togglePaid = async (t: any) => {
     if (t.status === "paid") {
       // Revertendo pagamento: limpa paid_by e contas
-      const { error } = await supabase.from("transactions").update({
+      const { error } = await supabase.from("transacoes").update({
         status: "pending",
         account_id: null,
         account_tayane_id: null,
@@ -241,7 +241,7 @@ function LancamentosPage() {
     const splitPayBy = payBy ? payBy.split(",") : [];
     const firstPayBy = splitPayBy[0] || "";
     const personIsDifferent = !isFamilyExpense && firstPayBy && norm(firstPayBy) !== norm(t.person || "");
-    const { error } = await supabase.from("transactions").update({
+    const { error } = await supabase.from("transacoes").update({
       status: "paid",
       account_id: payAccount || null,
       account_tayane_id: useSplit ? (payAccountTayane || null) : null,
@@ -267,15 +267,15 @@ function LancamentosPage() {
 
   const askDelete = (t: any) => setDeleting(t);
   const doDeleteOne = async (t: any) => {
-    const { error } = await supabase.from("transactions").delete().eq("id", t.id);
+    const { error } = await supabase.from("transacoes").delete().eq("id", t.id);
     if (error) toast.error(error.message); else { invalidate("transactions"); toast.success("Removido"); setDeleting(null); }
   };
   const doDeleteAll = async (t: any) => {
     let error: any = null;
     if (t.rule_id) {
-      ({ error } = await supabase.from("transactions").delete().eq("rule_id", t.rule_id));
+      ({ error } = await supabase.from("transacoes").delete().eq("rule_id", t.rule_id));
     } else {
-      let q = supabase.from("transactions").delete()
+      let q = supabase.from("transacoes").delete()
         .eq("description", t.description).eq("kind", t.kind).eq("is_fixed", true);
       q = t.person ? q.eq("person", t.person) : q.is("person", null);
       ({ error } = await q);
@@ -767,11 +767,11 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
       } as any;
 
       if (isEdit) {
-        const { error } = await supabase.from("transactions").update(payload).eq("id", initial.id);
+        const { error } = await supabase.from("transacoes").update(payload).eq("id", initial.id);
         if (error) throw error;
         // Propaga alterações para os lançamentos fixos relacionados (mantendo o offset mensal)
         if (initial.is_fixed) {
-          let q = supabase.from("transactions").select("id, due_at").eq("status", "pending");
+          let q = supabase.from("transacoes").select("id, due_at").eq("status", "pending");
           if (initial.rule_id) q = q.eq("rule_id", initial.rule_id);
           else {
             q = q.eq("description", initial.description).eq("kind", initial.kind).eq("is_fixed", true);
@@ -787,7 +787,7 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
             const sd = new Date(s.due_at + "T00:00:00");
             const shifted = new Date(sd.getFullYear(), sd.getMonth() + monthDelta, newDay);
             const iso = shifted.toISOString().slice(0, 10);
-            await supabase.from("transactions").update({
+            await supabase.from("transacoes").update({
               description: payload.description,
               amount: payload.amount,
               category_id: payload.category_id,
@@ -811,7 +811,7 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
             const iso = d.toISOString().slice(0, 10);
             return { ...payload, due_at: iso, posted_at: iso, status: "pending", user_id: user!.id };
           });
-          const { error } = await supabase.from("transactions").insert(rows);
+          const { error } = await supabase.from("transacoes").insert(rows);
           if (error) throw error;
           toast.success(`Lançamento fixo criado para 12 meses`);
         } else if (installments > 1) {
@@ -835,7 +835,7 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
               user_id: user!.id,
             };
           });
-          const { error } = await supabase.from("transactions").insert(rows);
+          const { error } = await supabase.from("transacoes").insert(rows);
           if (error) throw error;
           toast.success(`Parcelado em ${installments}x`);
         } else if (splitMode && splitPeople.length >= 2) {
@@ -856,11 +856,11 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
             description: `${payload.description} (${p})`,
             user_id: user!.id,
           }));
-          const { error } = await supabase.from("transactions").insert(rows);
+          const { error } = await supabase.from("transacoes").insert(rows);
           if (error) throw error;
           toast.success(`Dividido entre ${splitPeople.length} pessoas`);
         } else {
-          const { error } = await supabase.from("transactions").insert({ ...payload, user_id: user!.id });
+          const { error } = await supabase.from("transacoes").insert({ ...payload, user_id: user!.id });
           if (error) throw error;
           invalidate("accounts");
         }
@@ -1129,7 +1129,7 @@ function AdjustmentForm({ tx, existing, onDone }: { tx: any; existing: any[]; on
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("não autenticado");
       // 1. Apagar ajustes antigos
-      await supabase.from("transaction_adjustments").delete().eq("transaction_id", tx.id);
+      await supabase.from("transacao_ajustes").delete().eq("transaction_id", tx.id);
       
       // 2. Preparar novos ajustes
       const insertRows = rows.map((r) => {
@@ -1138,7 +1138,7 @@ function AdjustmentForm({ tx, existing, onDone }: { tx: any; existing: any[]; on
       });
       
       // 3. Salvar novos ajustes
-      const { error } = await supabase.from("transaction_adjustments").insert(insertRows);
+      const { error } = await supabase.from("transacao_ajustes").insert(insertRows);
       if (error) throw error;
 
       // 4. Se a transação já estava paga, precisamos atualizar o saldo das contas
@@ -1160,7 +1160,7 @@ function AdjustmentForm({ tx, existing, onDone }: { tx: any; existing: any[]; on
   const removeAll = async () => {
     setSaving(true);
     try {
-      const { error } = await supabase.from("transaction_adjustments").delete().eq("transaction_id", tx.id);
+      const { error } = await supabase.from("transacao_ajustes").delete().eq("transaction_id", tx.id);
       if (error) throw error;
       // 4. Se a transação já estava paga, precisamos atualizar o saldo das contas
       if (tx.status === "paid") {

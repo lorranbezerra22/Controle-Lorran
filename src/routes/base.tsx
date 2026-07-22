@@ -116,7 +116,7 @@ function PeopleListSection() {
     });
     if (updates.length === 0) { fixedRef.current = true; return; }
     fixedRef.current = true;
-    Promise.all(updates.map((u) => supabase.from("people").update({ color: u.color }).eq("id", u.id)))
+    Promise.all(updates.map((u) => supabase.from("pessoas").update({ color: u.color }).eq("id", u.id)))
       .then(() => invalidate("people"));
   }, [people, invalidate]);
 
@@ -124,18 +124,18 @@ function PeopleListSection() {
     if (!confirm(`Excluir pessoa "${name}"? Todos os lançamentos vinculados a esta pessoa também serão excluídos.`)) return;
     
     // Deletamos as parcelas de cartão vinculadas (via compras)
-    const { data: purchases } = await supabase.from("card_purchases").select("id").eq("person", name);
+    const { data: purchases } = await supabase.from("cartao_compras").select("id").eq("person", name);
     if (purchases && purchases.length > 0) {
       const pIds = purchases.map(p => p.id);
-      await supabase.from("card_installments").delete().in("purchase_id", pIds);
-      await supabase.from("card_purchases").delete().in("id", pIds);
+      await supabase.from("cartao_parcelas").delete().in("purchase_id", pIds);
+      await supabase.from("cartao_compras").delete().in("id", pIds);
     }
 
     // Deletamos as transações diretas
-    await supabase.from("transactions").delete().eq("person", name);
+    await supabase.from("transacoes").delete().eq("person", name);
 
     // Finalmente deletamos a pessoa
-    const { error } = await supabase.from("people").delete().eq("id", id);
+    const { error } = await supabase.from("pessoas").delete().eq("id", id);
     if (error) toast.error(error.message); else { 
       toast.success("Pessoa e lançamentos removidos"); 
       invalidate("people"); 
@@ -519,7 +519,7 @@ function PersonForm({ onDone }: any) {
         return;
       }
 
-      const { error } = await supabase.from("people").insert({
+      const { error } = await supabase.from("pessoas").insert({
         user_id: user!.id,
         name: parsed.data.name,
         color: parsed.data.color,
@@ -788,7 +788,7 @@ function CatRow({ cat, onChange }: any) {
   });
 
   const save = async () => {
-    const { error } = await supabase.from("categories").update({
+    const { error } = await supabase.from("categorias").update({
       name: form.name.trim(),
       icon: form.icon || null,
       essential: form.essential,
@@ -800,7 +800,7 @@ function CatRow({ cat, onChange }: any) {
 
   const remove = async () => {
     if (!confirm(`Excluir "${cat.name}"? Lançamentos vinculados ficarão sem categoria.`)) return;
-    const { error } = await supabase.from("categories").delete().eq("id", cat.id);
+    const { error } = await supabase.from("categorias").delete().eq("id", cat.id);
     if (error) toast.error(error.message);
     else { toast.success("Removido"); onChange(); }
   };
@@ -854,17 +854,17 @@ function CategoryForm({ onDone }: any) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      const { data: cats = [] } = await supabase.from("categories").select("name, kind");
+      const { data: existingCats = [] } = await supabase.from("categorias").select("name, kind");
       const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
       const newNameNorm = norm(parsed.data.name);
-      const isDuplicate = cats?.some((c: any) => c.kind === parsed.data.kind && norm(c.name) === newNameNorm);
+      const isDuplicate = existingCats?.some((c: any) => c.kind === parsed.data.kind && norm(c.name) === newNameNorm);
       
       if (isDuplicate) {
         toast.error(`Já existe uma categoria de ${parsed.data.kind === 'income' ? 'receita' : 'despesa'} com este nome.`);
         return;
       }
 
-      const { error } = await supabase.from("categories").insert({
+      const { error } = await supabase.from("categorias").insert({
         user_id: user!.id,
         name: parsed.data.name,
         kind: parsed.data.kind,
