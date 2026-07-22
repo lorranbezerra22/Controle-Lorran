@@ -185,7 +185,7 @@ function FinanceiroPage() {
       m[k].value += val;
       m[k].count += 1;
       
-      if (t._isCard) {
+      if (t._isCard || t.card_installment_id) {
         m[k].card += val;
         m[k].cardItems.push({ 
           inst: t._originalItem || t,
