@@ -1633,6 +1633,7 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
             <Label>Últimos 4 dígitos</Label>
             <Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} />
           </div>
+        </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5"><Label>Fechamento</Label><Input type="number" min={1} max={31} value={form.closing_day} onChange={e => setForm({ ...form, closing_day: Number(e.target.value) })} required /></div>
