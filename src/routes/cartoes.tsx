@@ -1721,8 +1721,8 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
           </div>
           <div className="text-[10px] text-muted-foreground italic text-center">
             Informações de faturas e limites serão centralizadas no cartão mestre.
-          </div>
         </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5"><Label>Fechamento</Label><Input type="number" min={1} max={31} value={form.closing_day} onChange={e => setForm({ ...form, closing_day: Number(e.target.value) })} required /></div>
