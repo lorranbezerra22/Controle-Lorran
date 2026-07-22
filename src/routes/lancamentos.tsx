@@ -4,6 +4,8 @@ import { ProtectedShell } from "@/components/ProtectedShell";
 import { useTransactions, useCategories, useInvalidate, usePeople, useAccounts } from "@/lib/queries";
 import { brl, fmtDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -164,6 +166,7 @@ function LancamentosPage() {
     if (sourceFilter === "manual" && t.card_installment_id) return false;
     if (categoryFilter !== "all" && t.category_id !== categoryFilter) return false;
     if (!matchPerson(t.person)) return false;
+    if (search.trim() && !(t.description || "").toLowerCase().includes(search.toLowerCase())) return false;
     const d = new Date(t.due_at + "T00:00:00");
     if (selY !== "all" && d.getFullYear() !== selY) return false;
     if (selM !== "all" && d.getMonth() !== selM) return false;
@@ -362,6 +365,14 @@ function LancamentosPage() {
               ))}
             </SelectContent>
           </Select>
+        </Field>
+        <Field label="Busca">
+          <Input 
+            className="w-auto min-w-[180px] h-10 rounded-xl transition-all shadow-sm border-border" 
+            placeholder="Buscar..." 
+            value={search} 
+            onChange={(e) => setSearch(e.target.value)} 
+          />
         </Field>
 
         <Field label="Pessoa">
