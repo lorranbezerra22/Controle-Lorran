@@ -1108,7 +1108,7 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
                     <tr key={tx.id} className="border-t border-border/60 hover:bg-muted/20">
                       <td className="p-2 whitespace-nowrap">{fmtDate(tx.due_at)}</td>
                       <td className="p-2 font-medium">{tx.description}</td>
-                      <td className="p-2 whitespace-nowrap">{tx.person ?? "—"}</td>
+                      <td className="p-2 whitespace-nowrap">{tx.person || tx._owner || "—"}</td>
                       <td className="p-2 whitespace-nowrap">
                         <span className={`text-[10px] px-2 py-0.5 rounded-full ${tx.status === "paid" ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>
                           {tx.status === "paid" ? "Pago" : "Pendente"}
