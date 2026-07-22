@@ -854,20 +854,17 @@ function CategoryForm({ onDone }: any) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      const { data: cats = [] } = await supabase.from("categories").select("name, kind");
+      const { data: existingCats = [] } = await supabase.from("categorias").select("name, kind");
       const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
       const newNameNorm = norm(parsed.data.name);
-      const isDuplicate = cats?.some((c: any) => c.kind === parsed.data.kind && norm(c.name) === newNameNorm);
+      const isDuplicate = existingCats?.some((c: any) => c.kind === parsed.data.kind && norm(c.name) === newNameNorm);
       
       if (isDuplicate) {
         toast.error(`Já existe uma categoria de ${parsed.data.kind === 'income' ? 'receita' : 'despesa'} com este nome.`);
         return;
       }
 
-    const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-    const isDuplicate = cats.some((c: any) => norm(c.name) === norm(form.name) && c.kind === form.kind);
-    if (isDuplicate) return toast.error("Já existe uma categoria com este nome para este tipo.");
-    const { error } = await supabase.from("categorias").insert({
+      const { error } = await supabase.from("categorias").insert({
         user_id: user!.id,
         name: parsed.data.name,
         kind: parsed.data.kind,

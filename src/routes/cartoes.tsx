@@ -402,23 +402,23 @@ function CartoesPage() {
           }
         }
         
-        await supabase.from("card_installments").update({ 
+        await supabase.from("cartao_parcelas").update({ 
           status: "paid", 
           paid_amount: amount,
           paid_by: useOverride ? costPerson : null,
         } as any).eq("id", i.id);
         toast.success(useOverride ? `Parcela paga por ${costPerson} (dívida de ${originalPerson})` : "Parcela marcada como paga e balanço compensado");
       } else {
-        const { data: linkedTxs } = await supabase.from("transactions").select("*").eq("card_installment_id", i.id);
+        const { data: linkedTxs } = await supabase.from("transacoes").select("*").eq("card_installment_id", i.id);
         if (linkedTxs && linkedTxs.length > 0) {
-          await supabase.from("transactions").delete().eq("card_installment_id", i.id);
+          await supabase.from("transacoes").delete().eq("card_installment_id", i.id);
         }
-        await supabase.from("card_installments").update({ 
+        await supabase.from("cartao_parcelas").update({ 
           status: "pending", 
           paid_amount: 0,
           paid_by: null,
         } as any).eq("id", i.id);
-        await supabase.from("transactions").delete()
+        await supabase.from("transacoes").delete()
           .eq("person", i.card_purchases?.person)
           .eq("kind", "income")
           .ilike("description", `Compensação Fatura ${i.cards?.name || "Cartão"}%`);
@@ -432,7 +432,7 @@ function CartoesPage() {
     }
   };
   const removeAll = async (i: any) => {
-    const { error } = await supabase.from("card_purchases").delete().eq("id", i.purchase_id);
+    const { error } = await supabase.from("cartao_compras").delete().eq("id", i.purchase_id);
     if (error) toast.error(error.message); else { invalidate("installments"); toast.success("Compra removida"); setDeleting(null); }
   };
   const removeOne = async (i: any) => {
@@ -499,7 +499,7 @@ function CartoesPage() {
                 onClick={(e) => { 
                   e.stopPropagation(); 
                   if (confirm(`Deseja realmente excluir o cartão ${c.name}?`)) {
-                    supabase.from("cards").delete().eq("id", c.id).then(({ error }) => {
+                    supabase.from("cartoes").delete().eq("id", c.id).then(({ error }) => {
                       if (error) toast.error(error.message);
                       else { toast.success("Cartão removido"); invalidate("cards"); }
                     });
@@ -1232,7 +1232,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
       const isSantanderUnlimited = /santander/i.test(card.name || "") && /unlimited/i.test(card.name || "");
 
       for (const s of splits) {
-        const { data: purchase, error: pErr } = await supabase.from("card_purchases").insert({
+        const { data: purchase, error: pErr } = await supabase.from("cartao_compras").insert({
           user_id: user!.id, card_id: card.id,
           description: splits.length > 1 ? `${form.description} (${s.person})` : form.description,
           purchase_date: form.purchase_date, total_amount: s.amount, installments_count: n,
@@ -1253,7 +1253,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
             status: "pending",
           };
         });
-        const { error: iErr } = await supabase.from("card_installments").insert(installments);
+        const { error: iErr } = await supabase.from("cartao_parcelas").insert(installments);
         if (iErr) throw iErr;
       }
 
@@ -1432,7 +1432,7 @@ function EditPurchaseForm({ purchase, cats, onDone }: any) {
     e.preventDefault(); if (!__tryLock()) return; setSaving(true);
     try {
       const newAmount = Number(form.amount);
-      const { data: list } = await supabase.from("card_installments").select("id, installment_number, amount").eq("purchase_id", purchase.id).order("installment_number");
+      const { data: list } = await supabase.from("cartao_parcelas").select("id, installment_number, amount").eq("purchase_id", purchase.id).order("installment_number");
 
       let newTotal = Number(purchase.total_amount ?? 0);
       if (list) {
@@ -1440,7 +1440,7 @@ function EditPurchaseForm({ purchase, cats, onDone }: any) {
         else newTotal = list.reduce((s, it) => s + (it.installment_number === clickedNum ? newAmount : Number(it.amount)), 0);
       }
 
-      await supabase.from("card_purchases").update({
+      await supabase.from("cartao_compras").update({
         description: form.description,
         person: form.person || null,
         category_id: form.category_id || null,
@@ -1455,7 +1455,7 @@ function EditPurchaseForm({ purchase, cats, onDone }: any) {
           for (const it of list) {
             const offset = (it.installment_number ?? 1) - clickedNum;
             const d = new Date(clickedDate.getFullYear(), clickedDate.getMonth() + offset, clickedDate.getDate());
-            await supabase.from("card_installments").update({
+            await supabase.from("cartao_parcelas").update({
               amount: newAmount,
               due_at: d.toISOString().slice(0, 10),
             }).eq("id", it.id);
@@ -1463,7 +1463,7 @@ function EditPurchaseForm({ purchase, cats, onDone }: any) {
         } else {
           const target = list.find((it) => it.installment_number === clickedNum);
           if (target) {
-            await supabase.from("card_installments").update({ amount: newAmount, due_at: form.due_at }).eq("id", target.id);
+            await supabase.from("cartao_parcelas").update({ amount: newAmount, due_at: form.due_at }).eq("id", target.id);
           }
         }
       }
@@ -1587,7 +1587,7 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
           if (Object.keys(brands).length === 0) {
             // Se remover todas as bandeiras, exclui o cartão
             if (confirm("Remover a última bandeira excluirá o cartão completamente. Continuar?")) {
-              const { error } = await supabase.from("cards").delete().eq("id", initialData.id);
+              const { error } = await supabase.from("cartoes").delete().eq("id", initialData.id);
               if (error) throw error;
               toast.success("Cartão removido");
               onDone();
@@ -1601,13 +1601,13 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
           payload.metadata.brands = brands;
         }
 
-        const { error } = await supabase.from("cards").update(payload).eq("id", initialData.id);
+        const { error } = await supabase.from("cartoes").update(payload).eq("id", initialData.id);
 
         if (error) throw error;
         toast.success("Cartão atualizado");
       } else {
         const { data: { user } } = await supabase.auth.getUser();
-        const { error } = await supabase.from("cards").insert({ ...payload, user_id: user!.id });
+        const { error } = await supabase.from("cartoes").insert({ ...payload, user_id: user!.id });
         if (error) throw error;
         toast.success("Cartão cadastrado");
       }
@@ -1618,7 +1618,7 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
   const remove = async () => {
     if (!initialData?.id) return;
     if (!confirm("Excluir cartão e todas as compras/parcelas vinculadas?")) return;
-    const { error } = await supabase.from("cards").delete().eq("id", initialData.id);
+    const { error } = await supabase.from("cartoes").delete().eq("id", initialData.id);
     if (error) toast.error(error.message); else { toast.success("Cartão removido"); onDone(); }
   };
 
@@ -1774,7 +1774,7 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
 
       for (const split of splits) {
         // 1. Criar transação de pagamento do valor informado
-        await supabase.from("transactions").insert({
+        await supabase.from("transacoes").insert({
           user_id: user!.id,
           description: `Pagamento Parcial ${installment.cards?.name || "Cartão"} - ${installment.card_purchases?.description}${split.descriptionSuffix}${overrideSuffix}`,
           amount: split.amount,
@@ -1793,7 +1793,7 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
 
         if (!overrideActive) {
           // Compensação só quando o próprio dono da dívida paga
-          await supabase.from("transactions").insert({
+          await supabase.from("transacoes").insert({
             user_id: user!.id,
             description: `Compensação Fatura ${installment.cards?.name || "Cartão"} - ${installment.card_purchases?.description}${split.descriptionSuffix}`,
             amount: split.amount,
@@ -1812,7 +1812,7 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
       const newPaidAmount = Number((Number(installment.paid_amount || 0) + amountToPay).toFixed(2));
       const isFull = Math.abs(newPaidAmount - originalAmount) < 0.01;
       
-      await supabase.from("card_installments").update({ 
+      await supabase.from("cartao_parcelas").update({ 
         paid_amount: newPaidAmount,
         status: isFull ? "paid" : "pending",
         notes: notes || null,
@@ -1986,31 +1986,31 @@ function RemovePaymentForm({ installment, allTransactions, onDone, transactionId
           const newAmt = Number(editAmount);
           const diff = newAmt - Number(transaction.amount);
           const newPaidAmount = Number((Number(installment.paid_amount || 0) + diff).toFixed(2));
-          await supabase.from("card_installments").update({ 
+          await supabase.from("cartao_parcelas").update({ 
             paid_amount: newPaidAmount,
             status: Math.abs(newPaidAmount - Number(installment.amount)) < 0.01 ? "paid" : "pending"
           }).eq("id", installment.id);
           toast.success("Valor pago atualizado");
         } else if (isRemoving) {
-          await supabase.from("card_installments").update({ paid_amount: 0, status: "pending", notes: null }).eq("id", installment.id);
+          await supabase.from("cartao_parcelas").update({ paid_amount: 0, status: "pending", notes: null }).eq("id", installment.id);
           toast.success("Pagamento removido");
         }
       } else {
         if (isEditing) {
           const newAmt = Number(editAmount);
           const diff = newAmt - Number(transaction.amount);
-          await supabase.from("transactions").update({ amount: newAmt, notes: editNotes || null }).eq("id", transaction.id);
+          await supabase.from("transacoes").update({ amount: newAmt, notes: editNotes || null }).eq("id", transaction.id);
           const newPaidAmount = Number((Number(installment.paid_amount || 0) + diff).toFixed(2));
-          await supabase.from("card_installments").update({ 
+          await supabase.from("cartao_parcelas").update({ 
             paid_amount: newPaidAmount,
             status: Math.abs(newPaidAmount - Number(installment.amount)) < 0.01 ? "paid" : "pending"
           }).eq("id", installment.id);
           toast.success("Pagamento atualizado");
         } else if (isRemoving) {
-          await supabase.from("transactions").delete().eq("id", transaction.id);
+          await supabase.from("transacoes").delete().eq("id", transaction.id);
           const newPaidAmount = Math.max(0, Number((Number(installment.paid_amount || 0) - Number(transaction.amount)).toFixed(2)));
           const remainingTrans = relatedTrans.filter(t => t.id !== selectedTransactionId);
-          await supabase.from("card_installments").update({ 
+          await supabase.from("cartao_parcelas").update({ 
             paid_amount: newPaidAmount,
             status: "pending",
             notes: remainingTrans.length > 0 ? remainingTrans[0].notes : null
@@ -2148,7 +2148,7 @@ function EditPaidForm({ installment, onDone }: { installment: any, onDone: () =>
         const splits = buildPaymentSplits(accounts, originalPerson, Math.abs(diff));
 
         for (const split of splits) {
-          await supabase.from("transactions").insert({
+          await supabase.from("transacoes").insert({
             user_id: user!.id,
             description: `Ajuste Pagamento ${installment.cards?.name || "Cartão"} - ${installment.card_purchases?.description}${split.descriptionSuffix}`,
             amount: split.amount,
@@ -2169,10 +2169,10 @@ function EditPaidForm({ installment, onDone }: { installment: any, onDone: () =>
 
       // Ao ajustar o valor manualmente via botão direito, limpamos o histórico de transações específicas
       // para manter o controle manual conforme solicitado
-      await supabase.from("transactions").delete().eq("card_installment_id", installment.id);
+      await supabase.from("transacoes").delete().eq("card_installment_id", installment.id);
 
       // Atualizar a parcela
-      const { error: instErr } = await supabase.from("card_installments").update({ 
+      const { error: instErr } = await supabase.from("cartao_parcelas").update({ 
         paid_amount: val,
         status: Math.abs(val - total) < 0.01 ? "paid" : "pending",
         notes: null

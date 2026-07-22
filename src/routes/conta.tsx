@@ -497,10 +497,10 @@ function YieldForm({ accountId, initial, onDone }: { accountId: string; initial?
       };
 
       if (yieldId) {
-        const { error } = await supabase.from("account_yields").update(payload).eq("id", yieldId);
+        const { error } = await supabase.from("conta_rendimentos").update(payload).eq("id", yieldId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("account_yields").insert(payload);
+        const { error } = await supabase.from("conta_rendimentos").insert(payload);
         if (error) throw error;
       }
 
@@ -553,11 +553,11 @@ function AccountForm({ initial, onDone }: { initial?: any; onDone: () => void })
       } as any;
 
       if (initial?.id) {
-        const { error } = await supabase.from("accounts").update(payload).eq("id", initial.id);
+        const { error } = await supabase.from("contas").update(payload).eq("id", initial.id);
         if (error) throw error;
         toast.success("Conta atualizada");
       } else {
-        const { error } = await supabase.from("accounts").insert(payload);
+        const { error } = await supabase.from("contas").insert(payload);
         if (error) throw error;
         toast.success("Conta cadastrada");
       }
@@ -639,12 +639,12 @@ function RemoveYieldForm({ yields, onDone }: { yields: any[]; onDone: () => void
         const yAmount = Math.round(Number(y.amount) * 100) / 100;
 
         if (yAmount <= remaining + 0.0001) {
-          const { error } = await supabase.from("account_yields").delete().eq("id", y.id);
+          const { error } = await supabase.from("conta_rendimentos").delete().eq("id", y.id);
           if (error) throw error;
           remaining = Math.round((remaining - yAmount) * 100) / 100;
         } else {
           const newAmount = Math.round((yAmount - remaining) * 100) / 100;
-          const { error } = await supabase.from("account_yields").update({ amount: newAmount }).eq("id", y.id);
+          const { error } = await supabase.from("conta_rendimentos").update({ amount: newAmount }).eq("id", y.id);
           if (error) throw error;
           remaining = 0;
         }

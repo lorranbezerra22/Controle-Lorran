@@ -147,7 +147,7 @@ function ImportPage() {
   const { data: batches = [], refetch: refetchBatches } = useQuery({
     queryKey: ["import_batches"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("import_batches").select("*").order("created_at", { ascending: false }).limit(10);
+      const { data, error } = await supabase.from("lotes_importacao").select("*").order("created_at", { ascending: false }).limit(10);
       if (error) throw error;
       return data ?? [];
     },
@@ -247,7 +247,7 @@ function ImportPage() {
       if (!uid) throw new Error("não autenticado");
 
       // Create batch
-      const { data: batch, error: bErr } = await supabase.from("import_batches").insert({ user_id: uid, source_filename: filename, summary: {} }).select().single();
+      const { data: batch, error: bErr } = await supabase.from("lotes_importacao").insert({ user_id: uid, source_filename: filename, summary: {} }).select().single();
       if (bErr) throw bErr;
       const batchId = batch.id;
 
@@ -382,7 +382,7 @@ function ImportPage() {
         }
       }
 
-      await supabase.from("import_batches").update({
+      await supabase.from("lotes_importacao").update({
         summary: { transactions: txCount, card_purchases: cpCount, installments: ciCount, recurring: rrCount, skipped },
       }).eq("id", batchId);
 
@@ -407,7 +407,7 @@ function ImportPage() {
     await supabase.from("card_installments").delete().eq("import_batch_id", id);
     await supabase.from("card_purchases").delete().eq("import_batch_id", id);
     await supabase.from("recurring_rules").delete().eq("import_batch_id", id);
-    await supabase.from("import_batches").delete().eq("id", id);
+    await supabase.from("lotes_importacao").delete().eq("id", id);
     toast.success("Importação desfeita");
     invalidate("transactions"); invalidate("installments"); invalidate("recurring_rules");
     refetchBatches();
