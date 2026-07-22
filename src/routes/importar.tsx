@@ -18,7 +18,7 @@ export const Route = createFileRoute("/importar")({
   head: () => ({ meta: [{ title: "Importar planilha — Gestão" }] }),
 });
 
-type SheetKind = "ignore" | "transactions" | "card_purchases" | "recurring";
+type SheetKind = "ignore" | "transactions" | "cartao_compras" | "recurring";
 type Field =
   | "ignore"
   | "description"
@@ -59,7 +59,7 @@ const FIELD_LABELS: Record<Field, string> = {
 const FIELDS_BY_KIND: Record<SheetKind, Field[]> = {
   ignore: [],
   transactions: ["ignore", "description", "amount", "date", "due_date", "category", "person", "kind"],
-  card_purchases: ["ignore", "description", "amount", "date", "card", "category", "person", "installments", "installment_number"],
+  cartao_compras: ["ignore", "description", "amount", "date", "card", "category", "person", "installments", "installment_number"],
   recurring: ["ignore", "description", "amount", "day_of_month", "category", "kind"],
 };
 
@@ -168,7 +168,7 @@ function ImportPage() {
       // guess kind from name
       const lower = name.toLowerCase();
       let kind: SheetKind = "ignore";
-      if (/cart|fatura|parcel/.test(lower)) kind = "card_purchases";
+      if (/cart|fatura|parcel/.test(lower)) kind = "cartao_compras";
       else if (/fix|recorr|mensal/.test(lower)) kind = "recurring";
       else if (/lan[çc]|extrato|movim|despe|receit/.test(lower)) kind = "transactions";
       const allowed = FIELDS_BY_KIND[kind];
@@ -208,7 +208,7 @@ function ImportPage() {
         if (!date) errors.push("data");
         return { kind: "tx" as const, errors, data: { description: String(desc ?? ""), amount: Math.abs(amt ?? 0), kind, due_at: due, posted_at: date, person: normalizePerson(get(row, "person")), category_name: get(row, "category") ? String(get(row, "category")) : null } };
       }
-      if (sheet.kind === "card_purchases") {
+      if (sheet.kind === "cartao_compras") {
         const desc = get(row, "description"); const amt = parseAmount(get(row, "amount"));
         const date = excelDateToISO(get(row, "date"));
         const cardName = get(row, "card") ? String(get(row, "card")).trim() : null;
@@ -292,7 +292,7 @@ function ImportPage() {
                 status: "pendente", import_batch_id: batchId,
               };
             }
-            if (sheet.kind === "card_purchases") {
+            if (sheet.kind === "cartao_compras") {
               const cardId = await ensureCard(r.data.card_name);
               return {
                 user_id: uid, source: "import", kind: "card",
@@ -338,7 +338,7 @@ function ImportPage() {
             const { error } = await supabase.from("transacoes").insert(chunk);
             if (!error) txCount += chunk.length;
           }
-        } else if (sheet.kind === "card_purchases") {
+        } else if (sheet.kind === "cartao_compras") {
           for (const r of valid) {
             const cardId = await ensureCard(r.data.card_name);
             if (!cardId) continue;
@@ -383,7 +383,7 @@ function ImportPage() {
       }
 
       await supabase.from("lotes_importacao").update({
-        summary: { transactions: txCount, card_purchases: cpCount, installments: ciCount, recurring: rrCount, skipped },
+        summary: { transactions: txCount, cartao_compras: cpCount, installments: ciCount, recurring: rrCount, skipped },
       }).eq("id", batchId);
 
       if (sendToRequests) {
@@ -471,7 +471,7 @@ function ImportPage() {
                       <SelectContent>
                         <SelectItem value="ignore">Ignorar aba</SelectItem>
                         <SelectItem value="transactions">Lançamentos</SelectItem>
-                        <SelectItem value="card_purchases">Compras no cartão</SelectItem>
+                        <SelectItem value="cartao_compras">Compras no cartão</SelectItem>
                         <SelectItem value="recurring">Fixos / recorrentes</SelectItem>
                       </SelectContent>
                     </Select>
@@ -540,7 +540,7 @@ function ImportPage() {
                   <div className="font-medium">{b.source_filename ?? "(sem nome)"}</div>
                   <div className="text-xs text-muted-foreground">
                     {new Date(b.created_at).toLocaleString("pt-BR")} •{" "}
-                    {b.summary ? `${b.summary.transactions ?? 0} lançamentos, ${b.summary.card_purchases ?? 0} compras, ${b.summary.recurring ?? 0} fixos` : ""}
+                    {b.summary ? `${b.summary.transactions ?? 0} lançamentos, ${b.summary.cartao_compras ?? 0} compras, ${b.summary.recurring ?? 0} fixos` : ""}
                   </div>
                 </div>
                 <Button size="sm" variant="outline" onClick={() => undoBatch(b.id)}><Undo2 className="w-4 h-4 mr-1" />Desfazer</Button>

@@ -160,7 +160,7 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
                           {i.cartao_compras?.description || "Parcela"}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {fmtDate(i.due_at)}{i.cards?.name ? ` · ${i.cards.name}` : ""}
+                          {fmtDate(i.due_at)}{i.cartoes?.name ? ` · ${i.cartoes.name}` : ""}
                         </div>
                       </div>
                       <span className="text-sm font-semibold tabular-nums text-destructive">{brl(Number(i.amount))}</span>
