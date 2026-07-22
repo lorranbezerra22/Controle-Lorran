@@ -469,7 +469,7 @@ function CartoesPage() {
                         {c.last_digits && `•••• ${c.last_digits}`}
                       </>
                     )}
-                    <div className="mt-0.5 opacity-60">F. {c.closing_day} • V. {c.due_day}</div>
+                    <div className="mt-1 opacity-70 font-medium">F. {c.closing_day} • V. {c.due_day}</div>
                   </div>
 
                 </div>
