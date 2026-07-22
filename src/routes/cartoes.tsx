@@ -1571,7 +1571,8 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
         credit_limit: Number(form.credit_limit) || 0,
         color: bInfo.color,
         last_digits: effectiveMode === "standard" ? (form.last_digits || null) : null,
-        metadata
+        metadata,
+        pai_id: effectiveMode === "subcard" ? (form.pai_id || null) : null,
       };
 
       if (initialData?.id) {
