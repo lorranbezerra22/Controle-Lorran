@@ -1649,12 +1649,12 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
         <Select 
           value={effectiveMode}
           onValueChange={(v: any) => setForm({ ...form, mode: v })}
-          disabled={isSU}
         >
           <SelectTrigger><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="standard">Bandeira Única (Visa, Master...)</SelectItem>
             <SelectItem value="multi">Múltiplas Bandeiras (Combo)</SelectItem>
+            <SelectItem value="subcard">Gerenciamento de Sub-Cartões</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -1703,6 +1703,24 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {effectiveMode === "subcard" && (
+        <div className="space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="p-3 rounded-lg border border-dashed border-border bg-muted/30 flex flex-col items-center justify-center gap-2">
+            <CreditCard className="w-8 h-8 text-muted-foreground/50" />
+            <div className="text-center">
+              <div className="text-xs font-medium">Vincular Sub-Cartões</div>
+              <div className="text-[10px] text-muted-foreground">Adicione sub-cartões que serão agregados a este principal</div>
+            </div>
+            <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] gap-1">
+              <Plus className="w-3 h-3" /> Adicionar Sub-Cartão
+            </Button>
+          </div>
+          <div className="text-[10px] text-muted-foreground italic text-center">
+            Informações de faturas e limites serão centralizadas no cartão mestre.
           </div>
         </div>
       )}
