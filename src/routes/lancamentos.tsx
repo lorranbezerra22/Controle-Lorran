@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Plus, Trash2, Check, Clock, Pencil, SplitSquareHorizontal, ListOrdered } from "lucide-react";
+import { Plus, Trash2, Check, Clock, Pencil, SplitSquareHorizontal, ListOrdered, Users } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -965,9 +965,14 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
           </div>
         )}
         <div className="space-y-1.5 flex items-center justify-between p-3 rounded-xl border border-border/50 bg-muted/20">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-medium">Despesa fixa</span>
-            <span className="text-[10px] text-muted-foreground">Repetir mensalmente</span>
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/10 text-gold shadow-sm ring-1 ring-gold/20">
+              <Clock className="h-4 w-4" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-sm font-medium">Despesa fixa</span>
+              <span className="text-[10px] text-muted-foreground">Repetir mensalmente</span>
+            </div>
           </div>
           <button
             type="button"
@@ -981,9 +986,14 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
       {!isEdit && (
         <>
           <div className="space-y-1.5 flex items-center justify-between p-3 rounded-xl border border-border/50 bg-muted/20">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium">Dividir entre pessoas</span>
-              <span className="text-[10px] text-muted-foreground">Rachar a compra em partes</span>
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/10 text-gold shadow-sm ring-1 ring-gold/20">
+                <Users className="h-4 w-4" />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm font-medium">Dividir entre pessoas</span>
+                <span className="text-[10px] text-muted-foreground">Rachar a compra em partes</span>
+              </div>
             </div>
             <button
               type="button"
