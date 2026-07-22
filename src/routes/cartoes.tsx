@@ -452,21 +452,32 @@ function CartoesPage() {
               style={{ background: "var(--gradient-card)", boxShadow: "var(--shadow-elegant)" }} 
               onClick={() => setEditingCard(c)}
             >
-              <button 
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  if (confirm(`Deseja realmente excluir o cartão ${c.name}?`)) {
-                    supabase.from("cartoes").delete().eq("id", c.id).then(({ error }) => {
-                      if (error) toast.error(error.message);
-                      else { toast.success("Cartão removido"); invalidate("cards"); }
-                    });
-                  }
-                }}
-                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-destructive/10 text-destructive flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-destructive hover:text-white z-10"
-                title="Remover cartão"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-4 z-10">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="rounded-full shadow-lg border-primary/20 hover:bg-primary hover:text-white transition-all transform translate-y-2 group-hover:translate-y-0 duration-300"
+                  onClick={(e) => { e.stopPropagation(); setEditingCard(c); }}
+                >
+                  <Pencil className="w-4 h-4 mr-1.5" /> Editar
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="destructive" 
+                  className="rounded-full shadow-lg hover:bg-destructive transition-all transform translate-y-2 group-hover:translate-y-0 duration-300 delay-[50ms]"
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    if (confirm(`Deseja realmente excluir o cartão ${c.name}?`)) {
+                      supabase.from("cartoes").delete().eq("id", c.id).then(({ error }) => {
+                        if (error) toast.error(error.message);
+                        else { toast.success("Cartão removido"); invalidate("cards"); }
+                      });
+                    }
+                  }}
+                >
+                  <Trash2 className="w-4 h-4 mr-1.5" /> Excluir
+                </Button>
+              </div>
               <div className="flex items-start justify-between mb-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
