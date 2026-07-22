@@ -1101,15 +1101,15 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
             <div className="text-xs text-muted-foreground p-4 text-center border-t border-border/60">Nenhum lançamento manual para esta categoria.</div>
           ) : (
             <div className="overflow-x-auto border-t border-border/60">
-              <table className="w-full text-xs">
+              <table className="w-full text-[11px]">
                 <thead className="bg-muted/20 text-muted-foreground">
                   <tr>
-                    <th className="text-left p-2 font-medium">Data</th>
-                    <th className="text-left p-2 font-medium">Descrição</th>
-                    <th className="text-left p-2 font-medium">Pessoa</th>
-                    <th className="text-left p-2 font-medium">Status</th>
-                    <th className="text-left p-2 font-medium">Observações</th>
-                    <th className="text-right p-2 font-medium">Valor</th>
+                    <th className="text-left p-2 font-semibold">Data</th>
+                    <th className="text-left p-2 font-semibold">Descrição</th>
+                    <th className="text-left p-2 font-semibold">Pessoa</th>
+                    <th className="text-left p-2 font-semibold">Status</th>
+                    <th className="text-left p-2 font-semibold">Observações</th>
+                    <th className="text-right p-2 font-semibold">Valor</th>
                   </tr>
                 </thead>
                 <tbody>
