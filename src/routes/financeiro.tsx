@@ -724,6 +724,7 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
 }
 
 type CatItem = { 
+  categoryId: string | null;
   id: string | null; 
   name: string; 
   icon: string; 
