@@ -975,16 +975,14 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
             Dividir entre várias pessoas
           </label>
           {splitMode && (
-            <div className="space-y-2 rounded-md border border-border p-2">
+            <div className="space-y-2 rounded-xl border border-border bg-gradient-to-br from-muted/30 to-transparent p-2.5">
               <Label className="text-xs">Selecione as pessoas</Label>
-              <div className="flex flex-wrap gap-2">
-                {people.map((p: any) => (
-                  <label key={p.id} className="flex items-center gap-1.5 text-sm bg-muted/40 rounded px-2 py-1 cursor-pointer">
-                    <input type="checkbox" checked={splitPeople.includes(p.name)} onChange={() => togglePerson(p.name)} />
-                    {p.name}
-                  </label>
-                ))}
-              </div>
+              <PersonSelect 
+                multiSelect 
+                selectedValues={splitPeople} 
+                onChange={(v) => setSplitPeople(v ? v.split(",") : [])}
+                includeFamilia={false}
+              />
               {splitPeople.length >= 2 && (
                 <label className="flex items-center gap-2 text-xs">
                   <input type="checkbox" checked={splitCustom} onChange={(e) => setSplitCustom(e.target.checked)} />
