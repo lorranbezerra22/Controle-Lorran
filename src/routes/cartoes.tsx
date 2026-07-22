@@ -1109,7 +1109,7 @@ function RefundHelper({ amount, rawAmount, selectedCategoryId, cats, person, pur
 function PurchaseForm({ cards, cats, onDone }: any) {
   const today = todayLocalISO();
   const { data: people = [] } = usePeople();
-  const [form, setForm] = useState({ card_id: cards[0]?.id ?? "", description: "", purchase_date: today, total_amount: "", installments_count: 1, category_id: "", person: "", brand: "Master 3019" });
+  const [form, setForm] = useState({ card_id: cards[0]?.id ?? "", description: "", purchase_date: today, total_amount: "", installments_count: 1, category_id: "", person: "", brand: "" });
   const [splitMode, setSplitMode] = useState(false);
   const [splitPeople, setSplitPeople] = useState<string[]>([]);
   const [splitCustom, setSplitCustom] = useState(false);
@@ -1208,7 +1208,15 @@ function PurchaseForm({ cards, cats, onDone }: any) {
     <form onSubmit={submit} className="space-y-3">
       <div className="space-y-1.5">
         <Label>Cartão</Label>
-        <Select value={form.card_id} onValueChange={v => setForm({ ...form, card_id: v })}>
+        <Select value={form.card_id} onValueChange={v => {
+          const c = cards.find((x: any) => x.id === v);
+          const firstBrand = c?.metadata?.brands?.[0];
+          setForm({ 
+            ...form, 
+            card_id: v, 
+            brand: firstBrand ? `${firstBrand.brand.charAt(0).toUpperCase()}${firstBrand.brand.slice(1)} ${firstBrand.last_digits}` : "" 
+          });
+        }}>
           <SelectTrigger><SelectValue placeholder="Selecione o cartão" /></SelectTrigger>
           <SelectContent>
             {cards.map((c: any) => (
