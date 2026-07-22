@@ -1673,14 +1673,14 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
           </div>
         </div>
       ) : (
-        <div className="space-y-3 p-3 border rounded-lg bg-muted/30 animate-in fade-in slide-in-from-top-1 duration-200">
-          <div className="flex items-center justify-between mb-2">
-            <Label className="text-xs font-bold uppercase">Bandeiras do Combo</Label>
+        <div className="space-y-3 p-3 border rounded-lg bg-muted/20 border-border/40 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="flex items-center justify-between">
+            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Bandeiras do Combo</Label>
             <Button 
               type="button" 
               variant="outline" 
               size="sm" 
-              className="h-7 text-[10px]"
+              className="h-7 text-[10px] font-bold border-primary/20 hover:bg-primary hover:text-white"
               onClick={() => setForm({ ...form, brands: [...form.brands, { brand: "visa", last_digits: "" }] })}
             >
               <Plus className="w-3 h-3 mr-1" /> Add Bandeira
