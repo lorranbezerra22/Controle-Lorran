@@ -1647,7 +1647,6 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
               </Button>
             </div>
           ))}
-          
           {form.brands.length === 0 && (
             <div className="text-center py-4 text-xs text-muted-foreground border border-dashed rounded-md">
               Nenhuma bandeira adicionada
@@ -1655,12 +1654,7 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
           )}
         </div>
       )}
-              Nenhuma bandeira adicionada
-            </div>
-          )}
-        </div>
-      )}
-      </div>
+
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5"><Label>Fechamento</Label><Input type="number" min={1} max={31} value={form.closing_day} onChange={e => setForm({ ...form, closing_day: Number(e.target.value) })} required /></div>
