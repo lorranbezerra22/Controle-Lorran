@@ -612,7 +612,8 @@ function LancamentosPage() {
                   <div className="grid gap-2">
                     <Label className="text-xs font-medium">Pago por</Label>
                     <PersonSelect 
-                      multiSelect 
+                      value="" 
+
                       value={payBy} 
                       selectedValues={payBy ? payBy.split(",") : []} 
                       onChange={(v) => setPayBy(v)} 
