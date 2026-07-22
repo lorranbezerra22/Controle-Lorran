@@ -493,11 +493,11 @@ function CartoesPage() {
                     <div className="flex flex-col gap-3 pr-3 border-r border-border/50">
                       {Object.entries(totals[c.id].brandTotals).map(([brand, data], bi) => (
                         <div key={bi} className="flex flex-col gap-1.5">
-                          <span className="text-[8px] uppercase text-muted-foreground font-bold leading-none">{brand}</span>
+                          <span className="text-[9px] uppercase text-muted-foreground font-bold leading-none">{brand}</span>
                           <div className="flex flex-col leading-tight">
                             <span className="text-[11px] font-bold">{brl(data.fatura)}</span>
                             {data.restante > 0.01 && (
-                              <span className="text-[8px] text-destructive font-medium mt-1">Rest. {brl(data.restante)}</span>
+                              <span className="text-[9px] text-destructive font-semibold mt-1">Rest. {brl(data.restante)}</span>
                             )}
                           </div>
                         </div>
@@ -509,7 +509,7 @@ function CartoesPage() {
                     const paid = rest === 0;
                     return (
                       <div className={`flex flex-col items-end px-2.5 py-1.5 rounded-lg border gap-0.5 ${paid ? "border-success/30 bg-success/10" : "border-destructive/25 bg-destructive/10"}`}>
-                        <span className={`text-[9px] uppercase tracking-[0.18em] font-semibold ${paid ? "text-success" : "text-destructive"}`}>{paid ? "Liquidada" : "Restante"}</span>
+                        <span className={`text-[10px] uppercase tracking-[0.18em] font-bold ${paid ? "text-success" : "text-destructive"}`}>{paid ? "Liquidada" : "Restante"}</span>
                         <span className={`text-sm font-bold tabular-nums ${paid ? "text-success" : "text-destructive"}`}>{brl(rest)}</span>
                       </div>
                     );

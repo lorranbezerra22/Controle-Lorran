@@ -634,10 +634,10 @@ function Dashboard() {
         <div className="relative px-5 py-4 border-b border-border/60 flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            <span className="text-[10px] uppercase tracking-[0.2em] text-primary">Live</span>
+            <span className="text-[11px] uppercase tracking-[0.2em] text-primary font-bold">Live</span>
             <h3 className="ml-2 text-sm font-semibold flex items-center gap-2"><CreditCard className="w-4 h-4 text-primary" /> Cartões de crédito</h3>
           </div>
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Fatura atual · Pago vs restante</span>
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Fatura atual · Pago vs restante</span>
         </div>
         <div className="relative p-4">
           {cards.length === 0 ? (
