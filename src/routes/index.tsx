@@ -1060,13 +1060,22 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
                         </td>
                         <td className="p-2 whitespace-nowrap">
                           <span className="inline-flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full" style={{ background: card.color || "#6366f1" }} />
+                            <BankIcon bank={card.bank || card.name} size={14} square />
                             {card.name ?? "—"}
                           </span>
                         </td>
                         <td className="p-2 whitespace-nowrap text-muted-foreground">{inst.installment_number}/{cp.installments_count ?? "?"}</td>
                         <td className="p-2 whitespace-nowrap">{cp.person || inst.person || "—"}</td>
-                        <td className="p-2 text-right tabular-nums font-medium">{brl(share)}</td>
+                        <td className="p-2 text-right tabular-nums font-medium">
+                          <div className="flex flex-col items-end">
+                            <span>{brl(share)}</span>
+                            {cp.brand && (
+                              <span className="text-[9px] text-muted-foreground">
+                                {cp.brand}
+                              </span>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}
