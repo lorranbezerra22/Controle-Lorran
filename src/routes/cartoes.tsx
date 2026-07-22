@@ -252,7 +252,10 @@ function CartoesPage() {
   }, []);
 
 
-  const personOptions = useMemo(() => people.map((p: any) => p.name).sort(), [people]);
+  const personOptions = useMemo(() => {
+    // Retorna apenas as pessoas cadastradas no sistema
+    return people.map((p: any) => p.name).sort();
+  }, [people]);
 
   const totals = useMemo(() => {
     const map: Record<string, { fatura: number; restante: number }> = {};

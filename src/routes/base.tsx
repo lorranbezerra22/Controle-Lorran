@@ -411,9 +411,10 @@ function PeopleReportSection() {
 
 
   const peopleOptions = useMemo(() => {
+    // Filtramos apenas as pessoas cadastradas. 
+    // Lorran e Tayane já devem estar no cadastro para aparecerem aqui.
+    // "Familia" é uma constante especial que tratamos separadamente no relatório se necessário.
     const names = new Set(people.map((p: any) => p.name));
-    names.add("Lorran");
-    names.add("Tayane");
     return Array.from(names).sort();
   }, [people]);
 
