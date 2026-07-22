@@ -490,14 +490,14 @@ function CartoesPage() {
                     </div>
                   </div>
                   {totals[c.id]?.brandTotals && Object.keys(totals[c.id].brandTotals).length > 1 && (
-                    <div className="flex flex-col gap-1 pr-3 border-r border-border/50">
+                    <div className="flex flex-col gap-2.5 pr-3 border-r border-border/50">
                       {Object.entries(totals[c.id].brandTotals).map(([brand, data], bi) => (
-                        <div key={bi} className="flex flex-col">
+                        <div key={bi} className="flex flex-col gap-0.5">
                           <span className="text-[8px] uppercase text-muted-foreground font-bold">{brand}</span>
-                          <div className="flex flex-col leading-none">
+                          <div className="flex flex-col leading-tight">
                             <span className="text-[10px] font-semibold">{brl(data.fatura)}</span>
                             {data.restante > 0.01 && (
-                              <span className="text-[8px] text-destructive font-medium">Rest. {brl(data.restante)}</span>
+                              <span className="text-[8px] text-destructive font-medium mt-0.5">Rest. {brl(data.restante)}</span>
                             )}
                           </div>
                         </div>
