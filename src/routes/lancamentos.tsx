@@ -234,12 +234,14 @@ function LancamentosPage() {
     // Despesa de Família sempre debita 50% da conta do Lorran e 50% da conta da Tayane.
     // O campo "Pago por" não deve transformar Família em débito 100% de uma pessoa.
     const useSplit = isFamilyExpense;
-    const personIsDifferent = !isFamilyExpense && payBy && payBy.trim() && payByNorm !== norm(t.person || "");
+    const splitPayBy = payBy ? payBy.split(",") : [];
+    const firstPayBy = splitPayBy[0] || "";
+    const personIsDifferent = !isFamilyExpense && firstPayBy && norm(firstPayBy) !== norm(t.person || "");
     const { error } = await supabase.from("transactions").update({
       status: "paid",
       account_id: payAccount || null,
       account_tayane_id: useSplit ? (payAccountTayane || null) : null,
-      paid_by: personIsDifferent ? payBy : null,
+      paid_by: personIsDifferent ? firstPayBy : null,
     }).eq("id", t.id);
     if (error) toast.error(error.message);
     else {
