@@ -514,7 +514,10 @@ function CartoesPage() {
                   </div>
                   <div className="text-xs text-muted-foreground truncate">
                     {c.bank ? `${findBank(c.bank).name} • ` : ""}
+                    {c.metadata?.brand && <span className="capitalize">{c.metadata.brand} </span>}
                     {c.last_digits ? `•••• ${c.last_digits} • ` : ""}
+                    {c.metadata?.brands?.visa && `Visa •••• ${c.metadata.brands.visa} • `}
+                    {c.metadata?.brands?.master && `Master •••• ${c.metadata.brands.master} • `}
                     Fech. {c.closing_day} • Venc. {c.due_day}
                   </div>
                 </div>
