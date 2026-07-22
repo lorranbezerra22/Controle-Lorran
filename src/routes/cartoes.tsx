@@ -245,13 +245,13 @@ function CartoesPage() {
   }, [people]);
 
   const totals = useMemo(() => {
-    const map: Record<string, { fatura: number; restante: number }> = {};
+    const map: Record<string, { fatura: number; restante: number; brandTotals: Record<string, number> }> = {};
     const isFamilia = (s: string) => (s || "").toLowerCase().trim() === "familia";
 
     monthInst.forEach((i: any) => {
       const card = cards.find((c: any) => c.id === i.card_id);
       const effectiveCardId = i.card_id;
-      const m = (map[effectiveCardId] = map[effectiveCardId] ?? { fatura: 0, restante: 0 });
+      const m = (map[effectiveCardId] = map[effectiveCardId] ?? { fatura: 0, restante: 0, brandTotals: {} });
       const payment = getInstallmentPaymentState(i);
       const v = getStatusFilteredAmount(i, statusFilter);
       
@@ -272,6 +272,9 @@ function CartoesPage() {
         }
         
         m.fatura += valueForFilter;
+        
+        const b = i.card_purchases?.brand || "Default";
+        m.brandTotals[b] = (m.brandTotals[b] ?? 0) + valueForFilter;
 
         if (statusFilter !== "paid" && payment.hasPending) {
           let pendingForFilter = payment.remaining;
