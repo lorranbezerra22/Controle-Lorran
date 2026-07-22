@@ -173,19 +173,6 @@ function CartoesPage() {
   const setPurchaseFrom = (v: string) => { _setPurchaseFrom(v); lsSet("purchaseFrom", v); };
   const setPurchaseTo = (v: string) => { _setPurchaseTo(v); lsSet("purchaseTo", v); };
 
-  // Bandeira por compra (Santander Unlimited tem 2 plásticos: Visa + Master).
-  // Guardado por purchase_id no localStorage para não precisar migrar o schema.
-  const [purchaseBrands, setPurchaseBrands] = useState<Record<string, string>>(() => {
-    if (typeof window === "undefined") return {};
-    try { return JSON.parse(window.localStorage.getItem("cartoes:purchaseBrands") || "{}"); } catch { return {}; }
-  });
-  useEffect(() => {
-    const onChange = () => {
-      try { setPurchaseBrands(JSON.parse(window.localStorage.getItem("cartoes:purchaseBrands") || "{}")); } catch {}
-    };
-    window.addEventListener("purchaseBrands:changed", onChange);
-    return () => window.removeEventListener("purchaseBrands:changed", onChange);
-  }, []);
 
 
   const now = new Date();
@@ -263,7 +250,7 @@ function CartoesPage() {
 
     monthInst.forEach((i: any) => {
       const card = cards.find((c: any) => c.id === i.card_id);
-      const effectiveCardId = card?.pai_id || i.card_id;
+      const effectiveCardId = i.card_id;
       const m = (map[effectiveCardId] = map[effectiveCardId] ?? { fatura: 0, restante: 0 });
       const payment = getInstallmentPaymentState(i);
       const v = getStatusFilteredAmount(i, statusFilter);
@@ -304,45 +291,6 @@ function CartoesPage() {
     return map;
   }, [monthInst, personFilter, personFilter2, statusFilter]);
 
-  // Identifica o Santander Unlimited (único cartão com 2 plásticos: Visa + Master)
-  const santanderCard = useMemo(
-    () => cards.find((c: any) => /santander/i.test(c.name || "") && /unlimited/i.test(c.name || "")),
-    [cards]
-  );
-
-  // Breakdown da fatura do Santander Unlimited por bandeira (Visa / Master / Sem bandeira)
-  const santanderBreakdown = useMemo(() => {
-    if (!santanderCard) return null as null | { brand: string; fatura: number; restante: number }[];
-    const map: Record<string, { fatura: number; restante: number }> = {};
-    const subcardIds = cards.filter((sc: any) => sc.pai_id === santanderCard.id).map((sc: any) => sc.id);
-    const allRelevantIds = [santanderCard.id, ...subcardIds];
-    monthInst
-      .filter((i: any) => allRelevantIds.includes(i.card_id))
-      .forEach((i: any) => {
-        const pid = i.purchase_id || i.card_purchases?.id;
-        const brand = i.card_purchases?.brand || purchaseBrands[pid] || "Master 3019";
-        const payment = getInstallmentPaymentState(i);
-        const v = getStatusFilteredAmount(i, statusFilter);
-        const person = (i.card_purchases?.person || "").toLowerCase().trim();
-        const isFamilia = person === "familia";
-        const f = personFilter !== "all" ? personFilter.toLowerCase().trim() : "all";
-        const f2 = personFilter2 !== "all" ? personFilter2.toLowerCase().trim() : "all";
-        const matchesFilter = f === "all" || person === f || (isFamilia && f === "lorran") || person === f2 || (isFamilia && f2 === "lorran");
-        if (!matchesFilter) return;
-        let valueForFilter = v;
-        let pendingForFilter = payment.remaining;
-        if (isFamilia && (f !== "all" || f2 !== "all")) {
-          valueForFilter = v / 2;
-          pendingForFilter = payment.remaining / 2;
-        }
-        const m = (map[brand] = map[brand] ?? { fatura: 0, restante: 0 });
-        m.fatura += valueForFilter;
-        if (statusFilter !== "paid" && payment.hasPending) m.restante += pendingForFilter;
-      });
-    return Object.entries(map)
-      .map(([brand, v]) => ({ brand, ...v }))
-      .sort((a, b) => a.brand.localeCompare(b.brand));
-  }, [santanderCard, monthInst, purchaseBrands, statusFilter, personFilter, personFilter2]);
 
 
   const getPaymentSplits = (person: string, amount: number) => buildPaymentSplits(accounts, person, amount);
@@ -1586,15 +1534,14 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
     due_day: initialData?.due_day ?? 10,
     credit_limit: String(initialData?.credit_limit ?? ""),
     last_digits: initialData?.last_digits ?? "",
-    visa_last_digits: initialData?.metadata?.brands?.visa ?? "",
-    master_last_digits: initialData?.metadata?.brands?.master ?? "",
+    visa_last_digits: "",
+    master_last_digits: "",
     brand: initialData?.metadata?.brand ?? "visa",
-    mode: (initialData?.metadata?.brands?.visa || initialData?.metadata?.brands?.master) ? "multi" : initialData?.pai_id ? "subcard" : "standard",
-    pai_id: initialData?.pai_id ?? "",
+    mode: "standard",
+    pai_id: "",
   });
   const [saving, setSaving] = useState(false);
-  const isSU = /santander/i.test(form.bank || "") && /unlimited/i.test(form.name || "");
-  const effectiveMode = isSU ? "multi" : form.mode;
+  const effectiveMode = "standard";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!__tryLock()) return; setSaving(true);
@@ -1602,11 +1549,8 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
       const bInfo = findBank(form.bank);
       const metadata = {
         ...(initialData?.metadata || {}),
-        brand: effectiveMode === "standard" ? form.brand : null,
-        brands: effectiveMode === "multi" ? { 
-          visa: form.visa_last_digits, 
-          master: form.master_last_digits 
-        } : null
+        brand: form.brand,
+        brands: null
       };
 
       const payload = {
@@ -1618,32 +1562,10 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
         color: bInfo.color,
         last_digits: effectiveMode === "standard" ? (form.last_digits || null) : null,
         metadata,
-        pai_id: effectiveMode === "subcard" ? (form.pai_id || null) : null,
+        pai_id: null,
       };
 
       if (initialData?.id) {
-        // Exclusão individual de bandeira no Santander Unlimited se um dos campos estiver vazio
-        if (isSU) {
-          const brands: any = {};
-          if (form.visa_last_digits) brands.visa = form.visa_last_digits;
-          if (form.master_last_digits) brands.master = form.master_last_digits;
-          
-          if (Object.keys(brands).length === 0) {
-            // Se remover todas as bandeiras, exclui o cartão
-            if (confirm("Remover a última bandeira excluirá o cartão completamente. Continuar?")) {
-              const { error } = await supabase.from("cartoes").delete().eq("id", initialData.id);
-              if (error) throw error;
-              toast.success("Cartão removido");
-              onDone();
-              return;
-            } else {
-              setSaving(false);
-              __release();
-              return;
-            }
-          }
-          payload.metadata.brands = brands;
-        }
 
         const { error } = await supabase.from("cartoes").update(payload).eq("id", initialData.id);
 
@@ -1676,7 +1598,7 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
           onValueChange={(v) => { 
             const b = findBank(v); 
             let newName = form.name;
-            if (b.id === "santander" && !form.name) newName = "Santander Unlimited";
+            if (b.id === "santander" && !form.name) newName = "Santander";
             setForm({ ...form, bank: b.name, name: newName }); 
           }}
         >
@@ -1693,23 +1615,8 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
           </SelectContent>
         </Select>
       </div>
-      <div className="space-y-1.5">
-        <Label>Tipo de Cartão</Label>
-        <Select 
-          value={effectiveMode}
-          onValueChange={(v: any) => setForm({ ...form, mode: v })}
-        >
-          <SelectTrigger><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="standard">Bandeira Única (Visa, Master...)</SelectItem>
-            <SelectItem value="multi">Múltiplas Bandeiras (Combo)</SelectItem>
-            <SelectItem value="subcard">Gerenciamento de Sub-Cartões</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
 
-      {effectiveMode === "standard" && (
-        <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+      <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
           <div className="space-y-1.5">
             <Label>Bandeira</Label>
             <Select value={form.brand} onValueChange={(v) => setForm({ ...form, brand: v })}>
@@ -1726,85 +1633,6 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
             <Label>Últimos 4 dígitos</Label>
             <Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} />
           </div>
-        </div>
-      )}
-
-      {effectiveMode === "multi" && (
-        <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
-          <div className="space-y-1.5">
-            <Label>Final Visa</Label>
-            <div className="relative group">
-              <Input maxLength={4} placeholder="Ex: 2054" value={form.visa_last_digits} onChange={e => setForm({ ...form, visa_last_digits: e.target.value })} />
-              {form.visa_last_digits && (
-                <button type="button" onClick={() => setForm({...form, visa_last_digits: ""})} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Final Master</Label>
-            <div className="relative group">
-              <Input maxLength={4} placeholder="Ex: 3019" value={form.master_last_digits} onChange={e => setForm({ ...form, master_last_digits: e.target.value })} />
-              {form.master_last_digits && (
-                <button type="button" onClick={() => setForm({...form, master_last_digits: ""})} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {effectiveMode === "subcard" && (
-        <div className="space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
-          <div className="p-3 rounded-lg border border-dashed border-border bg-muted/30 flex flex-col items-center justify-center gap-2">
-            <CreditCard className="w-8 h-8 text-muted-foreground/50" />
-            <div className="text-center">
-              <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Vínculo de Cartão</div>
-              <div className="text-[10px] text-muted-foreground">Este cartão enviará suas faturas para o cartão mestre</div>
-            </div>
-            <div className="w-full space-y-2 mt-2">
-              <Label className="text-[10px] text-muted-foreground uppercase">Cartão Principal (Mestre)</Label>
-              <Select value={form.pai_id} onValueChange={(v) => setForm({ ...form, pai_id: v })}>
-                <SelectTrigger className="h-9 text-xs">
-                  <SelectValue placeholder="Selecione o cartão mestre" />
-                </SelectTrigger>
-                <SelectContent>
-                  {cards.filter((c: any) => c.id !== initialData?.id && !c.pai_id).map((c: any) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      <div className="flex items-center gap-2">
-                        <BankIcon bank={c.bank} size={14} square />
-                        <span>{c.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {initialData?.id && cards.some((sc: any) => sc.pai_id === initialData.id) && (
-        <div className="space-y-2 pt-2 border-t border-border">
-          <Label className="text-[10px] text-muted-foreground uppercase font-bold">Sub-Cartões Vinculados</Label>
-          <div className="space-y-1">
-            {cards.filter((sc: any) => sc.pai_id === initialData.id).map((sc: any) => (
-              <div key={sc.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50 text-xs">
-                <div className="flex items-center gap-2">
-                  <BankIcon bank={sc.bank} size={14} square />
-                  <span>{sc.name}</span>
-                </div>
-                <div className="text-[10px] text-muted-foreground">•••• {sc.last_digits || sc.metadata?.brand}</div>
-              </div>
-            ))}
-          </div>
-          <div className="text-[9px] text-muted-foreground italic">
-            As faturas destes cartões são somadas a este cartão principal.
-          </div>
-        </div>
-      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5"><Label>Fechamento</Label><Input type="number" min={1} max={31} value={form.closing_day} onChange={e => setForm({ ...form, closing_day: Number(e.target.value) })} required /></div>
