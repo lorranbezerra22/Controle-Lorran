@@ -1688,9 +1688,19 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
           </div>
           
           {form.brands.map((b: any, idx: number) => (
-            <div key={idx} className="grid grid-cols-[1fr,1fr,auto] gap-2 items-end">
+            <div key={idx} className="relative p-2.5 border border-border/50 rounded-lg bg-background/50 space-y-2.5 group/brand">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="icon" 
+                className="absolute top-1 right-1 h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover/brand:opacity-100 transition-opacity"
+                onClick={() => setForm({ ...form, brands: form.brands.filter((_: any, i: number) => i !== idx) })}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+
               <div className="space-y-1">
-                <Label className="text-[10px]">Bandeira</Label>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Bandeira</Label>
                 <Select 
                   value={b.brand} 
                   onValueChange={(v) => {
@@ -1699,7 +1709,7 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
                     setForm({ ...form, brands: next });
                   }}
                 >
-                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-9 text-xs bg-background"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="visa">Visa</SelectItem>
                     <SelectItem value="mastercard">Mastercard</SelectItem>
@@ -1708,12 +1718,13 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="space-y-1">
-                <Label className="text-[10px]">Dígitos</Label>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Dígitos</Label>
                 <Input 
-                  className="h-8 text-xs" 
+                  className="h-9 text-xs bg-background" 
                   maxLength={4} 
-                  placeholder="1234" 
+                  placeholder="Últimos 4 dígitos" 
                   value={b.last_digits} 
                   onChange={e => {
                     const next = [...form.brands];
@@ -1722,15 +1733,6 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
                   }} 
                 />
               </div>
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8 text-destructive"
-                onClick={() => setForm({ ...form, brands: form.brands.filter((_: any, i: number) => i !== idx) })}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
             </div>
           ))}
           {form.brands.length === 0 && (
