@@ -222,8 +222,8 @@ function CartoesPage() {
 
     // Ordenar por data da compra (mais recente primeiro)
     return filtered.sort((a: any, b: any) => {
-      const dateA = a.card_purchases?.purchase_date || "";
-      const dateB = b.card_purchases?.purchase_date || "";
+      const dateA = a.cartao_compras?.purchase_date || "";
+      const dateB = b.cartao_compras?.purchase_date || "";
       if (dateA > dateB) return -1;
       if (dateA < dateB) return 1;
       return 0;
@@ -728,7 +728,7 @@ function CartoesPage() {
                     </div>
                   </td>
                   <td className="p-3 hidden sm:table-cell text-muted-foreground">
-                    {i.cartao_compras?.categories ? (
+                    {i.cartao_compras?.categorias ? (
                       <span className="inline-flex items-center gap-1.5">
                         {i.cartao_compras.categorias.icon && <span>{i.cartao_compras.categorias.icon}</span>}
                         <span>{i.cartao_compras.categorias.name}</span>
@@ -867,8 +867,8 @@ function CartoesPage() {
           {deleting && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Esta compra possui <strong className="text-foreground">{deleting.card_purchases?.installments_count ?? 1}</strong> parcela(s).
-                Você está vendo a parcela <strong className="text-foreground">{deleting.installment_number}/{deleting.card_purchases?.installments_count ?? 1}</strong>.
+                Esta compra possui <strong className="text-foreground">{deleting.cartao_compras?.installments_count ?? 1}</strong> parcela(s).
+                Você está vendo a parcela <strong className="text-foreground">{deleting.installment_number}/{deleting.cartao_compras?.installments_count ?? 1}</strong>.
                 O que deseja excluir?
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
