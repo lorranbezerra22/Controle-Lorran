@@ -671,11 +671,11 @@ function Dashboard() {
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div className="rounded-lg bg-background/60 border border-border/50 px-2 py-1.5 flex flex-col gap-1">
-                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Fatura</div>
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Fatura</div>
                         <div className="font-semibold tabular-nums text-foreground">{brl(fat)}</div>
                       </div>
                       <div className="rounded-lg bg-background/60 border border-border/50 px-2 py-1.5 flex flex-col gap-1">
-                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Restante</div>
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Restante</div>
                         <div className={`font-semibold tabular-nums ${isPaid ? "text-success" : "text-destructive"}`}>{brl(restante)}</div>
                       </div>
                     </div>
