@@ -223,9 +223,10 @@ function FinanceiroPage() {
     const year = selY === "all" ? now.getFullYear() : selY;
     const arr = MESES.map((m) => ({ mes: m, receita: 0, despesa: 0, balanco: 0 }));
     baseTx.forEach((t: any) => {
+      const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
       const d = new Date(t.due_at + "T00:00:00");
       if (d.getFullYear() !== year) return;
-      if (personFilter !== "all" && (t._owner || t.person) !== personFilter) return;
+      if (personFilter !== "all" && norm(t._owner || t.person) !== norm(personFilter) && norm(t._debtPerson) !== norm(personFilter)) return;
       const idx = d.getMonth();
       if (t.kind === "income") arr[idx].receita += Number(t.amount);
       else if (t.kind === "expense") arr[idx].despesa += Number(t.amount);
