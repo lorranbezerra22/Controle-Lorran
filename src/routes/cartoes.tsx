@@ -1497,10 +1497,12 @@ function EditPurchaseForm({ purchase, cats, onDone }: any) {
         </Select>
       </div>
       {(() => {
-        const isSU = /santander/i.test(purchase.cards?.bank || "") && /unlimited/i.test(purchase.cards?.name || "");
+        const card = purchase.cartoes;
+        const isSU = /santander/i.test(card?.bank || "") && /unlimited/i.test(card?.name || "");
         if (!isSU) return null;
-        const vNum = purchase.cards?.metadata?.brands?.visa || "2054";
-        const mNum = purchase.cards?.metadata?.brands?.master || "3019";
+        const meta = typeof card?.metadata === 'string' ? JSON.parse(card.metadata) : card?.metadata;
+        const vNum = meta?.brands?.visa || "";
+        const mNum = meta?.brands?.master || "";
         return (
           <div className="space-y-1.5">
             <Label>Bandeira (Santander Unlimited)</Label>
@@ -1508,8 +1510,8 @@ function EditPurchaseForm({ purchase, cats, onDone }: any) {
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Sem bandeira</SelectItem>
-                <SelectItem value={`Visa ${vNum}`}>Visa • {vNum}</SelectItem>
-                <SelectItem value={`Master ${mNum}`}>Master • {mNum}</SelectItem>
+                {vNum && <SelectItem value={`Visa ${vNum}`}>Visa • {vNum}</SelectItem>}
+                {mNum && <SelectItem value={`Master ${mNum}`}>Master • {mNum}</SelectItem>}
               </SelectContent>
             </Select>
           </div>
