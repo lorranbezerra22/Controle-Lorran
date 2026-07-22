@@ -1009,11 +1009,11 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-xl border border-border/60 bg-background/40 backdrop-blur px-3 py-2">
           <div className="text-[9px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><CreditCard className="w-3 h-3" /> Cartão</div>
-          <div className="text-sm font-semibold tabular-nums text-foreground">{brl(cat.card)}</div>
+          <div className="text-sm font-bold tabular-nums text-foreground">{brl(cat.card)}</div>
         </div>
         <div className="rounded-xl border border-border/60 bg-background/40 backdrop-blur px-3 py-2">
           <div className="text-[9px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><Wallet className="w-3 h-3" /> Manual</div>
-          <div className="text-sm font-semibold tabular-nums text-foreground">{brl(cat.manual)}</div>
+          <div className="text-sm font-bold tabular-nums text-foreground">{brl(cat.manual)}</div>
         </div>
         <div className="rounded-xl border border-primary/40 bg-primary/10 px-3 py-2">
           <div className="text-[9px] uppercase tracking-wider text-primary">Total</div>
@@ -1029,22 +1029,22 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
             Pago via cartão
             <span className="text-[10px] px-2 py-0.5 rounded-full border border-border/50 bg-background/60 text-muted-foreground">{cardItems.length}</span>
           </span>
-          <span className="tabular-nums font-semibold">{brl(cat.card)}</span>
+          <span className="tabular-nums font-bold">{brl(cat.card)}</span>
         </button>
         {showCard && (
           cardItems.length === 0 ? (
             <div className="text-xs text-muted-foreground p-4 text-center border-t border-border/60">Nenhuma compra no cartão para esta categoria.</div>
           ) : (
             <div className="overflow-x-auto border-t border-border/60">
-              <table className="w-full text-xs">
+              <table className="w-full text-[11px]">
                 <thead className="bg-muted/20 text-muted-foreground">
                   <tr>
-                    <th className="text-left p-2 font-medium">Data</th>
-                    <th className="text-left p-2 font-medium">Descrição</th>
-                    <th className="text-left p-2 font-medium">Cartão</th>
-                    <th className="text-left p-2 font-medium">Parcela</th>
-                    <th className="text-left p-2 font-medium">Pessoa</th>
-                    <th className="text-right p-2 font-medium">Valor</th>
+                    <th className="text-left p-2 font-semibold">Data</th>
+                    <th className="text-left p-2 font-semibold">Descrição</th>
+                    <th className="text-left p-2 font-semibold">Cartão</th>
+                    <th className="text-left p-2 font-semibold">Parcela</th>
+                    <th className="text-left p-2 font-semibold">Pessoa</th>
+                    <th className="text-right p-2 font-semibold">Valor</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1068,7 +1068,7 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
                         <td className="p-2 whitespace-nowrap">{cp.person || inst.person || "—"}</td>
                         <td className="p-2 text-right tabular-nums font-medium">
                           <div className="flex flex-col items-end">
-                            <span>{brl(share)}</span>
+                            <span className="font-bold">{brl(share)}</span>
                             {cp.brand && (
                               <span className="text-[9px] text-muted-foreground">
                                 {cp.brand}
@@ -1094,22 +1094,22 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
             Lançamentos manuais
             <span className="text-[10px] px-2 py-0.5 rounded-full border border-border/50 bg-background/60 text-muted-foreground">{manualItems.length}</span>
           </span>
-          <span className="tabular-nums font-semibold">{brl(cat.manual)}</span>
+          <span className="tabular-nums font-bold">{brl(cat.manual)}</span>
         </button>
         {showManual && (
           manualItems.length === 0 ? (
             <div className="text-xs text-muted-foreground p-4 text-center border-t border-border/60">Nenhum lançamento manual para esta categoria.</div>
           ) : (
             <div className="overflow-x-auto border-t border-border/60">
-              <table className="w-full text-xs">
+              <table className="w-full text-[11px]">
                 <thead className="bg-muted/20 text-muted-foreground">
                   <tr>
-                    <th className="text-left p-2 font-medium">Data</th>
-                    <th className="text-left p-2 font-medium">Descrição</th>
-                    <th className="text-left p-2 font-medium">Pessoa</th>
-                    <th className="text-left p-2 font-medium">Status</th>
-                    <th className="text-left p-2 font-medium">Observações</th>
-                    <th className="text-right p-2 font-medium">Valor</th>
+                    <th className="text-left p-2 font-semibold">Data</th>
+                    <th className="text-left p-2 font-semibold">Descrição</th>
+                    <th className="text-left p-2 font-semibold">Pessoa</th>
+                    <th className="text-left p-2 font-semibold">Status</th>
+                    <th className="text-left p-2 font-semibold">Observações</th>
+                    <th className="text-right p-2 font-semibold">Valor</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1124,7 +1124,7 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
                         </span>
                       </td>
                       <td className="p-2 max-w-[200px] truncate text-muted-foreground" title={tx.notes ?? ""}>{tx.notes ?? "—"}</td>
-                      <td className="p-2 text-right tabular-nums font-medium">{brl(share)}</td>
+                      <td className="p-2 text-right tabular-nums font-bold">{brl(share)}</td>
                     </tr>
                   ))}
                 </tbody>
