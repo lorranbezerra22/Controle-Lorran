@@ -670,11 +670,11 @@ function Dashboard() {
                       <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ backgroundImage: "linear-gradient(90deg, transparent 0, transparent 6px, var(--background) 6px, var(--background) 7px)", backgroundSize: "7px 100%" }} />
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="rounded-lg bg-background/60 border border-border/50 px-2 py-1.5">
+                      <div className="rounded-lg bg-background/60 border border-border/50 px-2 py-1.5 flex flex-col gap-1">
                         <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Fatura</div>
                         <div className="font-semibold tabular-nums text-foreground">{brl(fat)}</div>
                       </div>
-                      <div className="rounded-lg bg-background/60 border border-border/50 px-2 py-1.5">
+                      <div className="rounded-lg bg-background/60 border border-border/50 px-2 py-1.5 flex flex-col gap-1">
                         <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Restante</div>
                         <div className={`font-semibold tabular-nums ${isPaid ? "text-success" : "text-destructive"}`}>{brl(restante)}</div>
                       </div>
