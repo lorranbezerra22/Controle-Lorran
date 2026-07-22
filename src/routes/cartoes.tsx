@@ -438,7 +438,6 @@ function CartoesPage() {
           const allRelevantIds = [c.id, ...subcardIds];
           const usado = inst.filter((i: any) => allRelevantIds.includes(i.card_id) && i.status === "pending").reduce((s: number, i: any) => s + Number(i.amount), 0);
           const pct = c.credit_limit > 0 ? Math.min(100, (usado / Number(c.credit_limit)) * 100) : 0;
-          const subcards = cards.filter((sc: any) => sc.pai_id === c.id);
           return (
             <motion.div 
               key={c.id} 
@@ -477,7 +476,6 @@ function CartoesPage() {
                     {c.metadata?.brands?.visa && `Visa • ${c.metadata.brands.visa} • `}
                     {c.metadata?.brands?.master && `Master • ${c.metadata.brands.master} • `}
                     F. {c.closing_day} • V. {c.due_day}
-                    {subcards.length > 0 && ` • ${subcards.length} Sub-Cartões`}
                   </div>
 
                 </div>
@@ -497,12 +495,6 @@ function CartoesPage() {
                     <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-medium">Fatura {monthLabel(monthN-1)}{personFilter !== "all" && ` • ${personFilter}`}</div>
                     <div className="text-xl font-bold text-foreground tabular-nums mt-0.5">
                       <CountUp value={totals[c.id]?.fatura ?? 0} format={brl} />
-                      {subcards.length > 0 && (
-                        <div className="text-[9px] text-muted-foreground font-normal flex gap-1 items-center mt-1">
-                          <Users className="w-2.5 h-2.5" />
-                          <span>Inclui faturas de {subcards.length} sub-cartões</span>
-                        </div>
-                      )}
                     </div>
                   </div>
                   {(() => {
@@ -516,19 +508,6 @@ function CartoesPage() {
                     );
                   })()}
                 </div>
-                {santanderCard?.id === c.id && santanderBreakdown && santanderBreakdown.length > 0 && (
-                  <div className="pl-3 border-l-2 border-primary/30 space-y-1 mt-2">
-                    {santanderBreakdown.map((b) => (
-                      <div key={b.brand} className="flex justify-between items-center text-xs">
-                        <span className="text-muted-foreground font-medium">{b.brand}</span>
-                        <div className="flex items-baseline gap-2.5">
-                          <span className="font-semibold tabular-nums">{brl(b.fatura)}</span>
-                          <span className={`tabular-nums text-[11px] px-1.5 py-0.5 rounded-md ${b.restante === 0 ? "text-success bg-success/10" : "text-destructive bg-destructive/10"}`}>{b.restante === 0 ? "ok" : brl(b.restante)}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
 
@@ -824,7 +803,6 @@ function CartoesPage() {
             <EditPurchaseForm
               cats={cats}
               purchase={editingPurchase}
-              isSantanderUnlimited={santanderCard?.id === editingPurchase.card_id}
               onDone={() => { setEditingPurchase(null); invalidate("installments"); }}
             />
 
