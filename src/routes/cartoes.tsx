@@ -1529,8 +1529,8 @@ function EditPurchaseForm({ purchase, cats, onDone, isSantanderUnlimited }: any)
             <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Sem bandeira</SelectItem>
-              <SelectItem value="Visa 2054">Visa • final 2054</SelectItem>
-              <SelectItem value="Master 3019">Master • final 3019</SelectItem>
+              <SelectItem value="Visa 2054">Visa • Santander Unlimited</SelectItem>
+              <SelectItem value="Master 3019">Master • Santander Unlimited</SelectItem>
             </SelectContent>
           </Select>
         </div>
