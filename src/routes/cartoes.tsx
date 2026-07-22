@@ -481,7 +481,7 @@ function CartoesPage() {
                 <span className="opacity-80">Limite utilizado</span>
                 <span className="text-foreground/80 font-bold">{brl(usado)} <span className="font-medium text-muted-foreground/60 mx-1">/</span> {brl(c.credit_limit)}</span>
               </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden mb-3">
+              <div className="h-2.5 bg-muted rounded-full overflow-hidden mb-4">
                 <div className="h-full" style={{ width: `${pct}%`, background: pct > 80 ? "oklch(0.65 0.24 22)" : "var(--gradient-primary)" }} />
               </div>
               <div className="pt-3 border-t border-border space-y-2">
