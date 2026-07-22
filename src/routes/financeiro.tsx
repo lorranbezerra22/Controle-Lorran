@@ -80,7 +80,7 @@ function FinanceiroPage() {
       _debtPerson: t.person,
     }));
     const fromCards = installments.map((i: any) => {
-      const p = i.card_purchases || {};
+      const p = i.cartao_compras || {};
       const card = cardMap[i.card_id] || i.cards || {};
       const costOwner = i.paid_by || p.person || "—";
       return {
@@ -93,7 +93,7 @@ function FinanceiroPage() {
         person: costOwner,
         _debtPerson: p.person || "—",
         category_id: p.category_id || null,
-        categories: p.categories || null,
+        categorias: p.categorias || null,
         description: `${p.description || "Compra cartão"}${p.installments_count > 1 ? ` (${i.installment_number}/${p.installments_count})` : ""}`,
         notes: card.name ? `Cartão ${card.name}` : "Cartão",
         account_id: null,
@@ -644,7 +644,7 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
                 </thead>
                 <tbody>
                   {cardItems.map(({ inst, share }: any) => {
-                    const cp = inst.card_purchases || {};
+                    const cp = inst.cartao_compras || {};
                     const card = inst.cards || cardsById.get(inst.card_id) || {};
                     return (
                       <tr key={inst.id} className="border-t border-border/60 hover:bg-muted/20">
