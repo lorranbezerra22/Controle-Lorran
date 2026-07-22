@@ -1468,27 +1468,6 @@ function EditPurchaseForm({ purchase, cats, onDone }: any) {
           </SelectContent>
         </Select>
       </div>
-      {(() => {
-        const card = purchase.cartoes;
-        const isSU = /santander/i.test(card?.bank || "") && /unlimited/i.test(card?.name || "");
-        if (!isSU) return null;
-        const meta = typeof card?.metadata === 'string' ? JSON.parse(card.metadata) : card?.metadata;
-        const vNum = meta?.brands?.visa || "";
-        const mNum = meta?.brands?.master || "";
-        return (
-          <div className="space-y-1.5">
-            <Label>Bandeira (Santander Unlimited)</Label>
-            <Select value={form.brand || "none"} onValueChange={(v) => setForm({ ...form, brand: v === "none" ? "" : v })}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sem bandeira</SelectItem>
-                {vNum && <SelectItem value={`Visa ${vNum}`}>Visa • {vNum}</SelectItem>}
-                {mNum && <SelectItem value={`Master ${mNum}`}>Master • {mNum}</SelectItem>}
-              </SelectContent>
-            </Select>
-          </div>
-        );
-      })()}
       <label className="flex items-start gap-2 rounded-md border border-border p-2.5 cursor-pointer hover:bg-muted/50">
         <input type="checkbox" checked={applyAll} onChange={e => setApplyAll(e.target.checked)} className="mt-0.5" />
         <div className="text-xs">
@@ -1512,11 +1491,8 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
     due_day: initialData?.due_day ?? 10,
     credit_limit: String(initialData?.credit_limit ?? ""),
     last_digits: initialData?.last_digits ?? "",
-    visa_last_digits: "",
-    master_last_digits: "",
     brand: initialData?.metadata?.brand ?? "visa",
     mode: "standard",
-    pai_id: "",
   });
   const [saving, setSaving] = useState(false);
   const effectiveMode = "standard";
@@ -1595,23 +1571,23 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
       </div>
 
       <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
-          <div className="space-y-1.5">
-            <Label>Bandeira</Label>
-            <Select value={form.brand} onValueChange={(v) => setForm({ ...form, brand: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="visa">Visa</SelectItem>
-                <SelectItem value="mastercard">Mastercard</SelectItem>
-                <SelectItem value="elo">Elo</SelectItem>
-                <SelectItem value="amex">Amex</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Últimos 4 dígitos</Label>
-            <Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} />
-          </div>
+        <div className="space-y-1.5">
+          <Label>Bandeira</Label>
+          <Select value={form.brand} onValueChange={(v) => setForm({ ...form, brand: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="visa">Visa</SelectItem>
+              <SelectItem value="mastercard">Mastercard</SelectItem>
+              <SelectItem value="elo">Elo</SelectItem>
+              <SelectItem value="amex">Amex</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+        <div className="space-y-1.5">
+          <Label>Últimos 4 dígitos</Label>
+          <Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} />
+        </div>
+      </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5"><Label>Fechamento</Label><Input type="number" min={1} max={31} value={form.closing_day} onChange={e => setForm({ ...form, closing_day: Number(e.target.value) })} required /></div>
