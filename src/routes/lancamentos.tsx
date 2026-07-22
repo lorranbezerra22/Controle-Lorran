@@ -969,12 +969,13 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
             <span className="text-sm font-medium">Despesa fixa</span>
             <span className="text-[10px] text-muted-foreground">Repetir mensalmente</span>
           </div>
-          <input 
-            type="checkbox" 
-            className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
-            checked={form.is_fixed} 
-            onChange={(e) => setForm({ ...form, is_fixed: e.target.checked })} 
-          />
+          <button
+            type="button"
+            onClick={() => setForm({ ...form, is_fixed: !form.is_fixed })}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 ${form.is_fixed ? "bg-primary" : "bg-muted"}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.is_fixed ? "translate-x-6" : "translate-x-1"}`} />
+          </button>
         </div>
       </div>
       {!isEdit && (
@@ -984,12 +985,13 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
               <span className="text-sm font-medium">Dividir entre pessoas</span>
               <span className="text-[10px] text-muted-foreground">Rachar a compra em partes</span>
             </div>
-            <input 
-              type="checkbox" 
-              className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
-              checked={splitMode} 
-              onChange={(e) => setSplitMode(e.target.checked)} 
-            />
+            <button
+              type="button"
+              onClick={() => setSplitMode(!splitMode)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 ${splitMode ? "bg-primary" : "bg-muted"}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${splitMode ? "translate-x-6" : "translate-x-1"}`} />
+            </button>
           </div>
 
           {splitMode && (
@@ -1005,12 +1007,13 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
               {splitPeople.length >= 2 && (
                 <div className="flex items-center justify-between mt-1 px-1">
                   <span className="text-xs text-muted-foreground">Definir valor específico por pessoa</span>
-                  <input 
-                    type="checkbox" 
-                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-                    checked={splitCustom} 
-                    onChange={(e) => setSplitCustom(e.target.checked)} 
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setSplitCustom(!splitCustom)}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 ${splitCustom ? "bg-primary" : "bg-muted"}`}
+                  >
+                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${splitCustom ? "translate-x-5" : "translate-x-1"}`} />
+                  </button>
                 </div>
 
               )}
