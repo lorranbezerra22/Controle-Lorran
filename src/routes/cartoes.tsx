@@ -1606,7 +1606,6 @@ function EditCardForm({ card, onDone, onDelete }: any) {
   });
   const [saving, setSaving] = useState(false);
   const isSU = /santander/i.test(form.bank || "") && /unlimited/i.test(form.name || "");
-  const isSU = /santander/i.test(form.bank || "") && /unlimited/i.test(form.name || "");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!__tryLock()) return; setSaving(true);
