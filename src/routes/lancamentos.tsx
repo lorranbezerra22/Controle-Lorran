@@ -234,12 +234,14 @@ function LancamentosPage() {
     // Despesa de Família sempre debita 50% da conta do Lorran e 50% da conta da Tayane.
     // O campo "Pago por" não deve transformar Família em débito 100% de uma pessoa.
     const useSplit = isFamilyExpense;
-    const personIsDifferent = !isFamilyExpense && payBy && payBy.trim() && payByNorm !== norm(t.person || "");
+    const splitPayBy = payBy ? payBy.split(",") : [];
+    const firstPayBy = splitPayBy[0] || "";
+    const personIsDifferent = !isFamilyExpense && firstPayBy && norm(firstPayBy) !== norm(t.person || "");
     const { error } = await supabase.from("transactions").update({
       status: "paid",
       account_id: payAccount || null,
       account_tayane_id: useSplit ? (payAccountTayane || null) : null,
-      paid_by: personIsDifferent ? payBy : null,
+      paid_by: personIsDifferent ? firstPayBy : null,
     }).eq("id", t.id);
     if (error) toast.error(error.message);
     else {
@@ -609,7 +611,14 @@ function LancamentosPage() {
                 {!(paying.kind === "expense" && norm(paying.person || "") === "familia") && (
                   <div className="grid gap-2">
                     <Label className="text-xs font-medium">Pago por</Label>
-                    <PersonSelect value={payBy} onChange={setPayBy} extras={paying.person ? [paying.person] : []} />
+                    <PersonSelect 
+                      multiSelect 
+                      value="" 
+                      selectedValues={payBy ? payBy.split(",") : []} 
+                      onChange={(v) => setPayBy(v)} 
+                      includeFamilia={false}
+                      extras={paying.person ? [paying.person] : []} 
+                    />
                   </div>
                 )}
 
@@ -969,16 +978,15 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
             Dividir entre várias pessoas
           </label>
           {splitMode && (
-            <div className="space-y-2 rounded-md border border-border p-2">
+            <div className="space-y-2 rounded-xl border border-border bg-gradient-to-br from-muted/30 to-transparent p-2.5">
               <Label className="text-xs">Selecione as pessoas</Label>
-              <div className="flex flex-wrap gap-2">
-                {people.map((p: any) => (
-                  <label key={p.id} className="flex items-center gap-1.5 text-sm bg-muted/40 rounded px-2 py-1 cursor-pointer">
-                    <input type="checkbox" checked={splitPeople.includes(p.name)} onChange={() => togglePerson(p.name)} />
-                    {p.name}
-                  </label>
-                ))}
-              </div>
+              <PersonSelect 
+                multiSelect 
+                value=""
+                selectedValues={splitPeople} 
+                onChange={(v) => setSplitPeople(v ? v.split(",") : [])}
+                includeFamilia={false}
+              />
               {splitPeople.length >= 2 && (
                 <label className="flex items-center gap-2 text-xs">
                   <input type="checkbox" checked={splitCustom} onChange={(e) => setSplitCustom(e.target.checked)} />

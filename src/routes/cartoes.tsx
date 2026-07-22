@@ -1295,22 +1295,14 @@ function PurchaseForm({ cards, cats, onDone }: any) {
       </button>
       {splitMode && (
         <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="space-y-2 rounded-xl border border-border bg-gradient-to-br from-muted/30 to-transparent p-2.5">
-          <div className="flex flex-wrap gap-1.5">
-            {people.map((p: any) => {
-              const active = splitPeople.includes(p.name);
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => togglePerson(p.name)}
-                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs border transition-all ${active ? "border-primary bg-primary text-primary-foreground shadow-sm" : "border-border bg-background hover:border-primary/40"}`}
-                >
-                  {active && <Check className="w-3 h-3" />}
-                  {p.name}
-                </button>
-              );
-            })}
-          </div>
+          <PersonSelect 
+            multiSelect 
+            value=""
+            selectedValues={splitPeople} 
+            onChange={(v) => setSplitPeople(v ? v.split(",") : [])}
+            includeFamilia={false}
+          />
+
 
           {splitPeople.length >= 2 && (
             <>
