@@ -1003,10 +1003,16 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
                 includeFamilia={false}
               />
               {splitPeople.length >= 2 && (
-                <label className="flex items-center gap-2 text-xs">
-                  <input type="checkbox" checked={splitCustom} onChange={(e) => setSplitCustom(e.target.checked)} />
-                  Definir valor específico por pessoa
-                </label>
+                <div className="flex items-center justify-between mt-1 px-1">
+                  <span className="text-xs text-muted-foreground">Definir valor específico por pessoa</span>
+                  <input 
+                    type="checkbox" 
+                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    checked={splitCustom} 
+                    onChange={(e) => setSplitCustom(e.target.checked)} 
+                  />
+                </div>
+
               )}
               {splitCustom && splitPeople.length >= 2 && (
                 <div className="space-y-1.5">
