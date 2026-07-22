@@ -281,14 +281,13 @@ function CartoesPage() {
           let pendingForFilter = payment.remaining;
           
           if (isFamilia && (filter !== "all" || filter2 !== "all")) {
-            // No caso de pagamento parcial de conta família, 
-            // assumimos que o que foi pago abate do total e o restante divide.
-            // Se já foi pago mais que a metade do total, a pessoa do filtro já pagou sua parte?
-            // Para simplificar: (Total - Pago) / 2
             pendingForFilter = payment.remaining / 2;
           }
           
           m.restante += pendingForFilter;
+          const b = i.cartao_compras?.brand || "Default";
+          m.brandTotals[b] = m.brandTotals[b] ?? { fatura: 0, restante: 0 };
+          m.brandTotals[b].restante += pendingForFilter;
         }
       }
     });
