@@ -293,12 +293,12 @@ function Dashboard() {
       addTx(t.person || "", Number(t.amount), t.status === "paid");
     });
     monthInst.forEach((i: any) => {
-      addCard(i.card_purchases?.person || "", Number(i.amount), i.status === "paid");
+      addCard(i.cartao_compras?.person || "", Number(i.amount), i.status === "paid");
     });
     const cardMap: Record<string, Record<string, number>> = {};
     monthInst.forEach((i: any) => {
-      const cardName = i.cards?.name ?? "—";
-      const p = (i.card_purchases?.person || "").trim();
+      const cardName = i.cartoes?.name ?? "—";
+      const p = (i.cartao_compras?.person || "").trim();
       if (!p) return;
       cardMap[cardName] = cardMap[cardName] ?? {};
       cardMap[cardName][p] = (cardMap[cardName][p] ?? 0) + Number(i.amount);
@@ -393,8 +393,8 @@ function Dashboard() {
     monthTx.filter((t: any) => t.kind === "expense" && !t.card_installment_id && t.category_id !== "0494a63e-6737-4a3c-8778-67ce5f96a0a1").forEach((t: any) => {
       const v = effectiveShares(t, adjMap).reduce((s, sh) => s + sh.amount * personFactor(sh.person), 0);
       if (!v) return;
-      const name = t.categories?.name ?? "Sem categoria";
-      const icon = t.categories?.icon ?? null;
+      const name = t.categorias?.name ?? "Sem categoria";
+      const icon = t.categorias?.icon ?? null;
       const agg = ensure(name, icon);
       agg.value += v;
       agg.manual += v;
@@ -403,7 +403,7 @@ function Dashboard() {
     monthInst.forEach((i: any) => {
       const f = personFactor(costPersonInst(i));
       if (!f) return;
-      const cid = i.card_purchases?.category_id;
+      const cid = i.cartao_compras?.category_id;
       const meta = (cid && catMap.get(cid)) || { name: "Sem categoria", icon: null };
       const v = Number(i.amount) * f;
       const agg = ensure(meta.name, meta.icon);
@@ -420,8 +420,8 @@ function Dashboard() {
     monthTx.filter((t: any) => t.kind === "income" && !t.card_installment_id).forEach((t: any) => {
       const v = effectiveShares(t, adjMap).reduce((s, sh) => s + sh.amount * personFactor(sh.person), 0);
       if (!v) return;
-      const name = t.categories?.name ?? "Sem categoria";
-      const icon = t.categories?.icon ?? null;
+      const name = t.categorias?.name ?? "Sem categoria";
+      const icon = t.categorias?.icon ?? null;
       const cur: Agg = map.get(name) ?? { value: 0, icon, manual: 0, card: 0, manualItems: [], cardItems: [] };
       cur.value += v;
       cur.manual += v;
@@ -453,7 +453,7 @@ function Dashboard() {
     tx.filter((t: any) => inPrev(t.due_at)).forEach((t: any) => {
       const v = effectiveShares(t, adjMap).reduce((s, sh) => s + sh.amount * personFactor(sh.person), 0);
       if (!v) return;
-      const name = t.categories?.name ?? "Sem categoria";
+      const name = t.categorias?.name ?? "Sem categoria";
       if (t.kind === "income" && !t.card_installment_id) {
         incMap.set(name, (incMap.get(name) ?? 0) + v);
       } else if (t.kind === "expense" && !t.card_installment_id && t.category_id !== "0494a63e-6737-4a3c-8778-67ce5f96a0a1") {
@@ -463,7 +463,7 @@ function Dashboard() {
     inst.filter((i: any) => inPrev(i.due_at)).forEach((i: any) => {
       const f = personFactor(costPersonInst(i));
       if (!f) return;
-      const cid = i.card_purchases?.category_id;
+      const cid = i.cartao_compras?.category_id;
       const meta = (cid && catMap.get(cid)) || { name: "Sem categoria", icon: null };
       const v = Number(i.amount) * f;
       expMap.set(meta.name, (expMap.get(meta.name) ?? 0) + v);
@@ -1049,8 +1049,8 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
                 </thead>
                 <tbody>
                   {cardItems.map(({ inst, share }: any) => {
-                    const cp = inst.card_purchases || inst._originalItem?.card_purchases || {};
-                    const card = inst.cards || inst._originalItem?.cards || cardsById.get(inst.card_id) || {};
+                    const cp = inst.cartao_compras || inst._originalItem?.cartao_compras || {};
+                    const card = inst.cartoes || inst._originalItem?.cartoes || cardsById.get(inst.card_id) || {};
                     return (
                       <tr key={inst.id} className="border-t border-border/60 hover:bg-muted/20">
                         <td className="p-2 whitespace-nowrap">{fmtDate(inst.due_at)}</td>
@@ -1169,7 +1169,7 @@ function computePaidRest(targetName: string, monthTx: any[], monthInst: any[], a
   monthInst.forEach(i => {
     const v = Number(i.amount);
     const paid = Number(i.paid_amount || 0);
-    const itemPerson = (i.card_purchases?.person || "").trim();
+    const itemPerson = (i.cartao_compras?.person || "").trim();
     const isItemFamilia = norm(itemPerson) === "familia";
     let factor = 0;
     if (isNameFamilia) {
