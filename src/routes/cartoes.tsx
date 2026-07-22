@@ -245,13 +245,13 @@ function CartoesPage() {
   }, [people]);
 
   const totals = useMemo(() => {
-    const map: Record<string, { fatura: number; restante: number }> = {};
+    const map: Record<string, { fatura: number; restante: number; brandTotals: Record<string, number> }> = {};
     const isFamilia = (s: string) => (s || "").toLowerCase().trim() === "familia";
 
     monthInst.forEach((i: any) => {
       const card = cards.find((c: any) => c.id === i.card_id);
       const effectiveCardId = i.card_id;
-      const m = (map[effectiveCardId] = map[effectiveCardId] ?? { fatura: 0, restante: 0 });
+      const m = (map[effectiveCardId] = map[effectiveCardId] ?? { fatura: 0, restante: 0, brandTotals: {} });
       const payment = getInstallmentPaymentState(i);
       const v = getStatusFilteredAmount(i, statusFilter);
       
@@ -272,6 +272,9 @@ function CartoesPage() {
         }
         
         m.fatura += valueForFilter;
+        
+        const b = i.card_purchases?.brand || "Default";
+        m.brandTotals[b] = (m.brandTotals[b] ?? 0) + valueForFilter;
 
         if (statusFilter !== "paid" && payment.hasPending) {
           let pendingForFilter = payment.remaining;
@@ -472,9 +475,10 @@ function CartoesPage() {
                   <div className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-medium opacity-80">
                     {c.bank ? `${findBank(c.bank).name} • ` : ""}
                     {c.metadata?.brand && <span className="capitalize">{c.metadata.brand} </span>}
-                    {c.last_digits ? `•••• ${c.last_digits} • ` : ""}
-                    {c.metadata?.brands?.visa && `Visa • ${c.metadata.brands.visa} • `}
-                    {c.metadata?.brands?.master && `Master • ${c.metadata.brands.master} • `}
+                    {c.last_digits && `•••• ${c.last_digits} • `}
+                    {c.metadata?.brands?.length > 0 && c.metadata.brands.map((b: any, bi: number) => (
+                      <span key={bi} className="capitalize">{b.brand} • {b.last_digits} • </span>
+                    ))}
                     F. {c.closing_day} • V. {c.due_day}
                   </div>
 
@@ -497,6 +501,16 @@ function CartoesPage() {
                       <CountUp value={totals[c.id]?.fatura ?? 0} format={brl} />
                     </div>
                   </div>
+                  {totals[c.id]?.brandTotals && Object.keys(totals[c.id].brandTotals).length > 1 && (
+                    <div className="flex flex-col gap-1 pr-3 border-r border-border/50">
+                      {Object.entries(totals[c.id].brandTotals).map(([brand, val], bi) => (
+                        <div key={bi} className="flex flex-col">
+                          <span className="text-[8px] uppercase text-muted-foreground font-bold">{brand}</span>
+                          <span className="text-[11px] font-semibold">{brl(val)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {(() => {
                     const rest = totals[c.id]?.restante ?? 0;
                     const paid = rest === 0;
@@ -743,7 +757,7 @@ function CartoesPage() {
                   </td>
                   <td className="p-3">
                     <div className="flex gap-1 justify-end">
-                      <button onClick={() => setEditingPurchase({ id: i.purchase_id, ...i.card_purchases, card_id: i.card_id, _installment: i })} title="Editar compra" className="w-7 h-7 rounded-md flex items-center justify-center bg-muted text-muted-foreground hover:bg-primary/20 hover:text-primary">
+                      <button onClick={() => setEditingPurchase({ id: i.purchase_id, ...i.card_purchases, card_id: i.card_id, _installment: i, cards })} title="Editar compra" className="w-7 h-7 rounded-md flex items-center justify-center bg-muted text-muted-foreground hover:bg-primary/20 hover:text-primary">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       {Number(i.amount) < 0 ? (
@@ -802,6 +816,7 @@ function CartoesPage() {
           {editingPurchase && (
             <EditPurchaseForm
               cats={cats}
+              cards={cards}
               purchase={editingPurchase}
               onDone={() => { setEditingPurchase(null); invalidate("installments"); }}
             />
@@ -1109,7 +1124,7 @@ function RefundHelper({ amount, rawAmount, selectedCategoryId, cats, person, pur
 function PurchaseForm({ cards, cats, onDone }: any) {
   const today = todayLocalISO();
   const { data: people = [] } = usePeople();
-  const [form, setForm] = useState({ card_id: cards[0]?.id ?? "", description: "", purchase_date: today, total_amount: "", installments_count: 1, category_id: "", person: "", brand: "Master 3019" });
+  const [form, setForm] = useState({ card_id: cards[0]?.id ?? "", description: "", purchase_date: today, total_amount: "", installments_count: 1, category_id: "", person: "", brand: "" });
   const [splitMode, setSplitMode] = useState(false);
   const [splitPeople, setSplitPeople] = useState<string[]>([]);
   const [splitCustom, setSplitCustom] = useState(false);
@@ -1208,7 +1223,15 @@ function PurchaseForm({ cards, cats, onDone }: any) {
     <form onSubmit={submit} className="space-y-3">
       <div className="space-y-1.5">
         <Label>Cartão</Label>
-        <Select value={form.card_id} onValueChange={v => setForm({ ...form, card_id: v })}>
+        <Select value={form.card_id} onValueChange={v => {
+          const c = cards.find((x: any) => x.id === v);
+          const firstBrand = c?.metadata?.brands?.[0];
+          setForm({ 
+            ...form, 
+            card_id: v, 
+            brand: firstBrand ? `${firstBrand.brand.charAt(0).toUpperCase()}${firstBrand.brand.slice(1)} ${firstBrand.last_digits}` : "" 
+          });
+        }}>
           <SelectTrigger><SelectValue placeholder="Selecione o cartão" /></SelectTrigger>
           <SelectContent>
             {cards.map((c: any) => (
@@ -1355,7 +1378,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
   );
 }
 
-function EditPurchaseForm({ purchase, cats, onDone }: any) {
+function EditPurchaseForm({ purchase, cards, cats, onDone }: any) {
   const clicked = purchase._installment;
   const clickedNum = clicked?.installment_number ?? 1;
   const initialBrand = purchase.brand || "";
@@ -1446,6 +1469,35 @@ function EditPurchaseForm({ purchase, cats, onDone }: any) {
           </SelectContent>
         </Select>
       </div>
+      {(() => {
+        const card = cards.find((c: any) => c.id === purchase.card_id);
+        const brands = card?.metadata?.brands || [];
+        if (brands.length <= 1) return null;
+        return (
+          <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+            <Label>Bandeira da Compra</Label>
+            <div className="flex flex-wrap gap-2">
+              {brands.map((b: any, idx: number) => {
+                const label = `${b.brand.charAt(0).toUpperCase()}${b.brand.slice(1)} ${b.last_digits}`;
+                const active = form.brand === label;
+                return (
+                  <Button
+                    key={idx}
+                    type="button"
+                    variant={active ? "default" : "outline"}
+                    size="sm"
+                    className="h-8 text-[10px] uppercase font-bold tracking-wider"
+                    onClick={() => setForm({ ...form, brand: label })}
+                  >
+                    {label}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       <label className="flex items-start gap-2 rounded-md border border-border p-2.5 cursor-pointer hover:bg-muted/50">
         <input type="checkbox" checked={applyAll} onChange={e => setApplyAll(e.target.checked)} className="mt-0.5" />
         <div className="text-xs">
@@ -1470,10 +1522,11 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
     credit_limit: String(initialData?.credit_limit ?? ""),
     last_digits: initialData?.last_digits ?? "",
     brand: initialData?.metadata?.brand ?? "visa",
-    mode: "standard",
+    brands: initialData?.metadata?.brands || [],
+    mode: (initialData?.metadata?.brands?.length > 0) ? "multi" : "standard",
   });
   const [saving, setSaving] = useState(false);
-  const effectiveMode = "standard";
+  
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!__tryLock()) return; setSaving(true);
@@ -1481,8 +1534,8 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
       const bInfo = findBank(form.bank);
       const metadata = {
         ...(initialData?.metadata || {}),
-        brand: form.brand,
-        brands: null
+        brand: form.mode === "standard" ? form.brand : null,
+        brands: form.mode === "multi" ? form.brands : null
       };
 
       const payload = {
@@ -1492,7 +1545,7 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
         due_day: Number(form.due_day),
         credit_limit: Number(form.credit_limit) || 0,
         color: bInfo.color,
-        last_digits: effectiveMode === "standard" ? (form.last_digits || null) : null,
+        last_digits: form.mode === "standard" ? (form.last_digits || null) : null,
         metadata,
         
       };
@@ -1547,25 +1600,105 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
           </SelectContent>
         </Select>
       </div>
-
-      <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
-        <div className="space-y-1.5">
-          <Label>Bandeira</Label>
-          <Select value={form.brand} onValueChange={(v) => setForm({ ...form, brand: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="visa">Visa</SelectItem>
-              <SelectItem value="mastercard">Mastercard</SelectItem>
-              <SelectItem value="elo">Elo</SelectItem>
-              <SelectItem value="amex">Amex</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Últimos 4 dígitos</Label>
-          <Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} />
-        </div>
+      <div className="space-y-1.5">
+        <Label>Tipo de Gestão</Label>
+        <Select value={form.mode} onValueChange={(v: any) => setForm({ ...form, mode: v })}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="standard">Bandeira Única</SelectItem>
+            <SelectItem value="multi">Múltiplas Bandeiras (Combo)</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
+
+      {form.mode === "standard" ? (
+        <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="space-y-1.5">
+            <Label>Bandeira</Label>
+            <Select value={form.brand} onValueChange={(v) => setForm({ ...form, brand: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="visa">Visa</SelectItem>
+                <SelectItem value="mastercard">Mastercard</SelectItem>
+                <SelectItem value="elo">Elo</SelectItem>
+                <SelectItem value="amex">Amex</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Últimos 4 dígitos</Label>
+            <Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} />
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3 p-3 border rounded-lg bg-muted/30 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="flex items-center justify-between mb-2">
+            <Label className="text-xs font-bold uppercase">Bandeiras do Combo</Label>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm" 
+              className="h-7 text-[10px]"
+              onClick={() => setForm({ ...form, brands: [...form.brands, { brand: "visa", last_digits: "" }] })}
+            >
+              <Plus className="w-3 h-3 mr-1" /> Add Bandeira
+            </Button>
+          </div>
+          
+          {form.brands.map((b: any, idx: number) => (
+            <div key={idx} className="grid grid-cols-[1fr,1fr,auto] gap-2 items-end">
+              <div className="space-y-1">
+                <Label className="text-[10px]">Bandeira</Label>
+                <Select 
+                  value={b.brand} 
+                  onValueChange={(v) => {
+                    const next = [...form.brands];
+                    next[idx].brand = v;
+                    setForm({ ...form, brands: next });
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="visa">Visa</SelectItem>
+                    <SelectItem value="mastercard">Mastercard</SelectItem>
+                    <SelectItem value="elo">Elo</SelectItem>
+                    <SelectItem value="amex">Amex</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px]">Dígitos</Label>
+                <Input 
+                  className="h-8 text-xs" 
+                  maxLength={4} 
+                  placeholder="1234" 
+                  value={b.last_digits} 
+                  onChange={e => {
+                    const next = [...form.brands];
+                    next[idx].last_digits = e.target.value;
+                    setForm({ ...form, brands: next });
+                  }} 
+                />
+              </div>
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 text-destructive"
+                onClick={() => setForm({ ...form, brands: form.brands.filter((_: any, i: number) => i !== idx) })}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          ))}
+          {form.brands.length === 0 && (
+            <div className="text-center py-4 text-xs text-muted-foreground border border-dashed rounded-md">
+              Nenhuma bandeira adicionada
+            </div>
+          )}
+        </div>
+      )}
+
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5"><Label>Fechamento</Label><Input type="number" min={1} max={31} value={form.closing_day} onChange={e => setForm({ ...form, closing_day: Number(e.target.value) })} required /></div>
