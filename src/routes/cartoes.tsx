@@ -262,7 +262,9 @@ function CartoesPage() {
     const isFamilia = (s: string) => (s || "").toLowerCase().trim() === "familia";
 
     monthInst.forEach((i: any) => {
-      const m = (map[i.card_id] = map[i.card_id] ?? { fatura: 0, restante: 0 });
+      const card = cards.find((c: any) => c.id === i.card_id);
+      const effectiveCardId = card?.pai_id || i.card_id;
+      const m = (map[effectiveCardId] = map[effectiveCardId] ?? { fatura: 0, restante: 0 });
       const payment = getInstallmentPaymentState(i);
       const v = getStatusFilteredAmount(i, statusFilter);
       
@@ -312,8 +314,10 @@ function CartoesPage() {
   const santanderBreakdown = useMemo(() => {
     if (!santanderCard) return null as null | { brand: string; fatura: number; restante: number }[];
     const map: Record<string, { fatura: number; restante: number }> = {};
+    const subcardIds = cards.filter((sc: any) => sc.pai_id === santanderCard.id).map((sc: any) => sc.id);
+    const allRelevantIds = [santanderCard.id, ...subcardIds];
     monthInst
-      .filter((i: any) => i.card_id === santanderCard.id)
+      .filter((i: any) => allRelevantIds.includes(i.card_id))
       .forEach((i: any) => {
         const pid = i.purchase_id || i.card_purchases?.id;
         const brand = i.card_purchases?.brand || purchaseBrands[pid] || "Master 3019";
@@ -481,9 +485,12 @@ function CartoesPage() {
 
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {cards.map((c: any, idx: number) => {
-          const usado = inst.filter((i: any) => i.card_id === c.id && i.status === "pending").reduce((s: number, i: any) => s + Number(i.amount), 0);
+        {cards.filter((c: any) => !c.pai_id).map((c: any, idx: number) => {
+          const subcardIds = cards.filter((sc: any) => sc.pai_id === c.id).map((sc: any) => sc.id);
+          const allRelevantIds = [c.id, ...subcardIds];
+          const usado = inst.filter((i: any) => allRelevantIds.includes(i.card_id) && i.status === "pending").reduce((s: number, i: any) => s + Number(i.amount), 0);
           const pct = c.credit_limit > 0 ? Math.min(100, (usado / Number(c.credit_limit)) * 100) : 0;
+          const subcards = cards.filter((sc: any) => sc.pai_id === c.id);
           return (
             <motion.div 
               key={c.id} 
@@ -522,6 +529,7 @@ function CartoesPage() {
                     {c.metadata?.brands?.visa && `Visa • ${c.metadata.brands.visa} • `}
                     {c.metadata?.brands?.master && `Master • ${c.metadata.brands.master} • `}
                     F. {c.closing_day} • V. {c.due_day}
+                    {subcards.length > 0 && ` • ${subcards.length} Sub-Cartões`}
                   </div>
 
                 </div>
@@ -539,7 +547,15 @@ function CartoesPage() {
                 <div className="flex items-end justify-between gap-3">
                   <div className="min-w-0">
                     <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-medium">Fatura {monthLabel(monthN-1)}{personFilter !== "all" && ` • ${personFilter}`}</div>
-                    <div className="text-xl font-bold text-foreground tabular-nums mt-0.5"><CountUp value={totals[c.id]?.fatura ?? 0} format={brl} /></div>
+                    <div className="text-xl font-bold text-foreground tabular-nums mt-0.5">
+                      <CountUp value={totals[c.id]?.fatura ?? 0} format={brl} />
+                      {subcards.length > 0 && (
+                        <div className="text-[9px] text-muted-foreground font-normal flex gap-1 items-center mt-1">
+                          <Users className="w-2.5 h-2.5" />
+                          <span>Inclui faturas de {subcards.length} sub-cartões</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   {(() => {
                     const rest = totals[c.id]?.restante ?? 0;
@@ -641,7 +657,7 @@ function CartoesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os cartões</SelectItem>
-                  {cards.map((c: any) => (
+                  {cards.filter((c: any) => !c.pai_id).map((c: any) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -1267,8 +1283,17 @@ function PurchaseForm({ cards, cats, onDone }: any) {
       <div className="space-y-1.5">
         <Label>Cartão</Label>
         <Select value={form.card_id} onValueChange={v => setForm({ ...form, card_id: v })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>{cards.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+          <SelectTrigger><SelectValue placeholder="Selecione o cartão" /></SelectTrigger>
+          <SelectContent>
+            {cards.map((c: any) => (
+              <SelectItem key={c.id} value={c.id}>
+                <div className="flex items-center gap-2">
+                  <BankIcon bank={c.bank} size={14} square />
+                  <span>{c.name} {c.pai_id && "(Sub-Cartão)"}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
       </div>
       <div className="space-y-1.5"><Label>Descrição</Label><SmartInput value={form.description} onChange={(v) => setForm({ ...form, description: v })} required /></div>
@@ -1284,24 +1309,45 @@ function PurchaseForm({ cards, cats, onDone }: any) {
         <div className="space-y-1.5"><Label>Valor total</Label><Input type="number" step="0.01" value={form.total_amount} onChange={e => setForm({ ...form, total_amount: e.target.value })} required /></div>
         <div className="space-y-1.5"><Label>Parcelas</Label><Input type="number" min={1} max={36} value={form.installments_count} onChange={e => setForm({ ...form, installments_count: Number(e.target.value) })} required /></div>
       </div>
-      <button
-        type="button"
-        onClick={() => setSplitMode(!splitMode)}
-        className={`w-full flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-sm transition-all ${splitMode ? "border-primary/50 bg-primary/5 shadow-sm" : "border-border bg-muted/20 hover:bg-muted/40"}`}
-      >
-        <span className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${splitMode ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-            <Users className="w-4 h-4" />
-          </div>
-          <span className="flex flex-col items-start">
-            <span className="font-medium">Dividir entre pessoas</span>
-            <span className="text-[11px] text-muted-foreground">{splitMode ? `${splitPeople.length} selecionada${splitPeople.length === 1 ? "" : "s"}` : "Rachar a compra em partes"}</span>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => setSplitMode(!splitMode)}
+          className={`flex-1 flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-sm transition-all ${splitMode ? "border-primary/50 bg-primary/5 shadow-sm" : "border-border bg-muted/20 hover:bg-muted/40"}`}
+        >
+          <span className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${splitMode ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+              <Users className="w-4 h-4" />
+            </div>
+            <span className="flex flex-col items-start text-left">
+              <span className="font-medium text-xs">Dividir Pessoas</span>
+              <span className="text-[10px] text-muted-foreground">{splitMode ? `${splitPeople.length} sel.` : "Rachar valor"}</span>
+            </span>
           </span>
-        </span>
-        <div className={`w-9 h-5 rounded-full p-0.5 transition-colors ${splitMode ? "bg-primary" : "bg-muted-foreground/30"}`}>
-          <div className={`w-4 h-4 rounded-full bg-background shadow transition-transform ${splitMode ? "translate-x-4" : ""}`} />
-        </div>
-      </button>
+          <div className={`w-9 h-5 rounded-full p-0.5 transition-colors ${splitMode ? "bg-primary" : "bg-muted-foreground/30"}`}>
+            <div className={`w-4 h-4 rounded-full bg-background shadow transition-transform ${splitMode ? "translate-x-4" : ""}`} />
+          </div>
+        </button>
+
+        <button
+          type="button"
+          className="flex-1 flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-sm transition-all border-border bg-muted/20 hover:bg-muted/40 opacity-50 cursor-not-allowed"
+          title="Funcionalidade em desenvolvimento"
+        >
+          <span className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-muted text-muted-foreground">
+              <CreditCard className="w-4 h-4" />
+            </div>
+            <span className="flex flex-col items-start text-left">
+              <span className="font-medium text-xs">Sub-Cartões</span>
+              <span className="text-[10px] text-muted-foreground">Vincular gastos</span>
+            </span>
+          </span>
+          <div className="w-9 h-5 rounded-full p-0.5 bg-muted-foreground/30">
+            <div className="w-4 h-4 rounded-full bg-background shadow" />
+          </div>
+        </button>
+      </div>
       {splitMode && (
         <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="space-y-2 rounded-xl border border-border bg-gradient-to-br from-muted/30 to-transparent p-2.5">
           <PersonSelect 
@@ -1532,6 +1578,7 @@ function EditPurchaseForm({ purchase, cats, onDone }: any) {
 }
 
 function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: any }) {
+  const { data: cards = [] } = useCards();
   const [form, setForm] = useState({
     name: initialData?.name ?? "",
     bank: initialData?.bank ?? "",
@@ -1542,7 +1589,8 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
     visa_last_digits: initialData?.metadata?.brands?.visa ?? "",
     master_last_digits: initialData?.metadata?.brands?.master ?? "",
     brand: initialData?.metadata?.brand ?? "visa",
-    mode: (initialData?.metadata?.brands?.visa || initialData?.metadata?.brands?.master) ? "multi" : "standard"
+    mode: (initialData?.metadata?.brands?.visa || initialData?.metadata?.brands?.master) ? "multi" : initialData?.pai_id ? "subcard" : "standard",
+    pai_id: initialData?.pai_id ?? "",
   });
   const [saving, setSaving] = useState(false);
   const isSU = /santander/i.test(form.bank || "") && /unlimited/i.test(form.name || "");
@@ -1569,7 +1617,8 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
         credit_limit: Number(form.credit_limit) || 0,
         color: bInfo.color,
         last_digits: effectiveMode === "standard" ? (form.last_digits || null) : null,
-        metadata
+        metadata,
+        pai_id: effectiveMode === "subcard" ? (form.pai_id || null) : null,
       };
 
       if (initialData?.id) {
@@ -1712,15 +1761,47 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
           <div className="p-3 rounded-lg border border-dashed border-border bg-muted/30 flex flex-col items-center justify-center gap-2">
             <CreditCard className="w-8 h-8 text-muted-foreground/50" />
             <div className="text-center">
-              <div className="text-xs font-medium">Vincular Sub-Cartões</div>
-              <div className="text-[10px] text-muted-foreground">Adicione sub-cartões que serão agregados a este principal</div>
+              <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Vínculo de Cartão</div>
+              <div className="text-[10px] text-muted-foreground">Este cartão enviará suas faturas para o cartão mestre</div>
             </div>
-            <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] gap-1">
-              <Plus className="w-3 h-3" /> Adicionar Sub-Cartão
-            </Button>
+            <div className="w-full space-y-2 mt-2">
+              <Label className="text-[10px] text-muted-foreground uppercase">Cartão Principal (Mestre)</Label>
+              <Select value={form.pai_id} onValueChange={(v) => setForm({ ...form, pai_id: v })}>
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue placeholder="Selecione o cartão mestre" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cards.filter((c: any) => c.id !== initialData?.id && !c.pai_id).map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <div className="flex items-center gap-2">
+                        <BankIcon bank={c.bank} size={14} square />
+                        <span>{c.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="text-[10px] text-muted-foreground italic text-center">
-            Informações de faturas e limites serão centralizadas no cartão mestre.
+        </div>
+      )}
+
+      {initialData?.id && cards.some((sc: any) => sc.pai_id === initialData.id) && (
+        <div className="space-y-2 pt-2 border-t border-border">
+          <Label className="text-[10px] text-muted-foreground uppercase font-bold">Sub-Cartões Vinculados</Label>
+          <div className="space-y-1">
+            {cards.filter((sc: any) => sc.pai_id === initialData.id).map((sc: any) => (
+              <div key={sc.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50 text-xs">
+                <div className="flex items-center gap-2">
+                  <BankIcon bank={sc.bank} size={14} square />
+                  <span>{sc.name}</span>
+                </div>
+                <div className="text-[10px] text-muted-foreground">•••• {sc.last_digits || sc.metadata?.brand}</div>
+              </div>
+            ))}
+          </div>
+          <div className="text-[9px] text-muted-foreground italic">
+            As faturas destes cartões são somadas a este cartão principal.
           </div>
         </div>
       )}

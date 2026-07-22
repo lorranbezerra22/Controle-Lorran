@@ -220,6 +220,7 @@ export type Database = {
           last_digits: string | null
           metadata: Json | null
           name: string
+          pai_id: string | null
           user_id: string
         }
         Insert: {
@@ -233,6 +234,7 @@ export type Database = {
           last_digits?: string | null
           metadata?: Json | null
           name: string
+          pai_id?: string | null
           user_id: string
         }
         Update: {
@@ -246,9 +248,18 @@ export type Database = {
           last_digits?: string | null
           metadata?: Json | null
           name?: string
+          pai_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cartoes_pai_id_fkey"
+            columns: ["pai_id"]
+            isOneToOne: false
+            referencedRelation: "cartoes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       categorias: {
         Row: {
