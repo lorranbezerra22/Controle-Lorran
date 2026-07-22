@@ -710,10 +710,17 @@ function CartoesPage() {
                   <td className="p-3 whitespace-nowrap text-muted-foreground">{fmtDate(i.due_at)}</td>
                   <td className="p-3 whitespace-nowrap text-muted-foreground hidden sm:table-cell">{i.card_purchases?.purchase_date ? fmtDate(i.card_purchases.purchase_date) : "—"}</td>
                   <td className="p-3">
-                    <span className="inline-flex items-center gap-2">
-                      <BankIcon bank={i.cards?.bank || i.cards?.name} size={18} square />
-                      {i.cards?.name}
-                    </span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="inline-flex items-center gap-2">
+                        <BankIcon bank={i.cards?.bank || i.cards?.name} size={18} square />
+                        {i.cards?.name}
+                      </span>
+                      {i.card_purchases?.brand && (
+                        <span className="text-[10px] text-muted-foreground ml-6">
+                          {i.card_purchases.brand}
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   <td className="p-3 font-medium">
@@ -1008,7 +1015,12 @@ function CardForm({ onDone }: any) {
     <form onSubmit={submit} className="space-y-3">
       <div className="space-y-1.5"><Label>Nome do cartão</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required placeholder="Nubank, Santander…" /></div>
       <div className="space-y-1.5"><Label>Banco</Label>
-        <Select value={form.bank || undefined} onValueChange={(v) => { const b = findBank(v); setForm({ ...form, bank: b.name, color: b.color }); }}>
+        <Select value={form.bank || undefined} onValueChange={(v) => { 
+          const b = findBank(v); 
+          let newName = form.name;
+          if (b.id === "santander" && !form.name) newName = "Santander Unlimited";
+          setForm({ ...form, bank: b.name, color: b.color, name: newName }); 
+        }}>
           <SelectTrigger><SelectValue placeholder="Selecione o banco" /></SelectTrigger>
           <SelectContent>{BANKS.map((b) => <SelectItem key={b.id} value={b.name}><div className="flex items-center gap-2"><BankIcon bank={b.name} size={18} square /><span>{b.name}</span></div></SelectItem>)}</SelectContent>
         </Select>
@@ -1379,8 +1391,8 @@ function PurchaseForm({ cards, cats, onDone }: any) {
             <Select value={form.brand} onValueChange={(v) => setForm({ ...form, brand: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="Visa 2054">Visa • final 2054</SelectItem>
-                <SelectItem value="Master 3019">Master • final 3019</SelectItem>
+                <SelectItem value="Visa 2054">Visa • Santander Unlimited</SelectItem>
+                <SelectItem value="Master 3019">Master • Santander Unlimited</SelectItem>
               </SelectContent>
             </Select>
           </div>
