@@ -659,9 +659,9 @@ function Dashboard() {
                       <BankIcon bank={c.bank || c.name} size={28} square />
                       <div className="min-w-0 flex-1 flex flex-col gap-0.5">
                         <div className="text-sm font-medium truncate text-foreground">{c.name}</div>
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{isPaid ? "Quitado" : `${pctPago.toFixed(0)}% pago`}</div>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">{isPaid ? "Quitado" : `${pctPago.toFixed(0)}% pago`}</div>
                       </div>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full border ${isPaid ? "border-success/40 text-success bg-success/10" : "border-primary/40 text-primary bg-primary/10"}`}>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${isPaid ? "border-success/40 text-success bg-success/10" : "border-primary/40 text-primary bg-primary/10"}`}>
                         {isPaid ? "OK" : "Aberto"}
                       </span>
                     </div>
