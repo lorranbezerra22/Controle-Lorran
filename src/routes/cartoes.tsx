@@ -1584,7 +1584,75 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
         <div className="space-y-1.5">
           <Label>Últimos 4 dígitos</Label>
           <Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} />
+      ) : (
+        <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
+          <div className="flex items-center justify-between mb-2">
+            <Label className="text-xs font-bold uppercase">Bandeiras do Combo</Label>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm" 
+              className="h-7 text-[10px]"
+              onClick={() => setForm({ ...form, brands: [...form.brands, { brand: "visa", last_digits: "" }] })}
+            >
+              <Plus className="w-3 h-3 mr-1" /> Add Bandeira
+            </Button>
+          </div>
+          
+          {form.brands.map((b: any, idx: number) => (
+            <div key={idx} className="grid grid-cols-[1fr,1fr,auto] gap-2 items-end">
+              <div className="space-y-1">
+                <Label className="text-[10px]">Bandeira</Label>
+                <Select 
+                  value={b.brand} 
+                  onValueChange={(v) => {
+                    const next = [...form.brands];
+                    next[idx].brand = v;
+                    setForm({ ...form, brands: next });
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="visa">Visa</SelectItem>
+                    <SelectItem value="mastercard">Mastercard</SelectItem>
+                    <SelectItem value="elo">Elo</SelectItem>
+                    <SelectItem value="amex">Amex</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px]">Dígitos</Label>
+                <Input 
+                  className="h-8 text-xs" 
+                  maxLength={4} 
+                  placeholder="1234" 
+                  value={b.last_digits} 
+                  onChange={e => {
+                    const next = [...form.brands];
+                    next[idx].last_digits = e.target.value;
+                    setForm({ ...form, brands: next });
+                  }} 
+                />
+              </div>
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 text-destructive"
+                onClick={() => setForm({ ...form, brands: form.brands.filter((_: any, i: number) => i !== idx) })}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          ))}
+          
+          {form.brands.length === 0 && (
+            <div className="text-center py-4 text-xs text-muted-foreground border border-dashed rounded-md">
+              Nenhuma bandeira adicionada
+            </div>
+          )}
         </div>
+      )}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
