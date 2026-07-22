@@ -655,7 +655,7 @@ function CartoesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os cartões</SelectItem>
-                  {cards.map((c: any) => (
+                  {cards.filter((c: any) => !c.pai_id).map((c: any) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -1281,8 +1281,17 @@ function PurchaseForm({ cards, cats, onDone }: any) {
       <div className="space-y-1.5">
         <Label>Cartão</Label>
         <Select value={form.card_id} onValueChange={v => setForm({ ...form, card_id: v })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>{cards.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+          <SelectTrigger><SelectValue placeholder="Selecione o cartão" /></SelectTrigger>
+          <SelectContent>
+            {cards.map((c: any) => (
+              <SelectItem key={c.id} value={c.id}>
+                <div className="flex items-center gap-2">
+                  <BankIcon bank={c.bank} size={14} square />
+                  <span>{c.name} {c.pai_id && "(Sub-Cartão)"}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
       </div>
       <div className="space-y-1.5"><Label>Descrição</Label><SmartInput value={form.description} onChange={(v) => setForm({ ...form, description: v })} required /></div>
