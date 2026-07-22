@@ -456,10 +456,11 @@ function CartoesPage() {
               <div className="flex items-start justify-between mb-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <div className="font-semibold text-lg truncate">{c.name}</div>
+                    <div className="font-bold text-xl tracking-tight truncate">{c.name}</div>
                   </div>
-                  <div className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-medium opacity-80 leading-tight">
+                  <div className="text-xs text-muted-foreground truncate uppercase tracking-widest font-semibold opacity-90 leading-tight">
                     {c.bank ? `${findBank(c.bank).name} • ` : ""}
+
                     {c.metadata?.brands?.length > 0 ? (
                       <span className="text-primary/70 font-bold">{c.metadata.brands.length} Bandeiras</span>
                     ) : (
