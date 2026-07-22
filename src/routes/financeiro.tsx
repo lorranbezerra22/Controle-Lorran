@@ -389,7 +389,7 @@ function FinanceiroPage() {
           data={catReceitas}
           total={totalReceita}
           tone="success"
-          onSelect={(c) => setOpenCat({ kind: "income", categoryId: c.id, name: c.name, icon: c.icon })}
+          onSelect={(c) => setOpenCat(c)}
         />
         <CategoryCard
           title="Despesas por categoria"
