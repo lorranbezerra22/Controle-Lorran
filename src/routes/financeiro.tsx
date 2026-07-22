@@ -397,7 +397,7 @@ function FinanceiroPage() {
           data={catDespesas}
           total={totalDespesa}
           tone="danger"
-          onSelect={(c) => setOpenCat({ kind: "expense", categoryId: c.id, name: c.name, icon: c.icon })}
+          onSelect={(c) => setOpenCat(c)}
         />
       </div>
 
