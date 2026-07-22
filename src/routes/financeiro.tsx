@@ -26,7 +26,7 @@ type KindFilter = "all" | "income" | "expense";
 function colorFromString(s: string): string {
   let h = 0;
   for (let i = 0; i < (s || "").length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return `oklch(0.7 0.18 ${h % 360})`;
+  return `oklch(0.68 0.18 ${h % 360})`;
 }
 
 function FinanceiroPage() {
@@ -405,36 +405,45 @@ function FinanceiroPage() {
 
       {/* Drill-down dialog (Padronizado com o Dashboard) */}
       <Dialog open={!!openCat} onOpenChange={(o) => !o && setOpenCat(null)}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader className="flex flex-row items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl shrink-0 border border-primary/20">
-              {openCat?.icon}
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto p-0 border-border bg-gradient-to-br from-card via-card to-card/40">
+          <div className="absolute inset-0 opacity-[0.04] pointer-events-none rounded-lg" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, var(--foreground) 1px, transparent 0)", backgroundSize: "22px 22px" }} />
+          <div className="relative px-6 py-5 border-b border-border/60">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="text-[10px] uppercase tracking-[0.2em] text-primary">Detalhamento · {selM === "all" ? "Todos os meses" : MESES[selM]} {selY === "all" ? "" : selY}</span>
             </div>
-            <div>
-              <DialogTitle className="text-xl flex items-center gap-2">
-                {openCat?.name}
+            <DialogHeader className="space-y-1">
+              <DialogTitle className="flex items-center gap-3 text-lg">
+                {openCat && (
+                  <span className="w-9 h-9 rounded-lg flex items-center justify-center border border-border/50 text-base" style={{ background: `color-mix(in oklab, ${colorFromString(openCat.icon || openCat.name)} 15%, transparent)` }}>
+                    {openCat.icon ?? "💰"}
+                  </span>
+                )}
+                <span>{openCat?.name}</span>
                 <Badge variant={openCat?.kind === "income" ? "secondary" : "destructive"} className="ml-1 uppercase tracking-tighter text-[10px]">
                   {openCat?.kind === "income" ? "Receitas" : "Despesas"}
                 </Badge>
               </DialogTitle>
-              <DialogDescription className="text-xs">Detalhamento da categoria no período selecionado</DialogDescription>
-            </div>
-          </DialogHeader>
-
-          {openCat && <CategoryDetail cat={openCat} cardsById={new Map(cards.map(c => [c.id, c]))} />}
+              <DialogDescription className="text-xs">Conforme os filtros ativos no período selecionado</DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="relative px-6 py-4">
+            {openCat && <CategoryDetail cat={openCat} cardsById={new Map(cards.map(c => [c.id, c]))} />}
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Drill-down unificado por KPI (Receitas, Despesas, Balanço, Liquidado, Pendente) */}
       <Dialog open={openKpi !== null} onOpenChange={(o) => !o && setOpenKpi(null)}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto p-0 border-border bg-gradient-to-br from-card via-card to-card/40">
+          <div className="absolute inset-0 opacity-[0.04] pointer-events-none rounded-lg" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, var(--foreground) 1px, transparent 0)", backgroundSize: "22px 22px" }} />
           {(() => {
             const cfg = {
-              receitas: { title: "Histórico de receitas", icon: <TrendingUp className="w-5 h-5 text-success" />, filter: (t: any) => t.kind === "income" },
-              despesas: { title: "Histórico de despesas", icon: <TrendingDown className="w-5 h-5 text-destructive" />, filter: (t: any) => t.kind === "expense" },
-              balanco:  { title: "Histórico do balanço", icon: <Scale className="w-5 h-5 text-primary" />, filter: (_t: any) => true },
-              paid:     { title: "Histórico de liquidados", icon: <Wallet className="w-5 h-5 text-primary" />, filter: (t: any) => t.status === "paid" },
-              pending:  { title: "Histórico de pendentes", icon: <Calendar className="w-5 h-5 text-warning" />, filter: (t: any) => t.status !== "paid" },
+              receitas: { title: "Histórico de Receitas", icon: <TrendingUp className="w-5 h-5" />, color: "text-success", filter: (t: any) => t.kind === "income" },
+              despesas: { title: "Histórico de Despesas", icon: <TrendingDown className="w-5 h-5" />, color: "text-destructive", filter: (t: any) => t.kind === "expense" },
+              balanco:  { title: "Balanço Geral", icon: <Scale className="w-5 h-5" />, color: "text-primary", filter: (_t: any) => true },
+              paid:     { title: "Lançamentos Liquidados", icon: <Wallet className="w-5 h-5" />, color: "text-primary", filter: (t: any) => t.status === "paid" },
+              pending:  { title: "Lançamentos Pendentes", icon: <Calendar className="w-5 h-5" />, color: "text-warning", filter: (t: any) => t.status !== "paid" },
             } as const;
             const c = openKpi ? cfg[openKpi] : null;
             const items = c
@@ -443,70 +452,91 @@ function FinanceiroPage() {
             const rec = items.filter((t: any) => t.kind === "income").reduce((s: number, t: any) => s + Number(t.amount), 0);
             const des = items.filter((t: any) => t.kind === "expense").reduce((s: number, t: any) => s + Number(t.amount), 0);
             const tot = openKpi === "balanco" ? rec - des : rec + des;
+            
             return (
               <>
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2 flex-wrap">
-                    {c?.icon} {c?.title}
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="rounded-lg border bg-muted/30 p-3">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total</div>
-                    <div className={`text-lg font-bold tabular-nums ${openKpi === "balanco" ? (tot >= 0 ? "text-success" : "text-destructive") : ""}`}>{brl(tot)}</div>
+                <div className="relative px-6 py-5 border-b border-border/60">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-primary">Detalhamento · {selM === "all" ? "Todos os meses" : MESES[selM]} {selY === "all" ? "" : selY}</span>
                   </div>
-                  <div className="rounded-lg border bg-success/5 border-success/20 p-3">
-                    <div className="text-[10px] uppercase tracking-wider text-success">Receita</div>
-                    <div className="text-lg font-bold tabular-nums text-success">{brl(rec)}</div>
-                  </div>
-                  <div className="rounded-lg border bg-destructive/5 border-destructive/20 p-3">
-                    <div className="text-[10px] uppercase tracking-wider text-destructive">Despesa</div>
-                    <div className="text-lg font-bold tabular-nums text-destructive">{brl(des)}</div>
-                  </div>
+                  <DialogHeader className="space-y-1">
+                    <DialogTitle className="flex items-center gap-3 text-lg">
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center border border-border/50 bg-background/60 backdrop-blur ${c?.color}`}>
+                        {c?.icon}
+                      </div>
+                      <span>{c?.title}</span>
+                    </DialogTitle>
+                    <DialogDescription className="text-xs">Visualizando {items.length} registro(s) conforme filtros ativos</DialogDescription>
+                  </DialogHeader>
                 </div>
-                <div className="text-sm text-muted-foreground">{items.length} registro(s)</div>
-                <div className="max-h-[55vh] overflow-auto rounded-lg border">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/50 text-muted-foreground sticky top-0">
-                      <tr className="text-left">
-                        <th className="px-3 py-2 font-medium">Data</th>
-                        <th className="px-3 py-2 font-medium">Tipo</th>
-                        <th className="px-3 py-2 font-medium">Descrição</th>
-                        <th className="px-3 py-2 font-medium">Pessoa</th>
-                        <th className="px-3 py-2 font-medium">Status</th>
-                        <th className="px-3 py-2 font-medium text-right">Valor</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.length === 0 && (
-                        <tr><td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">Nenhum registro.</td></tr>
-                      )}
-                      {items.map((t: any) => {
-                        const isIncome = t.kind === "income";
-                        const isCard = !!t._isCard || !!t.card_installment_id;
-                        return (
-                          <tr key={t.id} className="border-t">
-                            <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{fmtDate(t.due_at)}</td>
-                            <td className="px-3 py-2">
-                              <div className="flex items-center gap-1.5">
-                                {isCard ? <CreditCard className="w-3 h-3 text-primary" /> : <Wallet className="w-3 h-3 text-muted-foreground" />}
-                                <span>{isIncome ? "Receita" : "Despesa"}</span>
-                              </div>
-                            </td>
-                            <td className="px-3 py-2">
-                              <div className="font-medium">{t.description || "—"}</div>
-                              {t.notes && <div className="text-[10px] text-muted-foreground">{t.notes}</div>}
-                            </td>
-                            <td className="px-3 py-2">{t.person || "—"}</td>
-                            <td className="px-3 py-2">{t.status === "paid" ? (isIncome ? "Recebido" : "Pago") : "Pendente"}</td>
-                            <td className={`px-3 py-2 text-right font-semibold tabular-nums ${isIncome ? "text-success" : "text-destructive"}`}>
-                              {isIncome ? "+" : "−"} {brl(Number(t.amount))}
-                            </td>
+
+                <div className="relative px-6 py-4 space-y-4">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-xl border border-border/60 bg-background/40 backdrop-blur px-3 py-2">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">Total</div>
+                      <div className={`text-sm font-bold tabular-nums ${openKpi === "balanco" ? (tot >= 0 ? "text-success" : "text-destructive") : "text-foreground"}`}>{brl(tot)}</div>
+                    </div>
+                    <div className="rounded-xl border border-success/30 bg-success/5 px-3 py-2">
+                      <div className="text-[9px] uppercase tracking-wider text-success flex items-center gap-1">Receita</div>
+                      <div className="text-sm font-bold tabular-nums text-success">{brl(rec)}</div>
+                    </div>
+                    <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2">
+                      <div className="text-[9px] uppercase tracking-wider text-destructive flex items-center gap-1">Despesa</div>
+                      <div className="text-sm font-bold tabular-nums text-destructive">{brl(des)}</div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border/60 overflow-hidden bg-background/30">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-[11px]">
+                        <thead className="bg-muted/20 text-muted-foreground">
+                          <tr>
+                            <th className="px-3 py-2 font-semibold text-left">Data</th>
+                            <th className="px-3 py-2 font-semibold text-left">Tipo</th>
+                            <th className="px-3 py-2 font-semibold text-left">Descrição</th>
+                            <th className="px-3 py-2 font-semibold text-left">Pessoa</th>
+                            <th className="px-3 py-2 font-semibold text-left">Status</th>
+                            <th className="px-3 py-2 font-semibold text-right">Valor</th>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                        </thead>
+                        <tbody>
+                          {items.length === 0 ? (
+                            <tr><td colSpan={6} className="px-3 py-8 text-center text-muted-foreground">Nenhum registro encontrado.</td></tr>
+                          ) : (
+                            items.map((t: any) => {
+                              const isIncome = t.kind === "income";
+                              const isCard = !!t._isCard || !!t.card_installment_id;
+                              return (
+                                <tr key={t.id} className="border-t border-border/60 hover:bg-muted/20 transition-colors">
+                                  <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{fmtDate(t.due_at)}</td>
+                                  <td className="px-3 py-2">
+                                    <div className="flex items-center gap-1.5">
+                                      {isCard ? <CreditCard className="w-3 h-3 text-primary" /> : <Wallet className="w-3 h-3 text-muted-foreground" />}
+                                      <span className="text-[10px] uppercase tracking-tighter">{isIncome ? "Rec." : "Desp."}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    <div className="font-medium truncate max-w-[140px]">{t.description || "—"}</div>
+                                    {t.notes && <div className="text-[10px] text-muted-foreground truncate max-w-[140px]">{t.notes}</div>}
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap">{t.person || "—"}</td>
+                                  <td className="px-3 py-2">
+                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${t.status === "paid" ? "bg-success/15 border-success/30 text-success" : "bg-warning/15 border-warning/30 text-warning"}`}>
+                                      {t.status === "paid" ? (isIncome ? "REC." : "PAGO") : "PEND."}
+                                    </span>
+                                  </td>
+                                  <td className={`px-3 py-2 text-right font-bold tabular-nums ${isIncome ? "text-success" : "text-destructive"}`}>
+                                    {isIncome ? "+" : "−"} {brl(Number(t.amount))}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               </>
             );
@@ -605,11 +635,11 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-xl border border-border/60 bg-background/40 backdrop-blur px-3 py-2">
           <div className="text-[9px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><CreditCard className="w-3 h-3" /> Cartão</div>
-          <div className="text-sm font-semibold tabular-nums text-foreground">{brl(cat.card || 0)}</div>
+          <div className="text-sm font-bold tabular-nums text-foreground">{brl(cat.card || 0)}</div>
         </div>
         <div className="rounded-xl border border-border/60 bg-background/40 backdrop-blur px-3 py-2">
           <div className="text-[9px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><Wallet className="w-3 h-3" /> Manual</div>
-          <div className="text-sm font-semibold tabular-nums text-foreground">{brl(cat.manual || 0)}</div>
+          <div className="text-sm font-bold tabular-nums text-foreground">{brl(cat.manual || 0)}</div>
         </div>
         <div className="rounded-xl border border-primary/40 bg-primary/10 px-3 py-2">
           <div className="text-[9px] uppercase tracking-wider text-primary">Total</div>
@@ -625,22 +655,22 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
             Pago via cartão
             <span className="text-[10px] px-2 py-0.5 rounded-full border border-border/50 bg-background/60 text-muted-foreground">{cardItems.length}</span>
           </span>
-          <span className="tabular-nums font-semibold">{brl(cat.card || 0)}</span>
+          <span className="tabular-nums font-bold">{brl(cat.card || 0)}</span>
         </button>
         {showCard && (
           cardItems.length === 0 ? (
             <div className="text-xs text-muted-foreground p-4 text-center border-t border-border/60">Nenhuma compra no cartão para esta categoria.</div>
           ) : (
             <div className="overflow-x-auto border-t border-border/60">
-              <table className="w-full text-xs text-left">
+              <table className="w-full text-[11px] text-left">
                 <thead className="bg-muted/20 text-muted-foreground">
                   <tr>
-                    <th className="p-2 font-medium">Data</th>
-                    <th className="p-2 font-medium">Descrição</th>
-                    <th className="p-2 font-medium">Cartão</th>
-                    <th className="p-2 font-medium">Parcela</th>
-                    <th className="p-2 font-medium">Pessoa</th>
-                    <th className="p-2 text-right font-medium">Valor</th>
+                    <th className="p-2 font-semibold">Data</th>
+                    <th className="p-2 font-semibold">Descrição</th>
+                    <th className="p-2 font-semibold">Cartão</th>
+                    <th className="p-2 font-semibold">Parcela</th>
+                    <th className="p-2 font-semibold">Pessoa</th>
+                    <th className="p-2 text-right font-semibold">Valor</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -662,7 +692,7 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
                         </td>
                         <td className="p-2 whitespace-nowrap text-muted-foreground">{inst.installment_number}/{cp.installments_count ?? "?"}</td>
                         <td className="p-2 whitespace-nowrap">{cp.person || inst.person || "—"}</td>
-                        <td className="p-2 text-right tabular-nums font-medium">{brl(share)}</td>
+                        <td className="p-2 text-right tabular-nums font-bold">{brl(share)}</td>
                       </tr>
                     );
                   })}
@@ -681,22 +711,22 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
             Lançamentos manuais
             <span className="text-[10px] px-2 py-0.5 rounded-full border border-border/50 bg-background/60 text-muted-foreground">{manualItems.length}</span>
           </span>
-          <span className="tabular-nums font-semibold">{brl(cat.manual || 0)}</span>
+          <span className="tabular-nums font-bold">{brl(cat.manual || 0)}</span>
         </button>
         {showManual && (
           manualItems.length === 0 ? (
             <div className="text-xs text-muted-foreground p-4 text-center border-t border-border/60">Nenhum lançamento manual para esta categoria.</div>
           ) : (
             <div className="overflow-x-auto border-t border-border/60">
-              <table className="w-full text-xs text-left">
+              <table className="w-full text-[11px] text-left">
                 <thead className="bg-muted/20 text-muted-foreground">
                   <tr>
-                    <th className="p-2 font-medium">Data</th>
-                    <th className="p-2 font-medium">Descrição</th>
-                    <th className="p-2 font-medium">Pessoa</th>
-                    <th className="p-2 font-medium">Status</th>
-                    <th className="p-2 font-medium">Observações</th>
-                    <th className="p-2 text-right font-medium">Valor</th>
+                    <th className="p-2 font-semibold">Data</th>
+                    <th className="p-2 font-semibold">Descrição</th>
+                    <th className="p-2 font-semibold">Pessoa</th>
+                    <th className="p-2 font-semibold">Status</th>
+                    <th className="p-2 font-semibold">Observações</th>
+                    <th className="p-2 text-right font-semibold">Valor</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -711,7 +741,7 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
                         </span>
                       </td>
                       <td className="p-2 max-w-[150px] truncate text-muted-foreground" title={tx.notes ?? ""}>{tx.notes ?? "—"}</td>
-                      <td className="p-2 text-right tabular-nums font-medium">{brl(share)}</td>
+                      <td className="p-2 text-right tabular-nums font-bold">{brl(share)}</td>
                     </tr>
                   ))}
                 </tbody>
