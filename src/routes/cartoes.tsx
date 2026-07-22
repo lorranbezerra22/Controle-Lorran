@@ -1372,6 +1372,34 @@ function PurchaseForm({ cards, cats, onDone }: any) {
           <SelectContent>{cats.filter((c: any) => c.kind === "expense").map((c: any) => <SelectItem key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ""}{c.name}</SelectItem>)}</SelectContent>
         </Select>
       </div>
+      {(() => {
+        const card = cards.find((c: any) => c.id === form.card_id);
+        const brands = card?.metadata?.brands || [];
+        if (brands.length <= 1) return null;
+        return (
+          <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+            <Label>Bandeira da Compra</Label>
+            <div className="flex flex-wrap gap-2">
+              {brands.map((b: any, idx: number) => {
+                const label = `${b.brand.charAt(0).toUpperCase()}${b.brand.slice(1)} ${b.last_digits}`;
+                const active = form.brand === label;
+                return (
+                  <Button
+                    key={idx}
+                    type="button"
+                    variant={active ? "default" : "outline"}
+                    size="sm"
+                    className="h-8 text-[10px] uppercase font-bold tracking-wider"
+                    onClick={() => setForm({ ...form, brand: label })}
+                  >
+                    {label}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
       <RefundHelper amount={Number(form.total_amount)} rawAmount={form.total_amount} selectedCategoryId={form.category_id} cats={cats} person={form.person} purchaseDate={form.purchase_date} card={cards.find((c: any) => c.id === form.card_id)} onPick={(id) => setForm({ ...form, category_id: id })} />
       <Button type="submit" disabled={saving || (splitMode && splitPeople.length < 2)} className="w-full">{saving ? "Salvando…" : "Salvar compra"}</Button>
     </form>
