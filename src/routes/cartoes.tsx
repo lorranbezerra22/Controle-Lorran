@@ -485,7 +485,7 @@ function CartoesPage() {
                 <div className="flex items-end justify-between gap-3">
                   <div className="min-w-0">
                     <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-medium">Fatura {monthLabel(monthN-1)}{personFilter !== "all" && ` • ${personFilter}`}</div>
-                    <div className="text-xl font-bold text-foreground tabular-nums mt-0.5">
+                    <div className="text-xl font-bold text-foreground tabular-nums mt-1.5">
                       <CountUp value={totals[c.id]?.fatura ?? 0} format={brl} />
                     </div>
                   </div>
