@@ -435,7 +435,7 @@ function CartoesPage() {
 
 
 
-      <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-8">
         {cards.map((c: any, idx: number) => {
           const subcardIds: string[] = [];
           const allRelevantIds = [c.id, ...subcardIds];
