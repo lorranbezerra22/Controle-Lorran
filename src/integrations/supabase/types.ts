@@ -288,6 +288,7 @@ export type Database = {
           credit_limit: number
           due_day: number
           id: string
+          last_digits: string | null
           name: string
           user_id: string
         }
@@ -299,6 +300,7 @@ export type Database = {
           credit_limit?: number
           due_day: number
           id?: string
+          last_digits?: string | null
           name: string
           user_id: string
         }
@@ -310,6 +312,7 @@ export type Database = {
           credit_limit?: number
           due_day?: number
           id?: string
+          last_digits?: string | null
           name?: string
           user_id?: string
         }
