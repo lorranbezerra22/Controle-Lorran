@@ -452,32 +452,6 @@ function CartoesPage() {
               style={{ background: "var(--gradient-card)", boxShadow: "var(--shadow-elegant)" }} 
               onClick={() => setEditingCard(c)}
             >
-              <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-background/95 to-transparent backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2 z-10">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="h-7 px-2.5 rounded-lg border-primary/20 hover:bg-primary hover:text-white text-[10px] font-bold uppercase transition-all shadow-sm"
-                  onClick={(e) => { e.stopPropagation(); setEditingCard(c); }}
-                >
-                  <Pencil className="w-3 h-3 mr-1" /> Editar
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="destructive" 
-                  className="h-7 px-2.5 rounded-lg text-[10px] font-bold uppercase transition-all shadow-sm"
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    if (confirm(`Deseja realmente excluir o cartão ${c.name}?`)) {
-                      supabase.from("cartoes").delete().eq("id", c.id).then(({ error }) => {
-                        if (error) toast.error(error.message);
-                        else { toast.success("Cartão removido"); invalidate("cards"); }
-                      });
-                    }
-                  }}
-                >
-                  <Trash2 className="w-3 h-3 mr-1" /> Excluir
-                </Button>
-              </div>
               <div className="flex items-start justify-between mb-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
