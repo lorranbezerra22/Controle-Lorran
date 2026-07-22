@@ -816,6 +816,7 @@ function CartoesPage() {
           {editingPurchase && (
             <EditPurchaseForm
               cats={cats}
+              cards={cards}
               purchase={editingPurchase}
               onDone={() => { setEditingPurchase(null); invalidate("installments"); }}
             />
