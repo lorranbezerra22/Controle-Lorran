@@ -1350,28 +1350,6 @@ function PurchaseForm({ cards, cats, onDone }: any) {
         </Select>
       </div>
       <RefundHelper amount={Number(form.total_amount)} rawAmount={form.total_amount} selectedCategoryId={form.category_id} cats={cats} person={form.person} purchaseDate={form.purchase_date} card={cards.find((c: any) => c.id === form.card_id)} onPick={(id) => setForm({ ...form, category_id: id })} />
-      {(() => {
-        const sel = cards.find((c: any) => c.id === form.card_id);
-        const isSU = sel && /santander/i.test(sel.name || "") && /unlimited/i.test(sel.name || "");
-        if (!isSU) return null;
-        
-        const visaNum = sel.metadata?.brands?.visa || "2054";
-        const masterNum = sel.metadata?.brands?.master || "3019";
-        
-        return (
-          <div className="space-y-1.5">
-            <Label>Bandeira (Santander Unlimited)</Label>
-            <Select value={form.brand} onValueChange={(v) => setForm({ ...form, brand: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={`Visa ${visaNum}`}>Visa • {visaNum}</SelectItem>
-                <SelectItem value={`Master ${masterNum}`}>Master • {masterNum}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        );
-
-      })()}
       <Button type="submit" disabled={saving || (splitMode && splitPeople.length < 2)} className="w-full">{saving ? "Salvando…" : "Salvar compra"}</Button>
     </form>
   );
