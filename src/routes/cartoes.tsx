@@ -1470,10 +1470,11 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
     credit_limit: String(initialData?.credit_limit ?? ""),
     last_digits: initialData?.last_digits ?? "",
     brand: initialData?.metadata?.brand ?? "visa",
-    mode: "standard",
+    brands: initialData?.metadata?.brands || [],
+    mode: (initialData?.metadata?.brands?.length > 0) ? "multi" : "standard",
   });
   const [saving, setSaving] = useState(false);
-  const effectiveMode = "standard";
+  
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!__tryLock()) return; setSaving(true);
@@ -1481,8 +1482,8 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
       const bInfo = findBank(form.bank);
       const metadata = {
         ...(initialData?.metadata || {}),
-        brand: form.brand,
-        brands: null
+        brand: form.mode === "standard" ? form.brand : null,
+        brands: form.mode === "multi" ? form.brands : null
       };
 
       const payload = {
@@ -1492,7 +1493,7 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
         due_day: Number(form.due_day),
         credit_limit: Number(form.credit_limit) || 0,
         color: bInfo.color,
-        last_digits: effectiveMode === "standard" ? (form.last_digits || null) : null,
+        last_digits: form.mode === "standard" ? (form.last_digits || null) : null,
         metadata,
         
       };
