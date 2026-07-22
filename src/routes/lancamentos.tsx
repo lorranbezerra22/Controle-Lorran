@@ -402,7 +402,7 @@ function LancamentosPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Adicionar pessoa</SelectItem>
-              {personOptions.map((p) => (
+              {personOptions.map((p: string) => (
                 <SelectItem key={p} value={p}>{p}</SelectItem>
               ))}
             </SelectContent>
