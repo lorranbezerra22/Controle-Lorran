@@ -4,8 +4,6 @@ import { ProtectedShell } from "@/components/ProtectedShell";
 import { useTransactions, useCategories, useInvalidate, usePeople, useAccounts } from "@/lib/queries";
 import { brl, fmtDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -99,6 +97,9 @@ function LancamentosPage() {
   const [personFilter2, setPersonFilter2] = useState<string>(() => {
     return typeof window !== "undefined" ? window.localStorage.getItem("lanc:personFilter2") || "all" : "all";
   });
+  const [search, setSearch] = useState<string>(() => {
+    return typeof window !== "undefined" ? window.localStorage.getItem("lanc:search") || "" : "";
+  });
   const now = new Date();
   const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const [selM, setSelM] = useState<number | "all">(() => {
@@ -121,8 +122,9 @@ function LancamentosPage() {
       window.localStorage.setItem("lanc:personFilter2", personFilter2);
       window.localStorage.setItem("lanc:selM", String(selM));
       window.localStorage.setItem("lanc:selY", String(selY));
+      window.localStorage.setItem("lanc:search", search);
     }
-  }, [filter, statusFilter, fixedFilter, sourceFilter, categoryFilter, personFilter, personFilter2, selM, selY]);
+  }, [filter, statusFilter, fixedFilter, sourceFilter, categoryFilter, personFilter, personFilter2, selM, selY, search]);
 
   // Gera recorrências para o mês/ano selecionado (despesas fixas) sob demanda
   useEffect(() => {
