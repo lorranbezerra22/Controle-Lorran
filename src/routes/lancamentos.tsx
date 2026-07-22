@@ -99,6 +99,9 @@ function LancamentosPage() {
   const [personFilter2, setPersonFilter2] = useState<string>(() => {
     return typeof window !== "undefined" ? window.localStorage.getItem("lanc:personFilter2") || "all" : "all";
   });
+  const [search, setSearch] = useState<string>(() => {
+    return typeof window !== "undefined" ? window.localStorage.getItem("lanc:search") || "" : "";
+  });
   const now = new Date();
   const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const [selM, setSelM] = useState<number | "all">(() => {
@@ -121,8 +124,9 @@ function LancamentosPage() {
       window.localStorage.setItem("lanc:personFilter2", personFilter2);
       window.localStorage.setItem("lanc:selM", String(selM));
       window.localStorage.setItem("lanc:selY", String(selY));
+      window.localStorage.setItem("lanc:search", search);
     }
-  }, [filter, statusFilter, fixedFilter, sourceFilter, categoryFilter, personFilter, personFilter2, selM, selY]);
+  }, [filter, statusFilter, fixedFilter, sourceFilter, categoryFilter, personFilter, personFilter2, selM, selY, search]);
 
   // Gera recorrências para o mês/ano selecionado (despesas fixas) sob demanda
   useEffect(() => {
@@ -162,6 +166,7 @@ function LancamentosPage() {
     if (sourceFilter === "manual" && t.card_installment_id) return false;
     if (categoryFilter !== "all" && t.category_id !== categoryFilter) return false;
     if (!matchPerson(t.person)) return false;
+    if (search.trim() && !(t.description || "").toLowerCase().includes(search.toLowerCase())) return false;
     const d = new Date(t.due_at + "T00:00:00");
     if (selY !== "all" && d.getFullYear() !== selY) return false;
     if (selM !== "all" && d.getMonth() !== selM) return false;
@@ -360,6 +365,14 @@ function LancamentosPage() {
               ))}
             </SelectContent>
           </Select>
+        </Field>
+        <Field label="Busca">
+          <Input 
+            className="w-auto min-w-[180px] h-10 rounded-xl transition-all shadow-sm border-border" 
+            placeholder="Buscar..." 
+            value={search} 
+            onChange={(e) => setSearch(e.target.value)} 
+          />
         </Field>
 
         <Field label="Pessoa">

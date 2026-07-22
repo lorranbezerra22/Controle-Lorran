@@ -3,9 +3,8 @@ import { ProtectedShell } from "@/components/ProtectedShell";
 import { useTransactions, useCategories, usePeople, useAccounts, useInstallments, useCards } from "@/lib/queries";
 import { brl, fmtDate } from "@/lib/format";
 import { useMemo, useState, useEffect } from "react";
-import { TrendingUp, TrendingDown, Wallet, Calendar, Users, ArrowUpRight, Search, Scale, Undo2, CreditCard, ChevronDown, ChevronRight } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Calendar, Users, ArrowUpRight, Scale, Undo2, CreditCard, ChevronDown, ChevronRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
@@ -52,7 +51,6 @@ function FinanceiroPage() {
   const [kindFilter, setKindFilter] = useState<KindFilter>(() => (ls("fin:kind", "all") as KindFilter));
   const [personFilter, setPersonFilter] = useState<string>(() => ls("fin:person", "all"));
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending">(() => ls("fin:status", "all") as any);
-  const [search, setSearch] = useState<string>(() => ls("fin:search", ""));
   const [openCat, setOpenCat] = useState<{ kind: "income" | "expense"; categoryId: string | null; name: string; icon: string } | null>(null);
   const [openKpi, setOpenKpi] = useState<null | "receitas" | "despesas" | "balanco" | "paid" | "pending">(null);
 
@@ -63,8 +61,7 @@ function FinanceiroPage() {
     window.localStorage.setItem("fin:kind", kindFilter);
     window.localStorage.setItem("fin:person", personFilter);
     window.localStorage.setItem("fin:status", statusFilter);
-    window.localStorage.setItem("fin:search", search);
-  }, [selM, selY, kindFilter, personFilter, statusFilter, search]);
+  }, [selM, selY, kindFilter, personFilter, statusFilter]);
 
   const catMap = useMemo(() => Object.fromEntries(cats.map((c: any) => [c.id, c])), [cats]);
   const accMap = useMemo(() => Object.fromEntries(accounts.map((a: any) => [a.id, a])), [accounts]);
@@ -140,10 +137,7 @@ function FinanceiroPage() {
       })
       .filter((t: any) => personFilter === "all" || (t._owner || t.person).toLowerCase() === personFilter.toLowerCase())
       .filter((t: any) => statusFilter === "all" || t.status === statusFilter)
-      .filter((t: any) =>
-        !search.trim() || (t.description || "").toLowerCase().includes(search.toLowerCase()),
-      );
-  }, [merged, baseTx, kindFilter, selM, selY, personFilter, statusFilter, search]);
+  }, [merged, baseTx, kindFilter, selM, selY, personFilter, statusFilter]);
 
 
   const receitas = lista.filter((t: any) => t.kind === "income");
@@ -291,10 +285,6 @@ function FinanceiroPage() {
             </>
           );
         })()}
-        <div className="relative col-span-2 sm:col-span-3 lg:col-span-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
       </div>
 
       {/* KPI cards */}
