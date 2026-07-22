@@ -127,7 +127,8 @@ function FinanceiroPage() {
   // Quando filtrar por "Família", mostramos os lançamentos originais com valor cheio.
   // Nos demais casos usamos baseTx (com split 50/50 de Família p/ Lorran e Tayane).
   const lista = useMemo(() => {
-    const source = personFilter === "Família" ? merged : baseTx;
+    const isFamilyFilter = personFilter.toLowerCase() === "família";
+    const source = isFamilyFilter ? merged : baseTx;
     return source
       .filter((t: any) => kindFilter === "all" || t.kind === kindFilter)
       .filter((t: any) => {
