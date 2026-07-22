@@ -463,7 +463,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
   const deleteTransfer: DataContextValue["deleteTransfer"] = useCallback(
     async (id) => {
       const target = transfers.find((t) => t.id === id);
-      const { error } = await supabase.from("milhas_transfers").delete().eq("id", id);
+      const { error } = await supabase.from("milhas_transferencias").delete().eq("id", id);
       if (error) throw error;
       if (target) {
         await adjustBalance(target.fromProgramId, target.pointsSent);
@@ -488,7 +488,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
       }
       const computedMilesCost =
         r.milesCost ?? (program ? (r.points / 1000) * program.valuePerThousand : undefined);
-      const { error } = await supabase.from("milhas_redemptions").insert({
+      const { error } = await supabase.from("milhas_resgates").insert({
         user_id: userId,
         program_id: r.programId,
         points: r.points,
@@ -513,7 +513,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
   const deleteRedemption: DataContextValue["deleteRedemption"] = useCallback(
     async (id) => {
       const target = redemptions.find((r) => r.id === id);
-      const { error } = await supabase.from("milhas_redemptions").delete().eq("id", id);
+      const { error } = await supabase.from("milhas_resgates").delete().eq("id", id);
       if (error) throw error;
       if (target) await adjustBalance(target.programId, target.points);
       invalidate(["redemptions", "programs"]);
@@ -524,10 +524,10 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
   const resetAll: DataContextValue["resetAll"] = useCallback(async () => {
     if (!userId) return;
     // Deletar programs em cascata remove filhos, mas removo tudo explicitamente por segurança.
-    await supabase.from("milhas_redemptions").delete().eq("user_id", userId);
-    await supabase.from("milhas_transfers").delete().eq("user_id", userId);
-    await supabase.from("milhas_earnings").delete().eq("user_id", userId);
-    await supabase.from("milhas_programs").delete().eq("user_id", userId);
+    await supabase.from("milhas_resgates").delete().eq("user_id", userId);
+    await supabase.from("milhas_transferencias").delete().eq("user_id", userId);
+    await supabase.from("milhas_ganhos").delete().eq("user_id", userId);
+    await supabase.from("milhas_programas").delete().eq("user_id", userId);
     invalidate(["programs", "earnings", "transfers", "redemptions"]);
   }, [userId, invalidate]);
 
@@ -570,7 +570,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
         const idMap = new Map<string, string>();
         for (const p of localPrograms) {
           const { data, error } = await supabase
-            .from("milhas_programs")
+            .from("milhas_programas")
             .insert({
               user_id: userId,
               name: p.name,
@@ -598,7 +598,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
               cost: e.cost ?? null,
               note: e.note ?? null,
             }));
-          if (rows.length) await supabase.from("milhas_earnings").insert(rows);
+          if (rows.length) await supabase.from("milhas_ganhos").insert(rows);
         }
         // Transfers
         if (localTransfers.length) {
@@ -615,7 +615,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
               date: t.date,
               note: t.note ?? null,
             }));
-          if (rows.length) await supabase.from("milhas_transfers").insert(rows);
+          if (rows.length) await supabase.from("milhas_transferencias").insert(rows);
         }
         // Redemptions
         if (localRedemptions.length) {
@@ -632,7 +632,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
               date: r.date,
               note: r.note ?? null,
             }));
-          if (rows.length) await supabase.from("milhas_redemptions").insert(rows);
+          if (rows.length) await supabase.from("milhas_resgates").insert(rows);
         }
         localStorage.setItem(MIGRATION_FLAG, "migrated-" + new Date().toISOString());
         invalidate(["programs", "earnings", "transfers", "redemptions"]);
