@@ -157,7 +157,7 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
                     >
                       <div className="min-w-0">
                         <div className="text-sm font-medium truncate">
-                          {i.card_purchases?.description || "Parcela"}
+                          {i.cartao_compras?.description || "Parcela"}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {fmtDate(i.due_at)}{i.cards?.name ? ` · ${i.cards.name}` : ""}

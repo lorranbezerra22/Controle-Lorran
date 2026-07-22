@@ -208,7 +208,7 @@ function PeopleReportSection() {
     });
 
     const personInst = inst.filter((i: any) => {
-      const p = (i.card_purchases?.person || "").trim();
+      const p = (i.cartao_compras?.person || "").trim();
       const matchesPerson = p === selectedPerson || (isFamilia(p) && (selectedPerson === "Lorran" || selectedPerson === "Tayane"));
       return matchesPerson && inReportPeriod(i.due_at);
     });
@@ -232,9 +232,10 @@ function PeopleReportSection() {
         };
       }),
       ...personInst.map((i: any) => {
-        const amount = isFamilia(i.card_purchases?.person) && !isFamilia(selectedPerson) ? Number(i.amount) / 2 : Number(i.amount);
-        const installmentText = i.installment_number && i.card_purchases?.installments_count 
-          ? `${i.installment_number}/${i.card_purchases.installments_count}` 
+        const amount = isFamilia(i.cartao_compras?.person) && !isFamilia(selectedPerson) ? Number(i.amount) / 2 : Number(i.amount);
+        const installmentText = i.installment_number && i.cartao_compras?.installments_count 
+
+          ? `${i.installment_number}/${i.cartao_compras.installments_count}` 
           : "—";
         return {
           date: i.card_purchases?.purchase_date || i.due_at,
@@ -243,7 +244,7 @@ function PeopleReportSection() {
           installment: installmentText,
           amount,
           status: amount < 0 ? "Estorno" : (i.status === "paid" ? "Pago" : "Pendente"),
-          original: i.card_purchases?.person || ""
+          original: i.cartao_compras?.person || ""
         };
       })
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
