@@ -757,7 +757,7 @@ function CartoesPage() {
                   </td>
                   <td className="p-3">
                     <div className="flex gap-1 justify-end">
-                      <button onClick={() => setEditingPurchase({ id: i.purchase_id, ...i.card_purchases, card_id: i.card_id, _installment: i })} title="Editar compra" className="w-7 h-7 rounded-md flex items-center justify-center bg-muted text-muted-foreground hover:bg-primary/20 hover:text-primary">
+                      <button onClick={() => setEditingPurchase({ id: i.purchase_id, ...i.card_purchases, card_id: i.card_id, _installment: i, cards })} title="Editar compra" className="w-7 h-7 rounded-md flex items-center justify-center bg-muted text-muted-foreground hover:bg-primary/20 hover:text-primary">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       {Number(i.amount) < 0 ? (
