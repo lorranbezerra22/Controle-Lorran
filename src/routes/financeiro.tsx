@@ -101,6 +101,7 @@ function FinanceiroPage() {
         notes: card.name ? `Cartão ${card.name}` : "Cartão",
         account_id: null,
         _isCard: true,
+        _originalItem: i, // Preserva o objeto original com card_purchases, etc.
       };
     });
     return [...fromTx, ...fromCards];
@@ -113,8 +114,8 @@ function FinanceiroPage() {
         if (t.kind === "expense" && t.person === "Família") {
           const half = Number(t.amount) / 2;
           return [
-            { ...t, id: `${t.id}::L`, person: "Família", _owner: "Lorran", amount: half, _familiaSplit: true, _origId: t.id },
-            { ...t, id: `${t.id}::T`, person: "Família", _owner: "Tayane", amount: half, _familiaSplit: true, _origId: t.id },
+            { ...t, id: `${t.id}::L`, person: "Família", _owner: "Lorran", amount: half, _familiaSplit: true, _origId: t.id, _originalItem: t._originalItem },
+            { ...t, id: `${t.id}::T`, person: "Família", _owner: "Tayane", amount: half, _familiaSplit: true, _origId: t.id, _originalItem: t._originalItem },
           ];
         }
         return [t];
@@ -179,14 +180,8 @@ function FinanceiroPage() {
       
       if (t._isCard) {
         m[k].card += val;
-        // Mocking structure to match index.tsx's CategoryDetail
         m[k].cardItems.push({ 
-          inst: { 
-            ...t, 
-            due_at: t.due_at,
-            card_purchases: { description: t.description, installments_count: 1 },
-            cards: { name: t.notes?.replace("Cartão ", "") || "Cartão" }
-          }, 
+          inst: t._originalItem || t, // Mantemos o item original com suas relações
           share: val 
         });
       } else {
