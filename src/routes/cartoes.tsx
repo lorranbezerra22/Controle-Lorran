@@ -262,7 +262,9 @@ function CartoesPage() {
     const isFamilia = (s: string) => (s || "").toLowerCase().trim() === "familia";
 
     monthInst.forEach((i: any) => {
-      const m = (map[i.card_id] = map[i.card_id] ?? { fatura: 0, restante: 0 });
+      const card = cards.find((c: any) => c.id === i.card_id);
+      const effectiveCardId = card?.pai_id || i.card_id;
+      const m = (map[effectiveCardId] = map[effectiveCardId] ?? { fatura: 0, restante: 0 });
       const payment = getInstallmentPaymentState(i);
       const v = getStatusFilteredAmount(i, statusFilter);
       
