@@ -1569,23 +1569,25 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
 
       {form.mode === "standard" ? (
         <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
-        <div className="space-y-1.5">
-          <Label>Bandeira</Label>
-          <Select value={form.brand} onValueChange={(v) => setForm({ ...form, brand: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="visa">Visa</SelectItem>
-              <SelectItem value="mastercard">Mastercard</SelectItem>
-              <SelectItem value="elo">Elo</SelectItem>
-              <SelectItem value="amex">Amex</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="space-y-1.5">
+            <Label>Bandeira</Label>
+            <Select value={form.brand} onValueChange={(v) => setForm({ ...form, brand: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="visa">Visa</SelectItem>
+                <SelectItem value="mastercard">Mastercard</SelectItem>
+                <SelectItem value="elo">Elo</SelectItem>
+                <SelectItem value="amex">Amex</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Últimos 4 dígitos</Label>
+            <Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} />
+          </div>
         </div>
-        <div className="space-y-1.5">
-          <Label>Últimos 4 dígitos</Label>
-          <Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} />
       ) : (
-        <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
+        <div className="space-y-3 p-3 border rounded-lg bg-muted/30 animate-in fade-in slide-in-from-top-1 duration-200">
           <div className="flex items-center justify-between mb-2">
             <Label className="text-xs font-bold uppercase">Bandeiras do Combo</Label>
             <Button 
@@ -1648,6 +1650,11 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
           
           {form.brands.length === 0 && (
             <div className="text-center py-4 text-xs text-muted-foreground border border-dashed rounded-md">
+              Nenhuma bandeira adicionada
+            </div>
+          )}
+        </div>
+      )}
               Nenhuma bandeira adicionada
             </div>
           )}
