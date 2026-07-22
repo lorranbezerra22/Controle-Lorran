@@ -448,7 +448,7 @@ function CartoesPage() {
               animate={{ opacity: 1, y: 0 }} 
               transition={{ duration: 0.4, delay: idx * 0.06, ease: [0.22, 1, 0.36, 1] }} 
               whileHover={{ y: -3, transition: { duration: 0.2 } }} 
-              className="rounded-xl p-5 border border-border cursor-pointer hover:border-primary/50 transition-colors group relative" 
+              className="rounded-xl p-5 border border-border cursor-pointer hover:border-primary/50 transition-colors group relative overflow-hidden" 
               style={{ background: "var(--gradient-card)", boxShadow: "var(--shadow-elegant)" }} 
               onClick={() => setEditingCard(c)}
             >
