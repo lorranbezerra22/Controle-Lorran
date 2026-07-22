@@ -2,7 +2,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { usePeople } from "@/lib/queries";
 
 interface Props {
-  value: string;
+  value?: string;
   onChange: (v: string) => void;
   includeFamilia?: boolean;
   placeholder?: string;
