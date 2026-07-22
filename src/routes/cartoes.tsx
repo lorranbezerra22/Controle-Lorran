@@ -483,13 +483,37 @@ function CartoesPage() {
           const usado = inst.filter((i: any) => i.card_id === c.id && i.status === "pending").reduce((s: number, i: any) => s + Number(i.amount), 0);
           const pct = c.credit_limit > 0 ? Math.min(100, (usado / Number(c.credit_limit)) * 100) : 0;
           return (
-            <motion.div key={c.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: idx * 0.06, ease: [0.22, 1, 0.36, 1] }} whileHover={{ y: -3, transition: { duration: 0.2 } }} onClick={() => setEditingCard(c)} className="rounded-xl p-5 border border-border cursor-pointer hover:border-primary/50 transition-colors" style={{ background: "var(--gradient-card)", boxShadow: "var(--shadow-elegant)" }} title="Clique para editar">
+            <motion.div 
+              key={c.id} 
+              initial={{ opacity: 0, y: 16 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              transition={{ duration: 0.4, delay: idx * 0.06, ease: [0.22, 1, 0.36, 1] }} 
+              whileHover={{ y: -3, transition: { duration: 0.2 } }} 
+              className="rounded-xl p-5 border border-border cursor-pointer hover:border-primary/50 transition-colors group relative" 
+              style={{ background: "var(--gradient-card)", boxShadow: "var(--shadow-elegant)" }} 
+            >
               <div className="flex items-start justify-between mb-4">
-                <div>
-                  <div className="font-semibold text-lg">{c.name}</div>
-                  <div className="text-xs text-muted-foreground">{c.bank ? `${findBank(c.bank).name} • ` : ""}Fech. {c.closing_day} • Venc. {c.due_day}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <div className="font-semibold text-lg truncate">{c.name}</div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="w-6 h-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-background/50 hover:bg-background border border-border"
+                      onClick={(e) => { e.stopPropagation(); setEditingCard(c); }}
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {c.bank ? `${findBank(c.bank).name} • ` : ""}
+                    {c.last_digits ? `•••• ${c.last_digits} • ` : ""}
+                    Fech. {c.closing_day} • Venc. {c.due_day}
+                  </div>
                 </div>
-                <BankIcon bank={c.bank} size={48} square />
+                <div onClick={() => setEditingCard(c)} className="shrink-0 cursor-pointer">
+                  <BankIcon bank={c.bank} size={48} square />
+                </div>
               </div>
               <div className="text-xs text-muted-foreground flex justify-between mb-1">
                 <span>Limite usado</span><span>{brl(usado)} de {brl(c.credit_limit)}</span>
@@ -1031,6 +1055,15 @@ function CardForm({ onDone }: any) {
         <div className="space-y-1.5"><Label>Cor</Label><Input type="color" value={form.color} onChange={e => setForm({ ...form, color: e.target.value })} /></div>
       </div>
       <div className="space-y-1.5"><Label>Limite total</Label><Input type="number" step="0.01" value={form.credit_limit} onChange={e => setForm({ ...form, credit_limit: e.target.value })} required /></div>
+      
+      {!isSU ? (
+        <div className="space-y-1.5"><Label>Últimos 4 dígitos</Label><Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} /></div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5"><Label>Final Visa</Label><Input maxLength={4} placeholder="Ex: 2054" value={form.visa_last_digits} onChange={e => setForm({ ...form, visa_last_digits: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label>Final Master</Label><Input maxLength={4} placeholder="Ex: 3019" value={form.master_last_digits} onChange={e => setForm({ ...form, master_last_digits: e.target.value })} /></div>
+        </div>
+      )}
       <Button type="submit" disabled={saving} className="w-full">{saving ? "Salvando…" : "Salvar cartão"}</Button>
     </form>
   );
@@ -1385,18 +1418,23 @@ function PurchaseForm({ cards, cats, onDone }: any) {
         const sel = cards.find((c: any) => c.id === form.card_id);
         const isSU = sel && /santander/i.test(sel.name || "") && /unlimited/i.test(sel.name || "");
         if (!isSU) return null;
+        
+        const visaNum = sel.metadata?.brands?.visa || "2054";
+        const masterNum = sel.metadata?.brands?.master || "3019";
+        
         return (
           <div className="space-y-1.5">
             <Label>Bandeira (Santander Unlimited)</Label>
             <Select value={form.brand} onValueChange={(v) => setForm({ ...form, brand: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="Visa 2054">Visa • Santander Unlimited</SelectItem>
-                <SelectItem value="Master 3019">Master • Santander Unlimited</SelectItem>
+                <SelectItem value={`Visa ${visaNum}`}>Visa • {visaNum}</SelectItem>
+                <SelectItem value={`Master ${masterNum}`}>Master • {masterNum}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         );
+
       })()}
       <Button type="submit" disabled={saving || (splitMode && splitPeople.length < 2)} className="w-full">{saving ? "Salvando…" : "Salvar compra"}</Button>
     </form>
@@ -1529,8 +1567,17 @@ function EditPurchaseForm({ purchase, cats, onDone, isSantanderUnlimited }: any)
             <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Sem bandeira</SelectItem>
-              <SelectItem value="Visa 2054">Visa • Santander Unlimited</SelectItem>
-              <SelectItem value="Master 3019">Master • Santander Unlimited</SelectItem>
+              {(() => {
+                const selCard = cards.find((c: any) => c.id === purchase.card_id);
+                const vNum = selCard?.metadata?.brands?.visa || "2054";
+                const mNum = selCard?.metadata?.brands?.master || "3019";
+                return (
+                  <>
+                    <SelectItem value={`Visa ${vNum}`}>Visa • {vNum}</SelectItem>
+                    <SelectItem value={`Master ${mNum}`}>Master • {mNum}</SelectItem>
+                  </>
+                );
+              })()}
             </SelectContent>
           </Select>
         </div>
@@ -1562,11 +1609,24 @@ function EditCardForm({ card, onDone, onDelete }: any) {
     due_day: card.due_day ?? 10,
     credit_limit: String(card.credit_limit ?? ""),
     color: card.color ?? "#6366f1",
+    last_digits: card.last_digits ?? "",
+    visa_last_digits: card.metadata?.brands?.visa ?? "",
+    master_last_digits: card.metadata?.brands?.master ?? ""
   });
   const [saving, setSaving] = useState(false);
+  const isSU = /santander/i.test(form.bank || "") && /unlimited/i.test(form.name || "");
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!__tryLock()) return; setSaving(true);
     try {
+      const metadata = isSU ? { 
+        ...card.metadata,
+        brands: { 
+          visa: form.visa_last_digits, 
+          master: form.master_last_digits 
+        } 
+      } : (card.metadata || {});
+
       const { error } = await supabase.from("cards").update({
         name: form.name,
         bank: form.bank || null,
@@ -1574,7 +1634,10 @@ function EditCardForm({ card, onDone, onDelete }: any) {
         due_day: Number(form.due_day),
         credit_limit: Number(form.credit_limit) || 0,
         color: form.color,
+        last_digits: form.last_digits || null,
+        metadata
       }).eq("id", card.id);
+
       if (error) throw error;
       toast.success("Cartão atualizado");
       onDone();
@@ -1600,6 +1663,15 @@ function EditCardForm({ card, onDone, onDelete }: any) {
         <div className="space-y-1.5"><Label>Cor</Label><Input type="color" value={form.color} onChange={e => setForm({ ...form, color: e.target.value })} /></div>
       </div>
       <div className="space-y-1.5"><Label>Limite total</Label><Input type="number" step="0.01" value={form.credit_limit} onChange={e => setForm({ ...form, credit_limit: e.target.value })} required /></div>
+      
+      {!isSU ? (
+        <div className="space-y-1.5"><Label>Últimos 4 dígitos</Label><Input maxLength={4} placeholder="Ex: 1234" value={form.last_digits} onChange={e => setForm({ ...form, last_digits: e.target.value })} /></div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5"><Label>Final Visa</Label><Input maxLength={4} placeholder="Ex: 2054" value={form.visa_last_digits} onChange={e => setForm({ ...form, visa_last_digits: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label>Final Master</Label><Input maxLength={4} placeholder="Ex: 3019" value={form.master_last_digits} onChange={e => setForm({ ...form, master_last_digits: e.target.value })} /></div>
+        </div>
+      )}
       <div className="flex gap-2">
         <Button type="submit" disabled={saving} className="flex-1">{saving ? "Salvando…" : "Salvar"}</Button>
         <Button type="button" variant="destructive" onClick={remove}>Excluir</Button>
