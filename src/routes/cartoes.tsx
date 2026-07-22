@@ -1523,10 +1523,13 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
     credit_limit: String(initialData?.credit_limit ?? ""),
     last_digits: initialData?.last_digits ?? "",
     visa_last_digits: initialData?.metadata?.brands?.visa ?? "",
-    master_last_digits: initialData?.metadata?.brands?.master ?? ""
+    master_last_digits: initialData?.metadata?.brands?.master ?? "",
+    brand: initialData?.metadata?.brand ?? "visa",
+    mode: (initialData?.metadata?.brands?.visa || initialData?.metadata?.brands?.master) ? "multi" : "standard"
   });
   const [saving, setSaving] = useState(false);
   const isSU = /santander/i.test(form.bank || "") && /unlimited/i.test(form.name || "");
+  const effectiveMode = isSU ? "multi" : form.mode;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!__tryLock()) return; setSaving(true);
