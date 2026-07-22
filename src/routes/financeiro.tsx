@@ -98,7 +98,7 @@ function FinanceiroPage() {
         notes: card.name ? `Cartão ${card.name}` : "Cartão",
         account_id: null,
         _isCard: true,
-        _originalItem: i, // Preserva o objeto original com card_purchases, etc.
+        _originalItem: i, // Preserva o objeto original com cartao_compras, etc.
       };
     });
     return [...fromTx, ...fromCards];

@@ -609,15 +609,15 @@ function PeopleSection() {
     });
     inst.forEach((i: any) => {
       if (!inPeriod(i.due_at)) return;
-      addCard(i.card_purchases?.person || "", Number(i.amount), i.status === "paid");
+      addCard(i.cartao_compras?.person || "", Number(i.amount), i.status === "paid");
     });
 
     // por cartão x pessoa (SEM split — cada compra é da pessoa cadastrada)
     const cardMap: Record<string, Record<string, number>> = {};
     inst.forEach((i: any) => {
       if (!inPeriod(i.due_at)) return;
-      const cardName = i.cards?.name ?? "—";
-      const p = (i.card_purchases?.person || "").trim();
+      const cardName = i.cartoes?.name ?? "—";
+      const p = (i.cartao_compras?.person || "").trim();
       if (!p) return;
       const v = Number(i.amount);
       cardMap[cardName] = cardMap[cardName] ?? {};
