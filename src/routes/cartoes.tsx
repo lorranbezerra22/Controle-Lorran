@@ -1408,14 +1408,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
 function EditPurchaseForm({ purchase, cats, onDone }: any) {
   const clicked = purchase._installment;
   const clickedNum = clicked?.installment_number ?? 1;
-  const initialBrand = (() => {
-    if (purchase.brand) return purchase.brand;
-    if (typeof window === "undefined") return "Master 3019";
-    try {
-      const map = JSON.parse(window.localStorage.getItem("cartoes:purchaseBrands") || "{}");
-      return map[purchase.id] || "Master 3019";
-    } catch { return "Master 3019"; }
-  })();
+  const initialBrand = purchase.brand || "";
   const [form, setForm] = useState({
     description: purchase.description ?? "",
     person: purchase.person ?? "",
@@ -1423,7 +1416,7 @@ function EditPurchaseForm({ purchase, cats, onDone }: any) {
     due_at: clicked?.due_at ?? "",
     amount: clicked ? String(clicked.amount) : "",
     purchase_date: purchase.purchase_date ?? "",
-    brand: initialBrand,
+    brand: initialBrand || "",
   });
   const [applyAll, setApplyAll] = useState(false);
   const [saving, setSaving] = useState(false);
