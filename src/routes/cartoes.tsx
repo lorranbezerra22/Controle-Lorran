@@ -14,7 +14,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 const __submitLock = { busy: false };
 const __tryLock = () => { if (__submitLock.busy) return false; __submitLock.busy = true; return true; };
 const __release = () => { __submitLock.busy = false; };
-import { Plus, CreditCard, Check, Clock, Trash2, Pencil, Banknote, Receipt, Undo2, AlertTriangle, Users, Equal, SlidersHorizontal } from "lucide-react";
+import { Plus, CreditCard, Check, Clock, Trash2, Pencil, Banknote, Receipt, Undo2, AlertTriangle, Users, Equal, SlidersHorizontal, X, Trash } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SmartInput } from "@/components/smart-input";
