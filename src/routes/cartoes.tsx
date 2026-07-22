@@ -485,7 +485,7 @@ function CartoesPage() {
                 <div className="h-full" style={{ width: `${pct}%`, background: pct > 80 ? "oklch(0.65 0.24 22)" : "var(--gradient-primary)" }} />
               </div>
               <div className="pt-4 border-t border-border/80 space-y-3">
-                <div className="flex items-end justify-between gap-3">
+                <div className="flex items-center justify-between gap-6">
                   <div className="min-w-0">
                     <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-bold">Fatura {monthLabel(monthN-1)}{personFilter !== "all" && ` • ${personFilter}`}</div>
                     <div className="text-2xl font-black text-foreground tabular-nums mt-1">
