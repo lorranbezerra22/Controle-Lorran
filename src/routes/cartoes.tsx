@@ -475,9 +475,10 @@ function CartoesPage() {
                   <div className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-medium opacity-80">
                     {c.bank ? `${findBank(c.bank).name} • ` : ""}
                     {c.metadata?.brand && <span className="capitalize">{c.metadata.brand} </span>}
-                    {c.last_digits ? `•••• ${c.last_digits} • ` : ""}
-                    {c.metadata?.brands?.visa && `Visa • ${c.metadata.brands.visa} • `}
-                    {c.metadata?.brands?.master && `Master • ${c.metadata.brands.master} • `}
+                    {c.last_digits && `•••• ${c.last_digits} • `}
+                    {c.metadata?.brands?.length > 0 && c.metadata.brands.map((b: any, bi: number) => (
+                      <span key={bi} className="capitalize">{b.brand} • {b.last_digits} • </span>
+                    ))}
                     F. {c.closing_day} • V. {c.due_day}
                   </div>
 
@@ -500,6 +501,16 @@ function CartoesPage() {
                       <CountUp value={totals[c.id]?.fatura ?? 0} format={brl} />
                     </div>
                   </div>
+                  {totals[c.id]?.brandTotals && Object.keys(totals[c.id].brandTotals).length > 1 && (
+                    <div className="flex flex-col gap-1 pr-3 border-r border-border/50">
+                      {Object.entries(totals[c.id].brandTotals).map(([brand, val], bi) => (
+                        <div key={bi} className="flex flex-col">
+                          <span className="text-[8px] uppercase text-muted-foreground font-bold">{brand}</span>
+                          <span className="text-[11px] font-semibold">{brl(val)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {(() => {
                     const rest = totals[c.id]?.restante ?? 0;
                     const paid = rest === 0;
