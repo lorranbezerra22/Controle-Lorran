@@ -1556,8 +1556,19 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
           </SelectContent>
         </Select>
       </div>
+      <div className="space-y-1.5">
+        <Label>Tipo de Gestão</Label>
+        <Select value={form.mode} onValueChange={(v: any) => setForm({ ...form, mode: v })}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="standard">Bandeira Única</SelectItem>
+            <SelectItem value="multi">Múltiplas Bandeiras (Combo)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-      <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+      {form.mode === "standard" ? (
+        <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
         <div className="space-y-1.5">
           <Label>Bandeira</Label>
           <Select value={form.brand} onValueChange={(v) => setForm({ ...form, brand: v })}>
