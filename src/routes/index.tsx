@@ -1068,7 +1068,7 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
                         <td className="p-2 whitespace-nowrap">{cp.person || inst.person || "—"}</td>
                         <td className="p-2 text-right tabular-nums font-medium">
                           <div className="flex flex-col items-end">
-                            <span>{brl(share)}</span>
+                            <span className="font-bold">{brl(share)}</span>
                             {cp.brand && (
                               <span className="text-[9px] text-muted-foreground">
                                 {cp.brand}
