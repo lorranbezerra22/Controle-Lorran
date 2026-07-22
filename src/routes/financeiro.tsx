@@ -639,7 +639,7 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
         </div>
         <div className="rounded-xl border border-border/60 bg-background/40 backdrop-blur px-3 py-2">
           <div className="text-[9px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><Wallet className="w-3 h-3" /> Manual</div>
-          <div className="text-sm font-semibold tabular-nums text-foreground">{brl(cat.manual || 0)}</div>
+          <div className="text-sm font-bold tabular-nums text-foreground">{brl(cat.manual || 0)}</div>
         </div>
         <div className="rounded-xl border border-primary/40 bg-primary/10 px-3 py-2">
           <div className="text-[9px] uppercase tracking-wider text-primary">Total</div>
