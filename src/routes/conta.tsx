@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Minus, Pencil, Trash2, Landmark, TrendingUp, Calendar, ChevronDown, ChevronUp, Wallet } from "lucide-react";
+import { BANKS } from "@/lib/banks";
+
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { useInvalidate, useTransactions, useInstallments } from "@/lib/queries";
@@ -570,7 +573,21 @@ function AccountForm({ initial, onDone }: { initial?: any; onDone: () => void })
     <form onSubmit={submit} className="space-y-4">
       <div className="space-y-1.5">
         <Label>Banco</Label>
-        <Input value={bank} onChange={(e) => setBank(e.target.value)} required placeholder="Ex: Nubank, Revolut, Santander..." />
+        <Select value={bank} onValueChange={setBank}>
+          <SelectTrigger className="rounded-xl border-primary/20 shadow-sm focus:ring-primary/20">
+            <SelectValue placeholder="Selecione o banco" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            {BANKS.map((b) => (
+              <SelectItem key={b.id} value={b.name} className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <BankIcon bank={b.name} size={18} square className="rounded-sm" />
+                  <span>{b.name}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-1.5">
         <Label>Nome da Conta / Identificação</Label>
@@ -586,6 +603,7 @@ function AccountForm({ initial, onDone }: { initial?: any; onDone: () => void })
     </form>
   );
 }
+
 
 function RemoveYieldForm({ yields, onDone }: { yields: any[]; onDone: () => void }) {
   const [amount, setAmount] = useState("");
