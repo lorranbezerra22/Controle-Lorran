@@ -10,7 +10,7 @@ export const useTransactions = () =>
     queryFn: async () => {
       const { data, error } = await supabase
         .from("transacoes")
-        .select("*, categorias(name, icon)")
+        .select("*, categorias:category_id(name, icon)")
         .order("due_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
@@ -58,7 +58,7 @@ export const useInstallments = () =>
     queryFn: async () => {
       const { data, error } = await supabase
         .from("cartao_parcelas")
-        .select("*, cartao_compras(description, person, total_amount, installments_count, purchase_date, category_id, brand, categorias(name, icon)), cartoes(name, color)")
+        .select("*, cartao_compras:purchase_id(description, person, total_amount, installments_count, purchase_date, category_id, brand, categorias:category_id(name, icon)), cartoes:card_id(name, color, bank)")
         .order("due_at", { ascending: false })
         .limit(2000);
       if (error) throw error;

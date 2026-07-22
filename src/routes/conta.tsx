@@ -101,7 +101,7 @@ function ContaPage() {
       
       const parcelas = inst
         .filter((i: any) => i.status === "paid" || Number(i.paid_amount || 0) > 0)
-        .reduce((s: number, i: any) => s + Number(i.amount) * personFactor(person, i.card_purchases?.person), 0);
+        .reduce((s: number, i: any) => s + Number(i.amount) * personFactor(person, i.cartao_compras?.person), 0);
       
       return receitas - despesas - parcelas;
     };

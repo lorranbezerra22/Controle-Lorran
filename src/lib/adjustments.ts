@@ -54,4 +54,4 @@ export const costPerson = (t: { person?: string | null; paid_by?: string | null 
   t?.paid_by || t?.person || "";
 
 export const costPersonInst = (i: any) =>
-  i?.paid_by || i?.card_purchases?.person || "";
+  i?.paid_by || i?.cartao_compras?.person || "";

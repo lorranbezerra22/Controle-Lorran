@@ -512,8 +512,8 @@ function LancamentosPage() {
                   </td>
                   <td className="p-3 hidden md:table-cell text-muted-foreground">
                     <div className="flex items-center gap-2">
-                      {t.categories?.icon && <span className="shrink-0">{t.categories.icon}</span>}
-                      <span>{t.categories?.name ?? "—"}</span>
+                      {t.categorias?.icon && <span className="shrink-0">{t.categorias.icon}</span>}
+                      <span>{t.categorias?.name ?? "—"}</span>
                     </div>
                   </td>
                   <td className="p-3 hidden md:table-cell text-muted-foreground">
