@@ -433,8 +433,8 @@ function CartoesPage() {
 
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {cards.filter((c: any) => !c.pai_id).map((c: any, idx: number) => {
-          const subcardIds = cards.filter((sc: any) => sc.pai_id === c.id).map((sc: any) => sc.id);
+        {cards.map((c: any, idx: number) => {
+          const subcardIds: string[] = [];
           const allRelevantIds = [c.id, ...subcardIds];
           const usado = inst.filter((i: any) => allRelevantIds.includes(i.card_id) && i.status === "pending").reduce((s: number, i: any) => s + Number(i.amount), 0);
           const pct = c.credit_limit > 0 ? Math.min(100, (usado / Number(c.credit_limit)) * 100) : 0;
@@ -584,7 +584,7 @@ function CartoesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os cartões</SelectItem>
-                  {cards.filter((c: any) => !c.pai_id).map((c: any) => (
+                  {cards.map((c: any) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -1215,7 +1215,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
               <SelectItem key={c.id} value={c.id}>
                 <div className="flex items-center gap-2">
                   <BankIcon bank={c.bank} size={14} square />
-                  <span>{c.name} {c.pai_id && "(Sub-Cartão)"}</span>
+                  <span>{c.name}</span>
                 </div>
               </SelectItem>
             ))}
