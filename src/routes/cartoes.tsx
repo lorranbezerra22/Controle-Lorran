@@ -435,7 +435,7 @@ function CartoesPage() {
 
 
 
-      <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-8">
         {cards.map((c: any, idx: number) => {
           const subcardIds: string[] = [];
           const allRelevantIds = [c.id, ...subcardIds];
@@ -448,7 +448,7 @@ function CartoesPage() {
               animate={{ opacity: 1, y: 0 }} 
               transition={{ duration: 0.4, delay: idx * 0.06, ease: [0.22, 1, 0.36, 1] }} 
               whileHover={{ y: -3, transition: { duration: 0.2 } }} 
-              className="rounded-2xl p-6 border border-border cursor-pointer hover:border-primary/50 transition-all group relative overflow-hidden" 
+              className="rounded-2xl p-7 border border-border cursor-pointer hover:border-primary/50 transition-all group relative overflow-hidden flex flex-col justify-between min-h-[220px]" 
               style={{ background: "var(--gradient-card)", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)" }} 
 
               onClick={() => setEditingCard(c)}
@@ -485,7 +485,7 @@ function CartoesPage() {
                 <div className="h-full" style={{ width: `${pct}%`, background: pct > 80 ? "oklch(0.65 0.24 22)" : "var(--gradient-primary)" }} />
               </div>
               <div className="pt-4 border-t border-border/80 space-y-3">
-                <div className="flex items-end justify-between gap-3">
+                <div className="flex items-center justify-between gap-6">
                   <div className="min-w-0">
                     <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-bold">Fatura {monthLabel(monthN-1)}{personFilter !== "all" && ` • ${personFilter}`}</div>
                     <div className="text-2xl font-black text-foreground tabular-nums mt-1">
@@ -493,7 +493,7 @@ function CartoesPage() {
                     </div>
                   </div>
                   {totals[c.id]?.brandTotals && Object.keys(totals[c.id].brandTotals).length > 1 && (
-                    <div className="flex flex-col gap-1.5 pr-4 border-r border-border/60">
+                    <div className="flex flex-col gap-1.5 pr-6 border-r border-border/60">
                       {Object.entries(totals[c.id].brandTotals).map(([brand, data], bi) => (
                         <div key={bi} className="flex flex-col">
                           <span className="text-[9px] uppercase text-muted-foreground font-black tracking-wider">{brand}</span>
