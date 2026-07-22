@@ -45,7 +45,7 @@ export function KpiTile({
       style={{
         background: highlight
           ? "linear-gradient(135deg, color-mix(in oklab, var(--primary) 10%, var(--card)), var(--card))"
-          : "var(--gradient-card)",
+          : "linear-gradient(135deg, var(--card), color-mix(in oklab, var(--muted) 40%, var(--card)))",
         boxShadow: "var(--shadow-elegant)",
       }}
     >

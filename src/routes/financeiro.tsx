@@ -305,12 +305,13 @@ function FinanceiroPage() {
       </div>
 
       {/* KPI cards */}
+      {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <KpiCard index={0} icon={<TrendingUp className="w-4 h-4" />} label="Receitas" value={totalReceita} sub={`${receitas.length} entrada(s)`} accent="success" onClick={() => setOpenKpi("receitas")} highlight />
-        <KpiCard index={1} icon={<TrendingDown className="w-4 h-4" />} label="Despesas" value={totalDespesa} sub={`${despesas.length} saída(s)`} accent="danger" onClick={() => setOpenKpi("despesas")} highlight />
-        <KpiCard index={2} icon={<Scale className="w-4 h-4" />} label="Balanço" value={balanco} accent={balanco >= 0 ? "success" : "danger"} onClick={() => setOpenKpi("balanco")} highlight />
-        <KpiCard index={3} icon={<Wallet className="w-4 h-4" />} label="Liquidado" value={totalPago} accent="primary" onClick={() => setOpenKpi("paid")} highlight />
-        <KpiCard index={4} icon={<Calendar className="w-4 h-4" />} label="Pendente" value={totalPendente} accent="warning" onClick={() => setOpenKpi("pending")} highlight />
+        <KpiCard index={0} icon={<TrendingUp className="w-4 h-4" />} label="Receitas" value={totalReceita} sub={`${receitas.length} entrada(s)`} accent="success" onClick={() => setOpenKpi("receitas")} highlight={false} />
+        <KpiCard index={1} icon={<TrendingDown className="w-4 h-4" />} label="Despesas" value={totalDespesa} sub={`${despesas.length} saída(s)`} accent="danger" onClick={() => setOpenKpi("despesas")} highlight={false} />
+        <KpiCard index={2} icon={<Scale className="w-4 h-4" />} label="Balanço" value={balanco} accent={balanco >= 0 ? "success" : "danger"} onClick={() => setOpenKpi("balanco")} highlight={false} />
+        <KpiCard index={3} icon={<Wallet className="w-4 h-4" />} label="Liquidado" value={totalPago} accent="primary" onClick={() => setOpenKpi("paid")} highlight={false} />
+        <KpiCard index={4} icon={<Calendar className="w-4 h-4" />} label="Pendente" value={totalPendente} accent="warning" onClick={() => setOpenKpi("pending")} highlight={false} />
       </div>
 
       {/* Charts */}
