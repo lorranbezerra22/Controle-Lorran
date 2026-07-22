@@ -448,8 +448,9 @@ function CartoesPage() {
               animate={{ opacity: 1, y: 0 }} 
               transition={{ duration: 0.4, delay: idx * 0.06, ease: [0.22, 1, 0.36, 1] }} 
               whileHover={{ y: -3, transition: { duration: 0.2 } }} 
-              className="rounded-xl p-5 border border-border cursor-pointer hover:border-primary/50 transition-colors group relative overflow-hidden" 
-              style={{ background: "var(--gradient-card)", boxShadow: "var(--shadow-elegant)" }} 
+              className="rounded-2xl p-6 border border-border cursor-pointer hover:border-primary/50 transition-all group relative overflow-hidden" 
+              style={{ background: "var(--gradient-card)", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)" }} 
+
               onClick={() => setEditingCard(c)}
             >
               <div className="flex items-start justify-between mb-4">
