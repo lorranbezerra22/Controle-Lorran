@@ -169,7 +169,8 @@ function FinanceiroPage() {
       const k = t.category_id || "none";
       if (!m[k]) {
         m[k] = { 
-          id: t.category_id || null, 
+          categoryId: t.category_id || null, 
+          id: t.category_id || null,
           name: c.name, 
           icon: c.icon || "💰", 
           value: 0, 
