@@ -305,12 +305,13 @@ function FinanceiroPage() {
       </div>
 
       {/* KPI cards */}
+      {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <KpiCard index={0} icon={<TrendingUp className="w-4 h-4" />} label="Receitas" value={totalReceita} sub={`${receitas.length} entrada(s)`} accent="success" onClick={() => setOpenKpi("receitas")} />
-        <KpiCard index={1} icon={<TrendingDown className="w-4 h-4" />} label="Despesas" value={totalDespesa} sub={`${despesas.length} saída(s)`} accent="danger" onClick={() => setOpenKpi("despesas")} />
-        <KpiCard index={2} icon={<Scale className="w-4 h-4" />} label="Balanço" value={balanco} accent={balanco >= 0 ? "success" : "danger"} onClick={() => setOpenKpi("balanco")} />
-        <KpiCard index={3} icon={<Wallet className="w-4 h-4" />} label="Liquidado" value={totalPago} accent="primary" onClick={() => setOpenKpi("paid")} />
-        <KpiCard index={4} icon={<Calendar className="w-4 h-4" />} label="Pendente" value={totalPendente} accent="warning" onClick={() => setOpenKpi("pending")} />
+        <KpiCard index={0} icon={<TrendingUp className="w-4 h-4" />} label="Receitas" value={totalReceita} sub={`${receitas.length} entrada(s)`} accent="success" onClick={() => setOpenKpi("receitas")} highlight={true} />
+        <KpiCard index={1} icon={<TrendingDown className="w-4 h-4" />} label="Despesas" value={totalDespesa} sub={`${despesas.length} saída(s)`} accent="danger" onClick={() => setOpenKpi("despesas")} highlight={true} />
+        <KpiCard index={2} icon={<Scale className="w-4 h-4" />} label="Balanço" value={balanco} accent={balanco >= 0 ? "success" : "danger"} onClick={() => setOpenKpi("balanco")} highlight={true} />
+        <KpiCard index={3} icon={<Wallet className="w-4 h-4" />} label="Liquidado" value={totalPago} accent="primary" onClick={() => setOpenKpi("paid")} highlight={true} />
+        <KpiCard index={4} icon={<Calendar className="w-4 h-4" />} label="Pendente" value={totalPendente} accent="warning" onClick={() => setOpenKpi("pending")} highlight={true} />
       </div>
 
       {/* Charts */}
@@ -775,14 +776,14 @@ function CategoryCard({ title, icon, data, total, tone, onSelect }: { title: str
   );
 }
 
-function KpiCard({ icon, label, value, sub, accent, index = 0, onClick }: { icon: React.ReactNode; label: string; value: number; sub?: string; accent?: "primary" | "success" | "warning" | "danger"; index?: number; onClick?: () => void }) {
+function KpiCard({ icon, label, value, sub, accent, index = 0, onClick, highlight }: { icon: React.ReactNode; label: string; value: number; sub?: string; accent?: "primary" | "success" | "warning" | "danger"; index?: number; onClick?: () => void; highlight?: boolean }) {
   const tone =
     accent === "primary" ? "text-primary" :
     accent === "success" ? "text-success" :
     accent === "warning" ? "text-warning" :
     accent === "danger" ? "text-destructive" :
     "text-foreground";
-  return <KpiTile icon={icon} label={label} value={value} sub={sub} tone={tone} index={index} onClick={onClick} />;
+  return <KpiTile icon={icon} label={label} value={value} sub={sub} tone={tone} index={index} onClick={onClick} highlight={highlight} />;
 }
 
 
