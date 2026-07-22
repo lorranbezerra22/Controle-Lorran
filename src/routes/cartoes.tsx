@@ -515,14 +515,15 @@ function CartoesPage() {
                   <div className="flex items-center gap-2">
                     <div className="font-semibold text-lg truncate">{c.name}</div>
                   </div>
-                  <div className="text-xs text-muted-foreground truncate">
+                  <div className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-medium opacity-80">
                     {c.bank ? `${findBank(c.bank).name} • ` : ""}
                     {c.metadata?.brand && <span className="capitalize">{c.metadata.brand} </span>}
                     {c.last_digits ? `•••• ${c.last_digits} • ` : ""}
-                    {c.metadata?.brands?.visa && `Visa •••• ${c.metadata.brands.visa} • `}
-                    {c.metadata?.brands?.master && `Master •••• ${c.metadata.brands.master} • `}
-                    Fech. {c.closing_day} • Venc. {c.due_day}
+                    {c.metadata?.brands?.visa && `Visa • ${c.metadata.brands.visa} • `}
+                    {c.metadata?.brands?.master && `Master • ${c.metadata.brands.master} • `}
+                    F. {c.closing_day} • V. {c.due_day}
                   </div>
+
                 </div>
                 <div className="shrink-0">
                   <BankIcon bank={c.bank} size={48} square />
@@ -1577,7 +1578,31 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
       };
 
       if (initialData?.id) {
+        // Exclusão individual de bandeira no Santander Unlimited se um dos campos estiver vazio
+        if (isSU) {
+          const brands: any = {};
+          if (form.visa_last_digits) brands.visa = form.visa_last_digits;
+          if (form.master_last_digits) brands.master = form.master_last_digits;
+          
+          if (Object.keys(brands).length === 0) {
+            // Se remover todas as bandeiras, exclui o cartão
+            if (confirm("Remover a última bandeira excluirá o cartão completamente. Continuar?")) {
+              const { error } = await supabase.from("cards").delete().eq("id", initialData.id);
+              if (error) throw error;
+              toast.success("Cartão removido");
+              onDone();
+              return;
+            } else {
+              setSaving(false);
+              __release();
+              return;
+            }
+          }
+          payload.metadata.brands = brands;
+        }
+
         const { error } = await supabase.from("cards").update(payload).eq("id", initialData.id);
+
         if (error) throw error;
         toast.success("Cartão atualizado");
       } else {
