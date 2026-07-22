@@ -289,6 +289,7 @@ export type Database = {
           due_day: number
           id: string
           last_digits: string | null
+          metadata: Json | null
           name: string
           user_id: string
         }
@@ -301,6 +302,7 @@ export type Database = {
           due_day: number
           id?: string
           last_digits?: string | null
+          metadata?: Json | null
           name: string
           user_id: string
         }
@@ -313,6 +315,7 @@ export type Database = {
           due_day?: number
           id?: string
           last_digits?: string | null
+          metadata?: Json | null
           name?: string
           user_id?: string
         }
