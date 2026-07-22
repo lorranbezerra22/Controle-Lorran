@@ -435,7 +435,7 @@ function CartoesPage() {
 
 
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
         {cards.map((c: any, idx: number) => {
           const subcardIds: string[] = [];
           const allRelevantIds = [c.id, ...subcardIds];
@@ -448,17 +448,19 @@ function CartoesPage() {
               animate={{ opacity: 1, y: 0 }} 
               transition={{ duration: 0.4, delay: idx * 0.06, ease: [0.22, 1, 0.36, 1] }} 
               whileHover={{ y: -3, transition: { duration: 0.2 } }} 
-              className="rounded-xl p-5 border border-border cursor-pointer hover:border-primary/50 transition-colors group relative overflow-hidden" 
-              style={{ background: "var(--gradient-card)", boxShadow: "var(--shadow-elegant)" }} 
+              className="rounded-2xl p-6 border border-border cursor-pointer hover:border-primary/50 transition-all group relative overflow-hidden" 
+              style={{ background: "var(--gradient-card)", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)" }} 
+
               onClick={() => setEditingCard(c)}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <div className="font-semibold text-lg truncate">{c.name}</div>
+                    <div className="font-bold text-xl tracking-tight truncate">{c.name}</div>
                   </div>
-                  <div className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-medium opacity-80 leading-tight">
+                  <div className="text-xs text-muted-foreground truncate uppercase tracking-widest font-semibold opacity-90 leading-tight">
                     {c.bank ? `${findBank(c.bank).name} • ` : ""}
+
                     {c.metadata?.brands?.length > 0 ? (
                       <span className="text-primary/70 font-bold">{c.metadata.brands.length} Bandeiras</span>
                     ) : (
@@ -467,7 +469,7 @@ function CartoesPage() {
                         {c.last_digits && `•••• ${c.last_digits}`}
                       </>
                     )}
-                    <div className="mt-0.5 opacity-60">F. {c.closing_day} • V. {c.due_day}</div>
+                    <div className="mt-1 opacity-70 font-medium">F. {c.closing_day} • V. {c.due_day}</div>
                   </div>
 
                 </div>
@@ -475,29 +477,30 @@ function CartoesPage() {
                   <BankIcon bank={c.bank} size={48} square />
                 </div>
               </div>
-              <div className="text-xs text-muted-foreground flex justify-between mb-1">
-                <span>Limite usado</span><span>{brl(usado)} de {brl(c.credit_limit)}</span>
+              <div className="text-xs font-medium text-muted-foreground flex justify-between mb-2">
+                <span className="opacity-80">Limite utilizado</span>
+                <span className="text-foreground/80 font-bold">{brl(usado)} <span className="font-medium text-muted-foreground/60 mx-1">/</span> {brl(c.credit_limit)}</span>
               </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden mb-3">
+              <div className="h-2.5 bg-muted rounded-full overflow-hidden mb-4">
                 <div className="h-full" style={{ width: `${pct}%`, background: pct > 80 ? "oklch(0.65 0.24 22)" : "var(--gradient-primary)" }} />
               </div>
-              <div className="pt-3 border-t border-border space-y-2">
+              <div className="pt-4 border-t border-border/80 space-y-3">
                 <div className="flex items-end justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-medium">Fatura {monthLabel(monthN-1)}{personFilter !== "all" && ` • ${personFilter}`}</div>
-                    <div className="text-xl font-bold text-foreground tabular-nums mt-0.5">
+                    <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-bold">Fatura {monthLabel(monthN-1)}{personFilter !== "all" && ` • ${personFilter}`}</div>
+                    <div className="text-2xl font-black text-foreground tabular-nums mt-1">
                       <CountUp value={totals[c.id]?.fatura ?? 0} format={brl} />
                     </div>
                   </div>
                   {totals[c.id]?.brandTotals && Object.keys(totals[c.id].brandTotals).length > 1 && (
-                    <div className="flex flex-col gap-1 pr-3 border-r border-border/50">
+                    <div className="flex flex-col gap-1.5 pr-4 border-r border-border/60">
                       {Object.entries(totals[c.id].brandTotals).map(([brand, data], bi) => (
                         <div key={bi} className="flex flex-col">
-                          <span className="text-[8px] uppercase text-muted-foreground font-bold">{brand}</span>
-                          <div className="flex flex-col leading-none">
-                            <span className="text-[10px] font-semibold">{brl(data.fatura)}</span>
+                          <span className="text-[9px] uppercase text-muted-foreground font-black tracking-wider">{brand}</span>
+                          <div className="flex flex-col leading-tight">
+                            <span className="text-xs font-bold text-foreground/90">{brl(data.fatura)}</span>
                             {data.restante > 0.01 && (
-                              <span className="text-[8px] text-destructive font-medium">Rest. {brl(data.restante)}</span>
+                              <span className="text-[9px] text-destructive font-bold tracking-tight">Rest. {brl(data.restante)}</span>
                             )}
                           </div>
                         </div>
@@ -508,9 +511,9 @@ function CartoesPage() {
                     const rest = totals[c.id]?.restante ?? 0;
                     const paid = rest === 0;
                     return (
-                      <div className={`flex flex-col items-end px-2.5 py-1.5 rounded-lg border ${paid ? "border-success/30 bg-success/10" : "border-destructive/25 bg-destructive/10"}`}>
-                        <span className={`text-[9px] uppercase tracking-[0.18em] font-semibold ${paid ? "text-success" : "text-destructive"}`}>{paid ? "Liquidada" : "Restante"}</span>
-                        <span className={`text-sm font-bold tabular-nums ${paid ? "text-success" : "text-destructive"}`}>{brl(rest)}</span>
+                      <div className={`flex flex-col items-end px-3 py-2 rounded-xl border ${paid ? "border-success/30 bg-success/10" : "border-destructive/25 bg-destructive/10"}`}>
+                        <span className={`text-[10px] uppercase tracking-[0.2em] font-black ${paid ? "text-success" : "text-destructive"}`}>{paid ? "Liquidada" : "Restante"}</span>
+                        <span className={`text-base font-black tabular-nums ${paid ? "text-success" : "text-destructive"}`}>{brl(rest)}</span>
                       </div>
                     );
                   })()}
