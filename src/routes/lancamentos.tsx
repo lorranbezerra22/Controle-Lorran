@@ -67,6 +67,7 @@ function LancamentosPage() {
   const { data: tx = [] } = useTransactions();
   const { data: cats = [] } = useCategories();
   const { data: accounts = [] } = useAccounts();
+  const { data: people = [] } = usePeople();
   const { data: adjustments = [] } = useAdjustments();
   const adjMap = useMemo(() => groupAdjustments(adjustments), [adjustments]);
   const invalidate = useInvalidate();
@@ -155,7 +156,10 @@ function LancamentosPage() {
     });
   };
 
-  const personOptions = Array.from(new Set(tx.map((t: any) => t.person).filter(Boolean) as string[])).sort();
+  const personOptions = useMemo(() => {
+    // Retorna apenas as pessoas cadastradas no sistema
+    return people.map((p: any) => p.name).sort();
+  }, [people]);
 
   const filtered = tx.filter((t: any) => {
     if (filter !== "all" && t.kind !== filter) return false;
@@ -384,7 +388,7 @@ function LancamentosPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as pessoas</SelectItem>
-              {personOptions.map((p) => (
+              {personOptions.map((p: string) => (
                 <SelectItem key={p} value={p}>{p}</SelectItem>
               ))}
             </SelectContent>
@@ -398,7 +402,7 @@ function LancamentosPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Adicionar pessoa</SelectItem>
-              {personOptions.map((p) => (
+              {personOptions.map((p: string) => (
                 <SelectItem key={p} value={p}>{p}</SelectItem>
               ))}
             </SelectContent>

@@ -121,9 +121,27 @@ function PeopleListSection() {
   }, [people, invalidate]);
 
   const remove = async (id: string, name: string) => {
-    if (!confirm(`Excluir pessoa "${name}"? Os lançamentos vinculados ficam intactos.`)) return;
+    if (!confirm(`Excluir pessoa "${name}"? Todos os lançamentos vinculados a esta pessoa também serão excluídos.`)) return;
+    
+    // Deletamos as parcelas de cartão vinculadas (via compras)
+    const { data: purchases } = await supabase.from("card_purchases").select("id").eq("person", name);
+    if (purchases && purchases.length > 0) {
+      const pIds = purchases.map(p => p.id);
+      await supabase.from("card_installments").delete().in("purchase_id", pIds);
+      await supabase.from("card_purchases").delete().in("id", pIds);
+    }
+
+    // Deletamos as transações diretas
+    await supabase.from("transactions").delete().eq("person", name);
+
+    // Finalmente deletamos a pessoa
     const { error } = await supabase.from("people").delete().eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Removido"); invalidate("people"); }
+    if (error) toast.error(error.message); else { 
+      toast.success("Pessoa e lançamentos removidos"); 
+      invalidate("people"); 
+      invalidate("transactions"); 
+      invalidate("installments"); 
+    }
   };
   const [open, setOpen] = useLsBool("peopleList", true);
   return (
@@ -397,9 +415,10 @@ function PeopleReportSection() {
 
 
   const peopleOptions = useMemo(() => {
+    // Filtramos apenas as pessoas cadastradas. 
+    // Lorran e Tayane já devem estar no cadastro para aparecerem aqui.
+    // "Familia" é uma constante especial que tratamos separadamente no relatório se necessário.
     const names = new Set(people.map((p: any) => p.name));
-    names.add("Lorran");
-    names.add("Tayane");
     return Array.from(names).sort();
   }, [people]);
 

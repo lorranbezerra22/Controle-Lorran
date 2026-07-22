@@ -34,7 +34,7 @@ export function PersonSelect({
     names.add(p.name);
   });
   
-  if (includeFamilia) names.add("Família");
+  if (includeFamilia) names.add("Familia");
   extras.forEach((n) => {
     if (!n) return;
     if (n.toLowerCase().trim() === "familia") return;
