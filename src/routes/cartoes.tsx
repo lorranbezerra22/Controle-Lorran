@@ -710,10 +710,17 @@ function CartoesPage() {
                   <td className="p-3 whitespace-nowrap text-muted-foreground">{fmtDate(i.due_at)}</td>
                   <td className="p-3 whitespace-nowrap text-muted-foreground hidden sm:table-cell">{i.card_purchases?.purchase_date ? fmtDate(i.card_purchases.purchase_date) : "—"}</td>
                   <td className="p-3">
-                    <span className="inline-flex items-center gap-2">
-                      <BankIcon bank={i.cards?.bank || i.cards?.name} size={18} square />
-                      {i.cards?.name}
-                    </span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="inline-flex items-center gap-2">
+                        <BankIcon bank={i.cards?.bank || i.cards?.name} size={18} square />
+                        {i.cards?.name}
+                      </span>
+                      {i.card_purchases?.brand && (
+                        <span className="text-[10px] text-muted-foreground ml-6">
+                          {i.card_purchases.brand}
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   <td className="p-3 font-medium">
