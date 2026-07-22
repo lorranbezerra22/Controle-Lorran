@@ -1171,7 +1171,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
       if (purDate.getDate() >= closing) firstMonth += 1;
       if (due < closing) firstMonth += 1;
 
-      const isSantanderUnlimited = /santander/i.test(card.name || "") && /unlimited/i.test(card.name || "");
+      
 
       for (const s of splits) {
         const { data: purchase, error: pErr } = await supabase.from("cartao_compras").insert({
@@ -1494,7 +1494,7 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
         color: bInfo.color,
         last_digits: effectiveMode === "standard" ? (form.last_digits || null) : null,
         metadata,
-        pai_id: null,
+        
       };
 
       if (initialData?.id) {
