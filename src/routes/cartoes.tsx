@@ -1740,16 +1740,50 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
           <div className="p-3 rounded-lg border border-dashed border-border bg-muted/30 flex flex-col items-center justify-center gap-2">
             <CreditCard className="w-8 h-8 text-muted-foreground/50" />
             <div className="text-center">
-              <div className="text-xs font-medium">Vincular Sub-Cartões</div>
-              <div className="text-[10px] text-muted-foreground">Adicione sub-cartões que serão agregados a este principal</div>
+              <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Vínculo de Cartão</div>
+              <div className="text-[10px] text-muted-foreground">Este cartão enviará suas faturas para o cartão mestre</div>
             </div>
-            <div className="w-full space-y-2">
-              <Label className="text-[10px] text-muted-foreground uppercase">Cartão Principal</Label>
+            <div className="w-full space-y-2 mt-2">
+              <Label className="text-[10px] text-muted-foreground uppercase">Cartão Principal (Mestre)</Label>
               <Select value={form.pai_id} onValueChange={(v) => setForm({ ...form, pai_id: v })}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Selecione o mestre" />
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue placeholder="Selecione o cartão mestre" />
                 </SelectTrigger>
                 <SelectContent>
+                  {cards.filter((c: any) => c.id !== initialData?.id && !c.pai_id).map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <div className="flex items-center gap-2">
+                        <BankIcon bank={c.bank} size={14} square />
+                        <span>{c.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {initialData?.id && cards.some((sc: any) => sc.pai_id === initialData.id) && (
+        <div className="space-y-2 pt-2 border-t border-border">
+          <Label className="text-[10px] text-muted-foreground uppercase font-bold">Sub-Cartões Vinculados</Label>
+          <div className="space-y-1">
+            {cards.filter((sc: any) => sc.pai_id === initialData.id).map((sc: any) => (
+              <div key={sc.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50 text-xs">
+                <div className="flex items-center gap-2">
+                  <BankIcon bank={sc.bank} size={14} square />
+                  <span>{sc.name}</span>
+                </div>
+                <div className="text-[10px] text-muted-foreground">•••• {sc.last_digits || sc.metadata?.brand}</div>
+              </div>
+            ))}
+          </div>
+          <div className="text-[9px] text-muted-foreground italic">
+            As faturas destes cartões são somadas a este cartão principal.
+          </div>
+        </div>
+      )}
                   {cards.filter((c: any) => c.id !== initialData?.id && !c.pai_id).map((c: any) => (
                     <SelectItem key={c.id} value={c.id}>
                       <div className="flex items-center gap-2">
