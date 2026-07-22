@@ -1605,26 +1605,6 @@ function EditPurchaseForm({ purchase, cats, onDone }: any) {
           </div>
         );
       })()}
-        <div className="space-y-1.5">
-          <Label>Bandeira (Santander Unlimited)</Label>
-          <Select value={form.brand || "none"} onValueChange={(v) => setForm({ ...form, brand: v === "none" ? "" : v })}>
-            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Sem bandeira</SelectItem>
-              {(() => {
-                const selCard = cards.find((c: any) => c.id === purchase.card_id);
-                const vNum = selCard?.metadata?.brands?.visa || "2054";
-                const mNum = selCard?.metadata?.brands?.master || "3019";
-                return (
-                  <>
-                    <SelectItem value={`Visa ${vNum}`}>Visa • {vNum}</SelectItem>
-                    <SelectItem value={`Master ${mNum}`}>Master • {mNum}</SelectItem>
-                  </>
-                );
-              })()}
-            </SelectContent>
-          </Select>
-      <label className="flex items-start gap-2 rounded-md border border-border p-2.5 cursor-pointer hover:bg-muted/50">
         <input type="checkbox" checked={applyAll} onChange={e => setApplyAll(e.target.checked)} className="mt-0.5" />
         <div className="text-xs">
           <div className="font-medium text-foreground">Aplicar a todas as parcelas</div>
@@ -1656,6 +1636,7 @@ function EditCardForm({ card, onDone, onDelete }: any) {
     master_last_digits: card.metadata?.brands?.master ?? ""
   });
   const [saving, setSaving] = useState(false);
+  const isSU = /santander/i.test(form.bank || "") && /unlimited/i.test(form.name || "");
   const isSU = /santander/i.test(form.bank || "") && /unlimited/i.test(form.name || "");
 
   const submit = async (e: React.FormEvent) => {
