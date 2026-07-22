@@ -482,22 +482,22 @@ function CartoesPage() {
                 <div className="h-full" style={{ width: `${pct}%`, background: pct > 80 ? "oklch(0.65 0.24 22)" : "var(--gradient-primary)" }} />
               </div>
               <div className="pt-3 border-t border-border space-y-2">
-                <div className="flex items-end justify-between gap-3">
+                <div className="flex items-end justify-between gap-4">
                   <div className="min-w-0">
                     <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-medium">Fatura {monthLabel(monthN-1)}{personFilter !== "all" && ` • ${personFilter}`}</div>
-                    <div className="text-xl font-bold text-foreground tabular-nums mt-0.5">
+                    <div className="text-xl font-bold text-foreground tabular-nums mt-1.5">
                       <CountUp value={totals[c.id]?.fatura ?? 0} format={brl} />
                     </div>
                   </div>
                   {totals[c.id]?.brandTotals && Object.keys(totals[c.id].brandTotals).length > 1 && (
-                    <div className="flex flex-col gap-1 pr-3 border-r border-border/50">
+                    <div className="flex flex-col gap-3 pr-3 border-r border-border/50">
                       {Object.entries(totals[c.id].brandTotals).map(([brand, data], bi) => (
-                        <div key={bi} className="flex flex-col">
-                          <span className="text-[8px] uppercase text-muted-foreground font-bold">{brand}</span>
-                          <div className="flex flex-col leading-none">
+                        <div key={bi} className="flex flex-col gap-1.5">
+                          <span className="text-[8px] uppercase text-muted-foreground font-bold leading-none">{brand}</span>
+                          <div className="flex flex-col leading-tight">
                             <span className="text-[10px] font-semibold">{brl(data.fatura)}</span>
                             {data.restante > 0.01 && (
-                              <span className="text-[8px] text-destructive font-medium">Rest. {brl(data.restante)}</span>
+                              <span className="text-[8px] text-destructive font-medium mt-1">Rest. {brl(data.restante)}</span>
                             )}
                           </div>
                         </div>
@@ -508,7 +508,7 @@ function CartoesPage() {
                     const rest = totals[c.id]?.restante ?? 0;
                     const paid = rest === 0;
                     return (
-                      <div className={`flex flex-col items-end px-2.5 py-1.5 rounded-lg border ${paid ? "border-success/30 bg-success/10" : "border-destructive/25 bg-destructive/10"}`}>
+                      <div className={`flex flex-col items-end px-2.5 py-1.5 rounded-lg border gap-0.5 ${paid ? "border-success/30 bg-success/10" : "border-destructive/25 bg-destructive/10"}`}>
                         <span className={`text-[9px] uppercase tracking-[0.18em] font-semibold ${paid ? "text-success" : "text-destructive"}`}>{paid ? "Liquidada" : "Restante"}</span>
                         <span className={`text-sm font-bold tabular-nums ${paid ? "text-success" : "text-destructive"}`}>{brl(rest)}</span>
                       </div>

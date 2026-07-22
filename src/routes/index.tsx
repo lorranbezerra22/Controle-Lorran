@@ -657,7 +657,7 @@ function Dashboard() {
                   <div key={c.id} className="group relative rounded-xl border border-border/60 bg-background/40 backdrop-blur p-3 hover:border-primary/40 transition-colors">
                     <div className="flex items-center gap-3 mb-3">
                       <BankIcon bank={c.bank || c.name} size={28} square />
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 flex-1 flex flex-col gap-0.5">
                         <div className="text-sm font-medium truncate text-foreground">{c.name}</div>
                         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{isPaid ? "Quitado" : `${pctPago.toFixed(0)}% pago`}</div>
                       </div>
@@ -670,11 +670,11 @@ function Dashboard() {
                       <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ backgroundImage: "linear-gradient(90deg, transparent 0, transparent 6px, var(--background) 6px, var(--background) 7px)", backgroundSize: "7px 100%" }} />
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="rounded-lg bg-background/60 border border-border/50 px-2 py-1.5">
+                      <div className="rounded-lg bg-background/60 border border-border/50 px-2 py-1.5 flex flex-col gap-1">
                         <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Fatura</div>
                         <div className="font-semibold tabular-nums text-foreground">{brl(fat)}</div>
                       </div>
-                      <div className="rounded-lg bg-background/60 border border-border/50 px-2 py-1.5">
+                      <div className="rounded-lg bg-background/60 border border-border/50 px-2 py-1.5 flex flex-col gap-1">
                         <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Restante</div>
                         <div className={`font-semibold tabular-nums ${isPaid ? "text-success" : "text-destructive"}`}>{brl(restante)}</div>
                       </div>
