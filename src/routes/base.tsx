@@ -800,7 +800,7 @@ function CatRow({ cat, onChange }: any) {
 
   const remove = async () => {
     if (!confirm(`Excluir "${cat.name}"? Lançamentos vinculados ficarão sem categoria.`)) return;
-    const { error } = await supabase.from("categories").delete().eq("id", cat.id);
+    const { error } = await supabase.from("categorias").delete().eq("id", cat.id);
     if (error) toast.error(error.message);
     else { toast.success("Removido"); onChange(); }
   };
