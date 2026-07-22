@@ -741,7 +741,7 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
                         </span>
                       </td>
                       <td className="p-2 max-w-[150px] truncate text-muted-foreground" title={tx.notes ?? ""}>{tx.notes ?? "—"}</td>
-                      <td className="p-2 text-right tabular-nums font-medium">{brl(share)}</td>
+                      <td className="p-2 text-right tabular-nums font-bold">{brl(share)}</td>
                     </tr>
                   ))}
                 </tbody>
