@@ -448,25 +448,36 @@ function CartoesPage() {
               animate={{ opacity: 1, y: 0 }} 
               transition={{ duration: 0.4, delay: idx * 0.06, ease: [0.22, 1, 0.36, 1] }} 
               whileHover={{ y: -3, transition: { duration: 0.2 } }} 
-              className="rounded-xl p-5 border border-border cursor-pointer hover:border-primary/50 transition-colors group relative" 
+              className="rounded-xl p-5 border border-border cursor-pointer hover:border-primary/50 transition-colors group relative overflow-hidden" 
               style={{ background: "var(--gradient-card)", boxShadow: "var(--shadow-elegant)" }} 
               onClick={() => setEditingCard(c)}
             >
-              <button 
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  if (confirm(`Deseja realmente excluir o cartão ${c.name}?`)) {
-                    supabase.from("cartoes").delete().eq("id", c.id).then(({ error }) => {
-                      if (error) toast.error(error.message);
-                      else { toast.success("Cartão removido"); invalidate("cards"); }
-                    });
-                  }
-                }}
-                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-destructive/10 text-destructive flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-destructive hover:text-white z-10"
-                title="Remover cartão"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-4 z-10">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="rounded-full shadow-lg border-primary/20 hover:bg-primary hover:text-white transition-all transform translate-y-2 group-hover:translate-y-0 duration-300"
+                  onClick={(e) => { e.stopPropagation(); setEditingCard(c); }}
+                >
+                  <Pencil className="w-4 h-4 mr-1.5" /> Editar
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="destructive" 
+                  className="rounded-full shadow-lg hover:bg-destructive transition-all transform translate-y-2 group-hover:translate-y-0 duration-300 delay-[50ms]"
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    if (confirm(`Deseja realmente excluir o cartão ${c.name}?`)) {
+                      supabase.from("cartoes").delete().eq("id", c.id).then(({ error }) => {
+                        if (error) toast.error(error.message);
+                        else { toast.success("Cartão removido"); invalidate("cards"); }
+                      });
+                    }
+                  }}
+                >
+                  <Trash2 className="w-4 h-4 mr-1.5" /> Excluir
+                </Button>
+              </div>
               <div className="flex items-start justify-between mb-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -474,11 +485,14 @@ function CartoesPage() {
                   </div>
                   <div className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-medium opacity-80">
                     {c.bank ? `${findBank(c.bank).name} • ` : ""}
-                    {c.metadata?.brand && <span className="capitalize">{c.metadata.brand} </span>}
-                    {c.last_digits && `•••• ${c.last_digits} • `}
-                    {c.metadata?.brands?.length > 0 && c.metadata.brands.map((b: any, bi: number) => (
-                      <span key={bi} className="capitalize">{b.brand} • {b.last_digits} • </span>
-                    ))}
+                    {c.metadata?.brands?.length > 0 ? (
+                      <span>{c.metadata.brands.length} Bandeiras • </span>
+                    ) : (
+                      <>
+                        {c.metadata?.brand && <span className="capitalize">{c.metadata.brand} </span>}
+                        {c.last_digits && `•••• ${c.last_digits} • `}
+                      </>
+                    )}
                     F. {c.closing_day} • V. {c.due_day}
                   </div>
 
@@ -1194,7 +1208,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
           description: splits.length > 1 ? `${form.description} (${s.person})` : form.description,
           purchase_date: form.purchase_date, total_amount: s.amount, installments_count: n,
           category_id: form.category_id || null, person: s.person,
-          brand: null,
+          brand: form.brand || null,
         }).select().single();
         if (pErr) throw pErr;
 
@@ -1372,6 +1386,34 @@ function PurchaseForm({ cards, cats, onDone }: any) {
           <SelectContent>{cats.filter((c: any) => c.kind === "expense").map((c: any) => <SelectItem key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ""}{c.name}</SelectItem>)}</SelectContent>
         </Select>
       </div>
+      {(() => {
+        const card = cards.find((c: any) => c.id === form.card_id);
+        const brands = card?.metadata?.brands || [];
+        if (brands.length <= 1) return null;
+        return (
+          <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+            <Label>Bandeira da Compra</Label>
+            <div className="flex flex-wrap gap-2">
+              {brands.map((b: any, idx: number) => {
+                const label = `${b.brand.charAt(0).toUpperCase()}${b.brand.slice(1)} ${b.last_digits}`;
+                const active = form.brand === label;
+                return (
+                  <Button
+                    key={idx}
+                    type="button"
+                    variant={active ? "default" : "outline"}
+                    size="sm"
+                    className="h-8 text-[10px] uppercase font-bold tracking-wider"
+                    onClick={() => setForm({ ...form, brand: label })}
+                  >
+                    {label}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
       <RefundHelper amount={Number(form.total_amount)} rawAmount={form.total_amount} selectedCategoryId={form.category_id} cats={cats} person={form.person} purchaseDate={form.purchase_date} card={cards.find((c: any) => c.id === form.card_id)} onPick={(id) => setForm({ ...form, category_id: id })} />
       <Button type="submit" disabled={saving || (splitMode && splitPeople.length < 2)} className="w-full">{saving ? "Salvando…" : "Salvar compra"}</Button>
     </form>
