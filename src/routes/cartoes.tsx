@@ -1532,6 +1532,7 @@ function EditPurchaseForm({ purchase, cats, onDone }: any) {
 }
 
 function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: any }) {
+  const { data: cards = [] } = useCards();
   const [form, setForm] = useState({
     name: initialData?.name ?? "",
     bank: initialData?.bank ?? "",
