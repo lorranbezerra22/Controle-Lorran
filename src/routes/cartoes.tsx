@@ -245,7 +245,7 @@ function CartoesPage() {
   }, [people]);
 
   const totals = useMemo(() => {
-    const map: Record<string, { fatura: number; restante: number; brandTotals: Record<string, number> }> = {};
+    const map: Record<string, { fatura: number; restante: number; brandTotals: Record<string, { fatura: number; restante: number }> }> = {};
     const isFamilia = (s: string) => (s || "").toLowerCase().trim() === "familia";
 
     monthInst.forEach((i: any) => {
