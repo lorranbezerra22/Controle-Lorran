@@ -485,11 +485,14 @@ function CartoesPage() {
                   </div>
                   <div className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-medium opacity-80">
                     {c.bank ? `${findBank(c.bank).name} • ` : ""}
-                    {c.metadata?.brand && <span className="capitalize">{c.metadata.brand} </span>}
-                    {c.last_digits && `•••• ${c.last_digits} • `}
-                    {c.metadata?.brands?.length > 0 && c.metadata.brands.map((b: any, bi: number) => (
-                      <span key={bi} className="capitalize">{b.brand} • {b.last_digits} • </span>
-                    ))}
+                    {c.metadata?.brands?.length > 0 ? (
+                      <span>{c.metadata.brands.length} Bandeiras • </span>
+                    ) : (
+                      <>
+                        {c.metadata?.brand && <span className="capitalize">{c.metadata.brand} </span>}
+                        {c.last_digits && `•••• ${c.last_digits} • `}
+                      </>
+                    )}
                     F. {c.closing_day} • V. {c.due_day}
                   </div>
 
