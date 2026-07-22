@@ -452,19 +452,19 @@ function CartoesPage() {
               style={{ background: "var(--gradient-card)", boxShadow: "var(--shadow-elegant)" }} 
               onClick={() => setEditingCard(c)}
             >
-              <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-4 z-10">
+              <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-background/95 to-transparent backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2 z-10">
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  className="rounded-full shadow-lg border-primary/20 hover:bg-primary hover:text-white transition-all transform translate-y-2 group-hover:translate-y-0 duration-300"
+                  className="h-7 px-2.5 rounded-lg border-primary/20 hover:bg-primary hover:text-white text-[10px] font-bold uppercase transition-all shadow-sm"
                   onClick={(e) => { e.stopPropagation(); setEditingCard(c); }}
                 >
-                  <Pencil className="w-4 h-4 mr-1.5" /> Editar
+                  <Pencil className="w-3 h-3 mr-1" /> Editar
                 </Button>
                 <Button 
                   size="sm" 
                   variant="destructive" 
-                  className="rounded-full shadow-lg hover:bg-destructive transition-all transform translate-y-2 group-hover:translate-y-0 duration-300 delay-[50ms]"
+                  className="h-7 px-2.5 rounded-lg text-[10px] font-bold uppercase transition-all shadow-sm"
                   onClick={(e) => { 
                     e.stopPropagation(); 
                     if (confirm(`Deseja realmente excluir o cartão ${c.name}?`)) {
@@ -475,7 +475,7 @@ function CartoesPage() {
                     }
                   }}
                 >
-                  <Trash2 className="w-4 h-4 mr-1.5" /> Excluir
+                  <Trash2 className="w-3 h-3 mr-1" /> Excluir
                 </Button>
               </div>
               <div className="flex items-start justify-between mb-4">
@@ -483,17 +483,17 @@ function CartoesPage() {
                   <div className="flex items-center gap-2">
                     <div className="font-semibold text-lg truncate">{c.name}</div>
                   </div>
-                  <div className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-medium opacity-80">
+                  <div className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-medium opacity-80 leading-tight">
                     {c.bank ? `${findBank(c.bank).name} • ` : ""}
                     {c.metadata?.brands?.length > 0 ? (
-                      <span>{c.metadata.brands.length} Bandeiras • </span>
+                      <span className="text-primary/70 font-bold">{c.metadata.brands.length} Bandeiras</span>
                     ) : (
                       <>
                         {c.metadata?.brand && <span className="capitalize">{c.metadata.brand} </span>}
-                        {c.last_digits && `•••• ${c.last_digits} • `}
+                        {c.last_digits && `•••• ${c.last_digits}`}
                       </>
                     )}
-                    F. {c.closing_day} • V. {c.due_day}
+                    <div className="mt-0.5 opacity-60">F. {c.closing_day} • V. {c.due_day}</div>
                   </div>
 
                 </div>
@@ -1673,14 +1673,14 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
           </div>
         </div>
       ) : (
-        <div className="space-y-3 p-3 border rounded-lg bg-muted/30 animate-in fade-in slide-in-from-top-1 duration-200">
-          <div className="flex items-center justify-between mb-2">
-            <Label className="text-xs font-bold uppercase">Bandeiras do Combo</Label>
+        <div className="space-y-3 p-3 border rounded-lg bg-muted/20 border-border/40 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="flex items-center justify-between">
+            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Bandeiras do Combo</Label>
             <Button 
               type="button" 
               variant="outline" 
               size="sm" 
-              className="h-7 text-[10px]"
+              className="h-7 text-[10px] font-bold border-primary/20 hover:bg-primary hover:text-white"
               onClick={() => setForm({ ...form, brands: [...form.brands, { brand: "visa", last_digits: "" }] })}
             >
               <Plus className="w-3 h-3 mr-1" /> Add Bandeira
@@ -1688,9 +1688,19 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
           </div>
           
           {form.brands.map((b: any, idx: number) => (
-            <div key={idx} className="grid grid-cols-[1fr,1fr,auto] gap-2 items-end">
+            <div key={idx} className="relative p-2.5 border border-border/50 rounded-lg bg-background/50 space-y-2.5 group/brand">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="icon" 
+                className="absolute top-1 right-1 h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover/brand:opacity-100 transition-opacity"
+                onClick={() => setForm({ ...form, brands: form.brands.filter((_: any, i: number) => i !== idx) })}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+
               <div className="space-y-1">
-                <Label className="text-[10px]">Bandeira</Label>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Bandeira</Label>
                 <Select 
                   value={b.brand} 
                   onValueChange={(v) => {
@@ -1699,7 +1709,7 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
                     setForm({ ...form, brands: next });
                   }}
                 >
-                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-9 text-xs bg-background"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="visa">Visa</SelectItem>
                     <SelectItem value="mastercard">Mastercard</SelectItem>
@@ -1708,12 +1718,13 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="space-y-1">
-                <Label className="text-[10px]">Dígitos</Label>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Dígitos</Label>
                 <Input 
-                  className="h-8 text-xs" 
+                  className="h-9 text-xs bg-background" 
                   maxLength={4} 
-                  placeholder="1234" 
+                  placeholder="Últimos 4 dígitos" 
                   value={b.last_digits} 
                   onChange={e => {
                     const next = [...form.brands];
@@ -1722,15 +1733,6 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
                   }} 
                 />
               </div>
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8 text-destructive"
-                onClick={() => setForm({ ...form, brands: form.brands.filter((_: any, i: number) => i !== idx) })}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
             </div>
           ))}
           {form.brands.length === 0 && (
