@@ -769,6 +769,8 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
       if (isEdit) {
         const { error } = await supabase.from("transacoes").update(payload).eq("id", initial.id);
         if (error) throw error;
+        invalidate("accounts");
+        invalidate("transactions");
         // Propaga alterações para os lançamentos fixos relacionados (mantendo o offset mensal)
         if (initial.is_fixed) {
           let q = supabase.from("transacoes").select("id, due_at").eq("status", "pending");
@@ -813,6 +815,8 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
           });
           const { error } = await supabase.from("transacoes").insert(rows);
           if (error) throw error;
+          invalidate("accounts");
+          invalidate("transactions");
           toast.success(`Lançamento fixo criado para 12 meses`);
         } else if (installments > 1) {
           const base = new Date(form.due_at + "T00:00:00");
@@ -837,6 +841,8 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
           });
           const { error } = await supabase.from("transacoes").insert(rows);
           if (error) throw error;
+          invalidate("accounts");
+          invalidate("transactions");
           toast.success(`Parcelado em ${installments}x`);
         } else if (splitMode && splitPeople.length >= 2) {
           const total = Number(form.amount);
@@ -858,11 +864,14 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
           }));
           const { error } = await supabase.from("transacoes").insert(rows);
           if (error) throw error;
+          invalidate("accounts");
+          invalidate("transactions");
           toast.success(`Dividido entre ${splitPeople.length} pessoas`);
         } else {
           const { error } = await supabase.from("transacoes").insert({ ...payload, user_id: user!.id });
           if (error) throw error;
           invalidate("accounts");
+          invalidate("transactions");
         }
       }
       onDone();
