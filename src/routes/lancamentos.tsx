@@ -874,8 +874,6 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
           invalidate("transactions");
         }
       }
-      invalidate("accounts");
-      invalidate("transactions");
       onDone();
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); submittingRef.current = false; }
   };
