@@ -537,7 +537,7 @@ function Dashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as pessoas</SelectItem>
-                  {people.map((p: any) => (
+                  {[...people].sort((a: any, b: any) => a.name.localeCompare(b.name, "pt-BR")).map((p: any) => (
                     <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -551,7 +551,7 @@ function Dashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Adicionar pessoa</SelectItem>
-                  {people.map((p: any) => (
+                  {[...people].sort((a: any, b: any) => a.name.localeCompare(b.name, "pt-BR")).map((p: any) => (
                     <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
