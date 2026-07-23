@@ -862,6 +862,8 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
           }));
           const { error } = await supabase.from("transacoes").insert(rows);
           if (error) throw error;
+          invalidate("accounts");
+          invalidate("transactions");
           toast.success(`Dividido entre ${splitPeople.length} pessoas`);
         } else {
           const { error } = await supabase.from("transacoes").insert({ ...payload, user_id: user!.id });
