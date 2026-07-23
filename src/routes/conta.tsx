@@ -593,7 +593,7 @@ function AccountForm({ initial, onDone }: { initial?: any; onDone: () => void })
         <Label>Nome da Conta / Identificação</Label>
         <Input value={accountName} onChange={(e) => setAccountName(e.target.value)} required placeholder="Ex: Corrente, Reserva Lorran, Tayane Principal..." />
       </div>
-      {!initial && (
+      {false && (
         <div className="space-y-1.5">
           <Label>Saldo Inicial</Label>
           <Input type="number" step="0.01" value={balance} onChange={(e) => setBalance(e.target.value)} required placeholder="0.00" />
