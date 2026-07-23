@@ -593,10 +593,13 @@ function AccountForm({ initial, onDone }: { initial?: any; onDone: () => void })
         <Label>Nome da Conta / Identificação</Label>
         <Input value={accountName} onChange={(e) => setAccountName(e.target.value)} required placeholder="Ex: Corrente, Reserva Lorran, Tayane Principal..." />
       </div>
-      <div className="space-y-1.5">
-        <Label>Saldo Atual</Label>
-        <Input type="number" step="0.01" value={balance} onChange={(e) => setBalance(e.target.value)} required placeholder="0.00" />
-      </div>
+      {!initial && (
+        <div className="space-y-1.5">
+          <Label>Saldo Inicial</Label>
+          <Input type="number" step="0.01" value={balance} onChange={(e) => setBalance(e.target.value)} required placeholder="0.00" />
+          <p className="text-[10px] text-muted-foreground">O saldo deve ser ajustado exclusivamente via Lançamentos ou Cartões após o cadastro.</p>
+        </div>
+      )}
       <Button type="submit" className="w-full" disabled={saving}>
         {saving ? "Salvando..." : initial ? "Salvar Alterações" : "Cadastrar Conta"}
       </Button>
