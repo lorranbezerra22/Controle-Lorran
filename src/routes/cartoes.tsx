@@ -437,8 +437,7 @@ function CartoesPage() {
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {cards.map((c: any, idx: number) => {
-          const subcardIds: string[] = [];
-          const allRelevantIds = [c.id, ...subcardIds];
+          const allRelevantIds = [c.id];
           const usado = inst.filter((i: any) => allRelevantIds.includes(i.card_id) && i.status === "pending").reduce((s: number, i: any) => s + Number(i.amount), 0);
           const pct = c.credit_limit > 0 ? Math.min(100, (usado / Number(c.credit_limit)) * 100) : 0;
           return (
@@ -1271,24 +1270,6 @@ function PurchaseForm({ cards, cats, onDone }: any) {
           </div>
         </button>
 
-        <button
-          type="button"
-          className="flex-1 flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-sm transition-all border-border bg-muted/20 hover:bg-muted/40 opacity-50 cursor-not-allowed"
-          title="Funcionalidade em desenvolvimento"
-        >
-          <span className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-muted text-muted-foreground">
-              <CreditCard className="w-4 h-4" />
-            </div>
-            <span className="flex flex-col items-start text-left">
-              <span className="font-medium text-xs">Sub-Cartões</span>
-              <span className="text-[10px] text-muted-foreground">Vincular gastos</span>
-            </span>
-          </span>
-          <div className="w-9 h-5 rounded-full p-0.5 bg-muted-foreground/30">
-            <div className="w-4 h-4 rounded-full bg-background shadow" />
-          </div>
-        </button>
       </div>
       {splitMode && (
         <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="space-y-2 rounded-xl border border-border bg-gradient-to-br from-muted/30 to-transparent p-2.5">
