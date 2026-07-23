@@ -493,7 +493,7 @@ function YieldForm({ accountId, initial, onDone }: { accountId: string; initial?
       const payload = {
         account_id: accountId,
         amount: inputAmount,
-        date: date,
+        date: date, // 'date' is a string in YYYY-MM-DD format from DatePicker/format, which PostgREST handles for DATE columns
       };
 
       if (yieldId) {
