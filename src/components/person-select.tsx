@@ -40,7 +40,7 @@ export function PersonSelect({
     if (n.toLowerCase().trim() === "familia") return;
     names.add(n);
   });
-  const list = Array.from(names);
+  const list = Array.from(names).sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
 
   if (multiSelect) {
     return (
