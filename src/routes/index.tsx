@@ -19,7 +19,6 @@ import { PageHeader } from "@/components/PageHeader";
 import { NotificationBell } from "@/components/NotificationBell";
 import { LayoutDashboard } from "lucide-react";
 
-
 export const Route = createFileRoute("/")({
   component: () => <ProtectedShell><Dashboard /></ProtectedShell>,
   head: () => ({ meta: [{ title: "Dashboard — Gestão Família" }] }),
