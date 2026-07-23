@@ -769,6 +769,8 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
       if (isEdit) {
         const { error } = await supabase.from("transacoes").update(payload).eq("id", initial.id);
         if (error) throw error;
+        invalidate("accounts");
+        invalidate("transactions");
         // Propaga alterações para os lançamentos fixos relacionados (mantendo o offset mensal)
         if (initial.is_fixed) {
           let q = supabase.from("transacoes").select("id, due_at").eq("status", "pending");
