@@ -115,8 +115,7 @@ function Dashboard() {
       defaultsApplied.current = true;
       return;
     }
-    const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    const find = (target: string) => people.find((p: any) => norm(p.name) === norm(target))?.name;
+    const find = (target: string) => people.find((p: any) => p.name.localeCompare(target, "pt-BR", { sensitivity: "base" }) === 0)?.name;
     const lor = find("Lorran"); if (lor) setPersonFilter(lor);
     defaultsApplied.current = true;
   }, [people]);
@@ -538,7 +537,7 @@ function Dashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as pessoas</SelectItem>
-                  {people.map((p: any) => (
+                  {[...people].sort((a: any, b: any) => a.name.localeCompare(b.name, "pt-BR")).map((p: any) => (
                     <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -552,7 +551,7 @@ function Dashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Adicionar pessoa</SelectItem>
-                  {people.map((p: any) => (
+                  {[...people].sort((a: any, b: any) => a.name.localeCompare(b.name, "pt-BR")).map((p: any) => (
                     <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>

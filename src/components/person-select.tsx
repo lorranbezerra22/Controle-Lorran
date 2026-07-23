@@ -30,17 +30,17 @@ export function PersonSelect({
     if (!p?.name) return;
     // Se a pessoa for "Familia" ou "Família", não adicionamos aqui 
     // porque ela será adicionada manualmente com a capitalização correta abaixo
-    if (p.name.toLowerCase().trim() === "familia") return;
+    if (p.name.localeCompare("familia", "pt-BR", { sensitivity: "base" }) === 0) return;
     names.add(p.name);
   });
   
   if (includeFamilia) names.add("Familia");
   extras.forEach((n) => {
     if (!n) return;
-    if (n.toLowerCase().trim() === "familia") return;
+    if (n.localeCompare("familia", "pt-BR", { sensitivity: "base" }) === 0) return;
     names.add(n);
   });
-  const list = Array.from(names);
+  const list = Array.from(names).sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
 
   if (multiSelect) {
     return (

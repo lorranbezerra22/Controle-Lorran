@@ -158,7 +158,7 @@ function LancamentosPage() {
 
   const personOptions = useMemo(() => {
     // Retorna apenas as pessoas cadastradas no sistema
-    return people.map((p: any) => p.name).sort();
+    return people.map((p: any) => p.name).sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [people]);
 
   const filtered = tx.filter((t: any) => {

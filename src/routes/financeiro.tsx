@@ -288,7 +288,7 @@ function FinanceiroPage() {
                 <SelectTrigger className={personFilter !== "all" ? active : ""}><SelectValue placeholder="Pessoa" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas pessoas</SelectItem>
-                  {people.map((p: any) => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}
+                  {[...people].sort((a: any, b: any) => a.name.localeCompare(b.name, "pt-BR")).map((p: any) => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>

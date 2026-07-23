@@ -154,7 +154,7 @@ function PeopleListSection() {
         <div className="p-6 text-center text-sm text-muted-foreground">Nenhuma pessoa cadastrada. Use "Nova pessoa" para começar.</div>
       ) : (
         <ul className="divide-y divide-border">
-          {people.map((p: any) => (
+          {[...people].sort((a: any, b: any) => a.name.localeCompare(b.name, "pt-BR")).map((p: any) => (
             <li key={p.id} className="p-3 flex items-center gap-3 hover:bg-muted/20">
               <span className="w-3 h-3 rounded-full" style={{ background: p.color || personColor(p.name) }} />
               <div className="flex-1 min-w-0">
@@ -420,7 +420,7 @@ function PeopleReportSection() {
     // Lorran e Tayane já devem estar no cadastro para aparecerem aqui.
     // "Familia" é uma constante especial que tratamos separadamente no relatório se necessário.
     const names = new Set(people.map((p: any) => p.name));
-    return Array.from(names).sort();
+    return Array.from(names).sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [people]);
 
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i);
