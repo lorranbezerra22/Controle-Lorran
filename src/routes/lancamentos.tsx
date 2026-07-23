@@ -921,7 +921,7 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
               </SelectContent>
             </Select>
             <p className="text-[10px] text-muted-foreground">
-              {form.person === "Familia" ? "Se não selecionar, usará a conta do Lorran por padrão." : "Se não selecionar, usará a conta do Lorran por padrão."}
+              Toda movimentação de saldo deve ser feita via Lançamentos ou Cartões.
             </p>
           </div>
 
