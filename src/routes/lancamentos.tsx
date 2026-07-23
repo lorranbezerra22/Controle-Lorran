@@ -863,8 +863,11 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
           const { error } = await supabase.from("transacoes").insert({ ...payload, user_id: user!.id });
           if (error) throw error;
           invalidate("accounts");
+          invalidate("transactions");
         }
       }
+      invalidate("accounts");
+      invalidate("transactions");
       onDone();
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); submittingRef.current = false; }
   };
