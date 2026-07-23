@@ -685,6 +685,7 @@ function LancamentosPage() {
   );
 }
 
+const normStr = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
@@ -737,17 +738,18 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
       // Em edições, preservar exatamente o que o usuário escolheu (ou o valor original),
       // sem trocar a conta silenciosamente — isso evita que o gatilho de saldo credite/debite
       // contas silenciosamente ao editar campos não financeiros (ex.: categoria).
-      const normStr = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
       const lorranFallback = accounts.find((a: any) => normStr(a.account_name || "") === "lorran")?.id
         || accounts.find((a: any) => (a.bank || "").toLowerCase().includes("revolut"))?.id
         || accounts.find((a: any) => (a.bank || "").toLowerCase().includes("nubank"))?.id
         || accounts[0]?.id || null;
       const mercadoFallback = accounts.find((a: any) => normStr(a.account_name || "") === "tayane")?.id
         || accounts.find((a: any) => (a.bank || "").toLowerCase().includes("mercado"))?.id || null;
+      
+      const isFamily = normStr(form.person || "") === "familia";
       const resolvedAccountId = form.status === "paid"
         ? (form.accountId || initial?.account_id || (isEdit ? null : lorranFallback))
         : null;
-      const isFamilyExpense = form.status === "paid" && form.person === "Família" && form.kind === "expense";
+      const isFamilyExpense = form.status === "paid" && isFamily && form.kind === "expense";
       const resolvedTayaneId = isFamilyExpense
         ? (form.accountTayaneId || initial?.account_tayane_id || (isEdit ? null : mercadoFallback))
         : null;
@@ -907,7 +909,7 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
       {form.status === "paid" && (
         <div className="space-y-3 p-3 rounded-lg bg-muted/30 border border-border/50">
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">{form.kind === "expense" && form.person === "Família" ? "Conta do Lorran (50%)" : "Qual conta bancária?"}</Label>
+            <Label className="text-xs font-semibold">{form.kind === "expense" && normStr(form.person) === "familia" ? "Conta do Lorran (50%)" : "Qual conta bancária?"}</Label>
             <Select value={form.accountId} onValueChange={(v) => setForm({ ...form, accountId: v })}>
               <SelectTrigger className="h-12 bg-background [&>span]:line-clamp-none">
                 <AccountSelectValue account={selectedAccount} />
@@ -919,11 +921,11 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
               </SelectContent>
             </Select>
             <p className="text-[10px] text-muted-foreground">
-              {form.person === "Família" ? "Se não selecionar, usará a conta do Lorran por padrão." : "Se não selecionar, usará a conta do Lorran por padrão."}
+              {form.person === "Familia" ? "Se não selecionar, usará a conta do Lorran por padrão." : "Se não selecionar, usará a conta do Lorran por padrão."}
             </p>
           </div>
 
-          {form.kind === "expense" && form.person === "Família" && (
+          {form.kind === "expense" && normStr(form.person) === "familia" && (
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Conta da Tayane (50%)</Label>
               <Select value={form.accountTayaneId} onValueChange={(v) => setForm({ ...form, accountTayaneId: v })}>
