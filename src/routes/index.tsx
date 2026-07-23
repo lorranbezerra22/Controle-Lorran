@@ -115,8 +115,7 @@ function Dashboard() {
       defaultsApplied.current = true;
       return;
     }
-    const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    const find = (target: string) => people.find((p: any) => norm(p.name) === norm(target))?.name;
+    const find = (target: string) => people.find((p: any) => p.name.localeCompare(target, "pt-BR", { sensitivity: "base" }) === 0)?.name;
     const lor = find("Lorran"); if (lor) setPersonFilter(lor);
     defaultsApplied.current = true;
   }, [people]);
