@@ -1,0 +1,1 @@
+UPDATE public.contas SET balance = 2887.64 WHERE id = 'fc79ad15-874f-4821-a12a-73931fcfbef3';
