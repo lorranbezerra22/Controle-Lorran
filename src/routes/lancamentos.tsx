@@ -685,6 +685,7 @@ function LancamentosPage() {
   );
 }
 
+const normStr = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
@@ -737,7 +738,6 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
       // Em edições, preservar exatamente o que o usuário escolheu (ou o valor original),
       // sem trocar a conta silenciosamente — isso evita que o gatilho de saldo credite/debite
       // contas silenciosamente ao editar campos não financeiros (ex.: categoria).
-      const normStr = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
       const lorranFallback = accounts.find((a: any) => normStr(a.account_name || "") === "lorran")?.id
         || accounts.find((a: any) => (a.bank || "").toLowerCase().includes("revolut"))?.id
         || accounts.find((a: any) => (a.bank || "").toLowerCase().includes("nubank"))?.id
