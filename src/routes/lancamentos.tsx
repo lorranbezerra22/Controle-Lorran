@@ -813,6 +813,8 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
           });
           const { error } = await supabase.from("transacoes").insert(rows);
           if (error) throw error;
+          invalidate("accounts");
+          invalidate("transactions");
           toast.success(`Lançamento fixo criado para 12 meses`);
         } else if (installments > 1) {
           const base = new Date(form.due_at + "T00:00:00");
