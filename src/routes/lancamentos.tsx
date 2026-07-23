@@ -839,6 +839,8 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
           });
           const { error } = await supabase.from("transacoes").insert(rows);
           if (error) throw error;
+          invalidate("accounts");
+          invalidate("transactions");
           toast.success(`Parcelado em ${installments}x`);
         } else if (splitMode && splitPeople.length >= 2) {
           const total = Number(form.amount);
