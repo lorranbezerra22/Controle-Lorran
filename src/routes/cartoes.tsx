@@ -160,6 +160,7 @@ function CartoesPage() {
   const [personFilter, _setPersonFilter] = useState<string>(() => lsGet("personFilter", "all"));
   const [personFilter2, _setPersonFilter2] = useState<string>(() => lsGet("personFilter2", "all"));
   const [cardFilter, _setCardFilter] = useState<string>(() => lsGet("cardFilter", "all"));
+  const [brandFilter, _setBrandFilter] = useState<string>(() => lsGet("brandFilter", "all"));
   const [categoryFilter, _setCategoryFilter] = useState<string>(() => lsGet("categoryFilter", "all"));
   const [statusFilter, _setStatusFilter] = useState<"all" | "paid" | "pending">(() => (lsGet("statusFilter", "all") as any));
   const [purchaseFrom, _setPurchaseFrom] = useState<string>(() => lsGet("purchaseFrom", ""));
@@ -168,6 +169,7 @@ function CartoesPage() {
   const setPersonFilter2 = (v: string) => { _setPersonFilter2(v); lsSet("personFilter2", v); };
 
   const setCardFilter = (v: string) => { _setCardFilter(v); lsSet("cardFilter", v); };
+  const setBrandFilter = (v: string) => { _setBrandFilter(v); lsSet("brandFilter", v); };
   const setCategoryFilter = (v: string) => { _setCategoryFilter(v); lsSet("categoryFilter", v); };
   const setStatusFilter = (v: "all" | "paid" | "pending") => { _setStatusFilter(v); lsSet("statusFilter", v); };
   const setPurchaseFrom = (v: string) => { _setPurchaseFrom(v); lsSet("purchaseFrom", v); };
@@ -209,6 +211,7 @@ function CartoesPage() {
       const d = new Date(i.due_at + "T00:00:00");
       if (d.getFullYear() !== year || d.getMonth() !== monthN - 1) return false;
       if (cardFilter !== "all" && i.card_id !== cardFilter) return false;
+      if (brandFilter !== "all" && i.cartao_compras?.brand !== brandFilter) return false;
       if (categoryFilter !== "all" && i.cartao_compras?.category_id !== categoryFilter) return false;
       const payment = getInstallmentPaymentState(i);
       if (statusFilter === "paid" && !payment.hasPaid) return false;
@@ -596,6 +599,27 @@ function CartoesPage() {
                 </SelectContent>
               </Select>
             </Field>
+            {cardFilter !== "all" && (() => {
+              const card = cards.find((c: any) => c.id === cardFilter);
+              const brands = card?.metadata?.brands || [];
+              if (brands.length <= 1) return null;
+              return (
+                <Field label="Bandeira">
+                  <Select value={brandFilter} onValueChange={setBrandFilter}>
+                    <SelectTrigger className={`w-auto min-w-[140px] h-10 rounded-xl transition-all shadow-sm ${brandFilter !== "all" ? "border-gold/50 ring-2 ring-gold/20 bg-gold/5 font-medium" : "border-border text-muted-foreground"}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas bandeiras</SelectItem>
+                      {brands.map((b: any, bi: number) => {
+                        const label = `${b.brand.charAt(0).toUpperCase()}${b.brand.slice(1)} ${b.last_digits}`;
+                        return <SelectItem key={bi} value={label}>{label}</SelectItem>;
+                      })}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              );
+            })()}
             <Field label="Categoria">
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className={`w-auto min-w-[140px] ${categoryFilter !== "all" ? activeCls : ""}`}><SelectValue /></SelectTrigger>
