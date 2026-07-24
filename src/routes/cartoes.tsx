@@ -601,7 +601,8 @@ function CartoesPage() {
             </Field>
             {cardFilter !== "all" && (() => {
               const card = cards.find((c: any) => c.id === cardFilter);
-              const brands = card?.metadata?.brands || [];
+              const metadata = card?.metadata as { brands?: any[] } | undefined;
+              const brands = metadata?.brands || [];
               if (brands.length <= 1) return null;
               return (
                 <Field label="Bandeira">
