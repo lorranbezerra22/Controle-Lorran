@@ -231,7 +231,7 @@ function CartoesPage() {
       if (dateA < dateB) return 1;
       return 0;
     });
-  }, [inst, year, monthN, personFilter, personFilter2, cardFilter, categoryFilter, statusFilter, purchaseFrom, purchaseTo]);
+  }, [inst, year, monthN, personFilter, personFilter2, cardFilter, brandFilter, categoryFilter, statusFilter, purchaseFrom, purchaseTo]);
 
   useEffect(() => {
     const handleOpen = (e: any) => {
