@@ -832,8 +832,8 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
             kind: payload.kind,
             category_id: payload.category_id || null,
             person: payload.person,
-            frequency: 'monthly',
-            active: false // Regra de parcelamento não precisa ser processada pelo gerador automático
+            day_of_month: base.getDate(),
+            active: false
           }).select().single();
 
           if (ruleErr) throw ruleErr;
