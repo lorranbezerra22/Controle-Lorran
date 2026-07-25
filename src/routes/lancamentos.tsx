@@ -822,8 +822,22 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
           toast.success(`Lançamento fixo criado para 12 meses`);
         } else if (installments > 1) {
           const base = new Date(form.due_at + "T00:00:00");
-          const ruleId = crypto.randomUUID();
           const total = Number(form.amount);
+          
+          // 1. Criar a regra recorrente para satisfazer a FK rule_id
+          const { data: rule, error: ruleErr } = await supabase.from("regras_recorrentes").insert({
+            user_id: user!.id,
+            description: payload.description,
+            amount: total,
+            kind: payload.kind,
+            category_id: payload.category_id || null,
+            person: payload.person,
+            frequency: 'monthly',
+            active: false // Regra de parcelamento não precisa ser processada pelo gerador automático
+          }).select().single();
+
+          if (ruleErr) throw ruleErr;
+
           const per = Math.round((total / installments) * 100) / 100;
           const lastAdj = Math.round((total - per * (installments - 1)) * 100) / 100;
           const rows = Array.from({ length: installments }, (_, k) => {
@@ -837,7 +851,7 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
               posted_at: iso,
               status: "pending",
               is_fixed: true,
-              rule_id: ruleId,
+              rule_id: rule.id,
               user_id: user!.id,
             };
           });
