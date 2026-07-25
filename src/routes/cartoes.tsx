@@ -1303,7 +1303,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
             value=""
             selectedValues={splitPeople} 
             onChange={(v) => setSplitPeople(v ? v.split(",") : [])}
-            includeFamilia={false}
+            includeFamilia={true}
           />
 
 
