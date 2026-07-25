@@ -808,12 +808,28 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
         const { data: { user } } = await supabase.auth.getUser();
         const installments = Math.max(1, Math.min(60, Number(form.installments) || 1));
         if (form.is_fixed) {
-          // Replica para 12 meses (mês atual + 11 seguintes)
           const base = new Date(form.due_at + "T00:00:00");
+          
+          // Criar a regra recorrente para que o gerador automático possa processar meses futuros
+          // e para satisfazer a FK rule_id
+          const { data: rule, error: ruleErr } = await supabase.from("regras_recorrentes").insert({
+            user_id: user!.id,
+            description: payload.description,
+            amount: Number(form.amount),
+            kind: payload.kind,
+            category_id: payload.category_id || null,
+            person: payload.person,
+            day_of_month: base.getDate(),
+            active: true
+          }).select().single();
+
+          if (ruleErr) throw ruleErr;
+
+          // Replica para 12 meses iniciais (mês atual + 11 seguintes)
           const rows = Array.from({ length: 12 }, (_, k) => {
             const d = new Date(base.getFullYear(), base.getMonth() + k, base.getDate());
             const iso = d.toISOString().slice(0, 10);
-            return { ...payload, due_at: iso, posted_at: iso, status: "pending", user_id: user!.id };
+            return { ...payload, due_at: iso, posted_at: iso, status: "pending", user_id: user!.id, rule_id: rule.id };
           });
           const { error } = await supabase.from("transacoes").insert(rows);
           if (error) throw error;
@@ -822,8 +838,22 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
           toast.success(`Lançamento fixo criado para 12 meses`);
         } else if (installments > 1) {
           const base = new Date(form.due_at + "T00:00:00");
-          const ruleId = crypto.randomUUID();
           const total = Number(form.amount);
+          
+          // 1. Criar a regra recorrente para satisfazer a FK rule_id
+          const { data: rule, error: ruleErr } = await supabase.from("regras_recorrentes").insert({
+            user_id: user!.id,
+            description: payload.description,
+            amount: total,
+            kind: payload.kind,
+            category_id: payload.category_id || null,
+            person: payload.person,
+            day_of_month: base.getDate(),
+            active: false
+          }).select().single();
+
+          if (ruleErr) throw ruleErr;
+
           const per = Math.round((total / installments) * 100) / 100;
           const lastAdj = Math.round((total - per * (installments - 1)) * 100) / 100;
           const rows = Array.from({ length: installments }, (_, k) => {
@@ -837,7 +867,7 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
               posted_at: iso,
               status: "pending",
               is_fixed: true,
-              rule_id: ruleId,
+              rule_id: rule.id,
               user_id: user!.id,
             };
           });
