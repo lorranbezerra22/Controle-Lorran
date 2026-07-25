@@ -620,7 +620,7 @@ function LancamentosPage() {
                       value="" 
                       selectedValues={payBy ? payBy.split(",") : []} 
                       onChange={(v) => setPayBy(v)} 
-                      includeFamilia={false}
+                      includeFamilia={true}
                       extras={paying.person ? [paying.person] : []} 
                     />
                   </div>
