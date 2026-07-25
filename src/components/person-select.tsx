@@ -30,7 +30,10 @@ export function PersonSelect({
     if (!p?.name) return;
     // Se a pessoa for "Familia" ou "Família", não adicionamos aqui 
     // porque ela será adicionada manualmente com a capitalização correta abaixo
-    if (p.name.localeCompare("familia", "pt-BR", { sensitivity: "base" }) === 0) return;
+    if (p.name.localeCompare("familia", "pt-BR", { sensitivity: "base" }) === 0) {
+      names.add("Familia");
+      return;
+    }
     names.add(p.name);
   });
   
