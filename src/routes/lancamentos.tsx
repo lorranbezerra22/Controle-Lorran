@@ -620,7 +620,7 @@ function LancamentosPage() {
                       value="" 
                       selectedValues={payBy ? payBy.split(",") : []} 
                       onChange={(v) => setPayBy(v)} 
-                      includeFamilia={false}
+                      includeFamilia={true}
                       extras={paying.person ? [paying.person] : []} 
                     />
                   </div>
@@ -1057,7 +1057,7 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
                 value=""
                 selectedValues={splitPeople} 
                 onChange={(v) => setSplitPeople(v ? v.split(",") : [])}
-                includeFamilia={false}
+                includeFamilia={true}
               />
               {splitPeople.length >= 2 && (
                 <div className="flex items-center justify-between mt-1 px-1">

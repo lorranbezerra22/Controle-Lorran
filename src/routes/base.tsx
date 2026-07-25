@@ -416,11 +416,9 @@ function PeopleReportSection() {
 
 
   const peopleOptions = useMemo(() => {
-    // Filtramos apenas as pessoas cadastradas. 
-    // Lorran e Tayane já devem estar no cadastro para aparecerem aqui.
-    // "Familia" é uma constante especial que tratamos separadamente no relatório se necessário.
     const names = new Set(people.map((p: any) => p.name));
-    return Array.from(names).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    names.add("Familia");
+    return Array.from(names).sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
   }, [people]);
 
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i);
