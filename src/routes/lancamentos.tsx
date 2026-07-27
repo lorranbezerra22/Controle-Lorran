@@ -253,7 +253,7 @@ function LancamentosPage() {
       invalidate("transactions");
       invalidate("accounts");
       toast.success(
-        !payAccount
+        !payAccount && !payAccountTayane
           ? "Pago (sem débito em conta)"
           : useSplit
             ? "Pago: 50% debitado do Lorran e 50% da Tayane"
@@ -988,7 +988,7 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-[10px] text-muted-foreground">Se não selecionar, usará o Mercado Pago por padrão.</p>
+              <p className="text-[10px] text-muted-foreground">Toda movimentação de saldo deve ser feita via Lançamentos ou Cartões.</p>
             </div>
           )}
         </div>

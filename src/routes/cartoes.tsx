@@ -323,7 +323,13 @@ function CartoesPage() {
           const splits = getPaymentSplits(costPerson, amountToPay);
           const overrideSuffix = useOverride ? ` (pago por ${costPerson}, dívida de ${originalPerson})` : "";
           
-          for (const split of splits) {
+          const validSplits = splits.filter(s => {
+            const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
+            const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
+            return hasLorranAcc || hasTayaneAcc;
+          });
+
+          for (const split of validSplits) {
             // Criar transação para histórico
             await supabase.from("transacoes").insert({
               user_id: user!.id,
