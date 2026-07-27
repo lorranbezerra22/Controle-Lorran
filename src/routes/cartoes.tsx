@@ -72,9 +72,11 @@ type PaymentSplit = {
 // O trigger handle_account_balance_update divide 50/50 automaticamente.
 const buildPaymentSplits = (accounts: any[], person: string, amount: number): PaymentSplit[] => {
   const p = normalizeName(person);
+  
   if (p === "familia") {
     const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"]);
     const tayaneAcc = pickPaymentAccount(accounts, "Tayane", ["mercado pago", "mercado"]);
+    
     if (lorranAcc && tayaneAcc) {
       return [{
         accountId: lorranAcc.id,
@@ -84,15 +86,23 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number): Pa
         descriptionSuffix: " (Família 50/50)",
       }];
     }
+    
+    // Se não tiver ambas as contas para o split, retorna a única disponível 
+    // ou vazio se nenhuma existir, o que cairá na lógica de "Sem conta".
     const only = lorranAcc || tayaneAcc;
     if (only) return [{ accountId: only.id, amount, person: "Família", descriptionSuffix: "" }];
-    return [];
+    
+    return [{ accountId: "__none__", amount, person: "Família", descriptionSuffix: " (Sem débito em conta)" }];
   }
+
   const target = p === "lorran"
     ? pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"])
     : pickPaymentAccount(accounts, person, [person]);
+
   if (target) return [{ accountId: target.id, amount, person, descriptionSuffix: "" }];
-  return [];
+  
+  // Se não encontrou conta para a pessoa, retorna "Nenhuma" para apenas registrar
+  return [{ accountId: "__none__", amount, person, descriptionSuffix: " (Sem débito em conta)" }];
 };
 
 
