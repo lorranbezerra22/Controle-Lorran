@@ -961,7 +961,7 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__" className="py-2.5 font-medium text-muted-foreground italic">
-                  Sem conta (apenas registro, não debita saldo)
+                  Nenhuma (não debitar de conta)
                 </SelectItem>
                 {accounts.map((a: any) => (
                   <AccountSelectItem key={a.id} account={a} />
@@ -982,7 +982,7 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__" className="py-2.5 font-medium text-muted-foreground italic">
-                    Sem conta (apenas registro, não debita saldo)
+                    Nenhuma (não debitar de conta)
                   </SelectItem>
                   {accounts.map((a: any) => (
                     <AccountSelectItem key={a.id} account={a} />
