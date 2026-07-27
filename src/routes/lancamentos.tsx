@@ -741,10 +741,10 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
       // sem trocar a conta silenciosamente — isso evita que o gatilho de saldo credite/debite
       // contas silenciosamente ao editar campos não financeiros (ex.: categoria).
       const lorranFallback = accounts.find((a: any) => normStr(a.account_name || "").includes("lorran"))?.id
-        || accounts.find((a: any) => (a.bank || "").toLowerCase().includes("revolut"))?.id
         || accounts.find((a: any) => (a.bank || "").toLowerCase().includes("nubank"))?.id
+        || accounts.find((a: any) => (a.bank || "").toLowerCase().includes("revolut"))?.id
         || accounts[0]?.id || null;
-      const mercadoFallback = accounts.find((a: any) => normStr(a.account_name || "").includes("tayane"))?.id
+      const tayaneFallback = accounts.find((a: any) => normStr(a.account_name || "").includes("tayane"))?.id
         || accounts.find((a: any) => (a.bank || "").toLowerCase().includes("mercado"))?.id || null;
       
       const isFamily = normStr(form.person || "") === "familia";
@@ -765,7 +765,7 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
         if (form.accountTayaneId === "__none__") {
           resolvedTayaneId = null;
         } else {
-          resolvedTayaneId = form.accountTayaneId || initial?.account_tayane_id || (isEdit ? null : mercadoFallback);
+          resolvedTayaneId = form.accountTayaneId || initial?.account_tayane_id || (isEdit ? null : tayaneFallback);
         }
       }
 
