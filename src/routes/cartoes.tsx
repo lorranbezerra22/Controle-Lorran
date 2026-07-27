@@ -2184,6 +2184,12 @@ function EditPaidForm({ installment, onDone }: { installment: any, onDone: () =>
         return hasLorranAcc || hasTayaneAcc;
       });
 
+      const validSplits = splits.filter(s => {
+        const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
+        const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
+        return hasLorranAcc || hasTayaneAcc;
+      });
+
       for (const split of validSplits) {
           await supabase.from("transacoes").insert({
             user_id: user!.id,
