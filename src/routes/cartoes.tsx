@@ -360,8 +360,8 @@ function CartoesPage() {
               paid_by: useOverride ? split.person : null,
               category_id: i.cartao_compras?.category_id || "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
               card_installment_id: i.id,
-              account_id: split.accountId,
-              account_tayane_id: split.accountTayaneId || null,
+              account_id: split.accountId === "__none__" ? null : split.accountId,
+              account_tayane_id: (split.accountTayaneId && split.accountTayaneId !== "__none__") ? split.accountTayaneId : null,
               notes: notes || null,
             } as any);
 
