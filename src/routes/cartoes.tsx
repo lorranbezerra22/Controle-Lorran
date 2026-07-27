@@ -61,24 +61,27 @@ type PaymentSplit = {
   descriptionSuffix: string;
 };
 
-// Para "Família": retorna 1 registro com ambas as contas e person='Família'.
-// O trigger handle_account_balance_update divide 50/50 automaticamente.
+// Para "Família": retorna 1 registro com ambas as contas e person='Familia'.
+// O trigger update_account_balance divide 50/50 automaticamente se account_id E account_tayane_id estiverem presentes.
 const buildPaymentSplits = (accounts: any[], person: string, amount: number): PaymentSplit[] => {
   const p = normalizeName(person);
   if (p === "familia") {
     const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"]);
     const tayaneAcc = pickPaymentAccount(accounts, "Tayane", ["mercado pago", "mercado"]);
+
+    // Se temos ambas as contas, retornamos um split que usa ambas.
+    // A trigger no banco de dados cuidará de descontar 50% de cada.
     if (lorranAcc && tayaneAcc) {
       return [{
         accountId: lorranAcc.id,
         accountTayaneId: tayaneAcc.id,
         amount,
-        person: "Família",
+        person: "Familia",
         descriptionSuffix: " (Família 50/50)",
       }];
     }
     const only = lorranAcc || tayaneAcc;
-    if (only) return [{ accountId: only.id, amount, person: "Família", descriptionSuffix: "" }];
+    if (only) return [{ accountId: only.id, amount, person: "Familia", descriptionSuffix: "" }];
     return [];
   }
   const target = p === "lorran"

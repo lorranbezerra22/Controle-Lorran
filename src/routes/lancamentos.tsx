@@ -740,11 +740,11 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
       // Em edições, preservar exatamente o que o usuário escolheu (ou o valor original),
       // sem trocar a conta silenciosamente — isso evita que o gatilho de saldo credite/debite
       // contas silenciosamente ao editar campos não financeiros (ex.: categoria).
-      const lorranFallback = accounts.find((a: any) => normStr(a.account_name || "") === "lorran")?.id
+      const lorranFallback = accounts.find((a: any) => normStr(a.account_name || "").includes("lorran"))?.id
         || accounts.find((a: any) => (a.bank || "").toLowerCase().includes("revolut"))?.id
         || accounts.find((a: any) => (a.bank || "").toLowerCase().includes("nubank"))?.id
         || accounts[0]?.id || null;
-      const mercadoFallback = accounts.find((a: any) => normStr(a.account_name || "") === "tayane")?.id
+      const mercadoFallback = accounts.find((a: any) => normStr(a.account_name || "").includes("tayane"))?.id
         || accounts.find((a: any) => (a.bank || "").toLowerCase().includes("mercado"))?.id || null;
       
       const isFamily = normStr(form.person || "") === "familia";
