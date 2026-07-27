@@ -253,7 +253,7 @@ function LancamentosPage() {
       invalidate("transactions");
       invalidate("accounts");
       toast.success(
-        !payAccount && !payAccountTayane
+        (!payAccount || payAccount === "__none__") && (!payAccountTayane || payAccountTayane === "__none__")
           ? "Pago (sem débito em conta)"
           : useSplit
             ? "Pago: 50% debitado do Lorran e 50% da Tayane"
@@ -653,11 +653,12 @@ function LancamentosPage() {
                 {paying.kind === "expense" && norm(paying.person || "") === "familia" && (
                   <div className="grid gap-2">
                     <Label className="text-xs font-medium">Conta da Tayane (50%)</Label>
-                    <Select value={payAccountTayane || undefined} onValueChange={setPayAccountTayane}>
+                    <Select value={payAccountTayane ? payAccountTayane : "__none__"} onValueChange={(v) => setPayAccountTayane(v === "__none__" ? "" : v)}>
                       <SelectTrigger className="w-full h-11 rounded-xl shadow-sm border-border bg-background/50 hover:border-primary/50 transition-all">
                         <SelectValue placeholder="Selecione a conta" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="__none__" className="py-2.5">Sem conta (só registrar, não debita saldo)</SelectItem>
                         {accounts.map((a: any) => (
                           <SelectItem key={a.id} value={a.id} className="py-2.5">
                             <div className="flex items-center gap-2">
