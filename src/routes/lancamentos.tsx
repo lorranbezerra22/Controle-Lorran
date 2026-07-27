@@ -776,7 +776,7 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
         due_at: form.due_at,
         posted_at: form.posted_at,
         category_id,
-        person: form.person || null,
+        person: form.person === "Família" ? "Familia" : (form.person || null),
         is_fixed: form.is_fixed,
         status: form.status,
         account_id: resolvedAccountId,
