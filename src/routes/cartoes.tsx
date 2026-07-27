@@ -2196,8 +2196,8 @@ function EditPaidForm({ installment, onDone }: { installment: any, onDone: () =>
         const splits = buildPaymentSplits(accounts, originalPerson, Math.abs(diff));
 
       const validSplits = splits.filter(s => {
-        const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
-        const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
+        const hasLorranAcc = !!s.accountId;
+        const hasTayaneAcc = !!s.accountTayaneId;
         return hasLorranAcc || hasTayaneAcc;
       });
 
