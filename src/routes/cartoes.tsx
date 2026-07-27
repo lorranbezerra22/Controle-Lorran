@@ -36,6 +36,13 @@ const normalizeName = (s: string) => (s || "").normalize("NFD").replace(/[\u0300
 
 const pickPaymentAccount = (accounts: any[], personName: string, bankFallbacks: string[] = []) => {
   const target = normalizeName(personName);
+  
+  // Se for "Familia", priorizamos as contas específicas para Lorran/Tayane 
+  // que o trigger do banco usa para o split 50/50.
+  if (target === "familia") {
+    return undefined; // Deixa o buildPaymentSplits lidar com isso
+  }
+
   const ownAccounts = accounts
     .filter((a: any) => normalizeName(a.account_name || "") === target)
     .sort((a: any, b: any) => Number(b.balance ?? 0) - Number(a.balance ?? 0));
@@ -65,9 +72,11 @@ type PaymentSplit = {
 // O trigger handle_account_balance_update divide 50/50 automaticamente.
 const buildPaymentSplits = (accounts: any[], person: string, amount: number): PaymentSplit[] => {
   const p = normalizeName(person);
+  
   if (p === "familia") {
     const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"]);
     const tayaneAcc = pickPaymentAccount(accounts, "Tayane", ["mercado pago", "mercado"]);
+    
     if (lorranAcc && tayaneAcc) {
       return [{
         accountId: lorranAcc.id,
@@ -77,15 +86,23 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number): Pa
         descriptionSuffix: " (Família 50/50)",
       }];
     }
+    
+    // Se não tiver ambas as contas para o split, retorna a única disponível 
+    // ou vazio se nenhuma existir, o que cairá na lógica de "Sem conta".
     const only = lorranAcc || tayaneAcc;
     if (only) return [{ accountId: only.id, amount, person: "Família", descriptionSuffix: "" }];
-    return [];
+    
+    return [{ accountId: "__none__", amount, person: "Família", descriptionSuffix: " (Sem débito em conta)" }];
   }
+
   const target = p === "lorran"
     ? pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"])
     : pickPaymentAccount(accounts, person, [person]);
+
   if (target) return [{ accountId: target.id, amount, person, descriptionSuffix: "" }];
-  return [];
+  
+  // Se não encontrou conta para a pessoa, retorna "Nenhuma" para apenas registrar
+  return [{ accountId: "__none__", amount, person, descriptionSuffix: " (Sem débito em conta)" }];
 };
 
 
@@ -324,8 +341,8 @@ function CartoesPage() {
           const overrideSuffix = useOverride ? ` (pago por ${costPerson}, dívida de ${originalPerson})` : "";
           
           const validSplits = splits.filter(s => {
-            const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
-            const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
+            const hasLorranAcc = !!s.accountId;
+            const hasTayaneAcc = !!s.accountTayaneId;
             return hasLorranAcc || hasTayaneAcc;
           });
 
@@ -343,8 +360,8 @@ function CartoesPage() {
               paid_by: useOverride ? split.person : null,
               category_id: i.cartao_compras?.category_id || "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
               card_installment_id: i.id,
-              account_id: split.accountId,
-              account_tayane_id: split.accountTayaneId || null,
+              account_id: split.accountId === "__none__" ? null : split.accountId,
+              account_tayane_id: (split.accountTayaneId && split.accountTayaneId !== "__none__") ? split.accountTayaneId : null,
               notes: notes || null,
             } as any);
 
@@ -1798,8 +1815,8 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
       const splits = buildPaymentSplits(accounts, costPerson, amountToPay);
 
           const validSplits = splits.filter(s => {
-            const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
-            const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
+            const hasLorranAcc = !!s.accountId;
+            const hasTayaneAcc = !!s.accountTayaneId;
             return hasLorranAcc || hasTayaneAcc;
           });
 
@@ -1817,8 +1834,8 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
           paid_by: overrideActive ? split.person : null,
           category_id: "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
           card_installment_id: installment.id,
-          account_id: split.accountId,
-          account_tayane_id: split.accountTayaneId || null,
+          account_id: split.accountId === "__none__" ? null : split.accountId,
+          account_tayane_id: (split.accountTayaneId && split.accountTayaneId !== "__none__") ? split.accountTayaneId : null,
           notes: notes || null,
         } as any);
 
@@ -2179,8 +2196,8 @@ function EditPaidForm({ installment, onDone }: { installment: any, onDone: () =>
         const splits = buildPaymentSplits(accounts, originalPerson, Math.abs(diff));
 
       const validSplits = splits.filter(s => {
-        const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
-        const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
+        const hasLorranAcc = !!s.accountId;
+        const hasTayaneAcc = !!s.accountTayaneId;
         return hasLorranAcc || hasTayaneAcc;
       });
 
@@ -2196,8 +2213,8 @@ function EditPaidForm({ installment, onDone }: { installment: any, onDone: () =>
             person: split.person,
             category_id: "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
             card_installment_id: installment.id,
-            account_id: split.accountId,
-            account_tayane_id: split.accountTayaneId || null,
+            account_id: split.accountId === "__none__" ? null : split.accountId,
+            account_tayane_id: (split.accountTayaneId && split.accountTayaneId !== "__none__") ? split.accountTayaneId : null,
           } as any);
         }
       }
