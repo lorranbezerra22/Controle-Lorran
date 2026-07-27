@@ -37,7 +37,7 @@ const normalizeName = (s: string) => (s || "").normalize("NFD").replace(/[\u0300
 const pickPaymentAccount = (accounts: any[], personName: string, bankFallbacks: string[] = []) => {
   const target = normalizeName(personName);
   const ownAccounts = accounts
-    .filter((a: any) => normalizeName(a.account_name || "") === target)
+    .filter((a: any) => normalizeName(a.account_name || "").includes(target))
     .sort((a: any, b: any) => Number(b.balance ?? 0) - Number(a.balance ?? 0));
 
   if (ownAccounts.length > 0) return ownAccounts[0];
@@ -61,24 +61,27 @@ type PaymentSplit = {
   descriptionSuffix: string;
 };
 
-// Para "Família": retorna 1 registro com ambas as contas e person='Família'.
-// O trigger handle_account_balance_update divide 50/50 automaticamente.
+// Para "Família": retorna 1 registro com ambas as contas e person='Familia'.
+// O trigger update_account_balance divide 50/50 automaticamente se account_id E account_tayane_id estiverem presentes.
 const buildPaymentSplits = (accounts: any[], person: string, amount: number): PaymentSplit[] => {
   const p = normalizeName(person);
   if (p === "familia") {
     const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"]);
     const tayaneAcc = pickPaymentAccount(accounts, "Tayane", ["mercado pago", "mercado"]);
+
+    // Se temos ambas as contas, retornamos um split que usa ambas.
+    // A trigger no banco de dados cuidará de descontar 50% de cada.
     if (lorranAcc && tayaneAcc) {
       return [{
         accountId: lorranAcc.id,
         accountTayaneId: tayaneAcc.id,
         amount,
-        person: "Família",
+        person: "Familia",
         descriptionSuffix: " (Família 50/50)",
       }];
     }
     const only = lorranAcc || tayaneAcc;
-    if (only) return [{ accountId: only.id, amount, person: "Família", descriptionSuffix: "" }];
+    if (only) return [{ accountId: only.id, amount, person: "Familia", descriptionSuffix: "" }];
     return [];
   }
   const target = p === "lorran"
@@ -1216,7 +1219,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
           user_id: user!.id, card_id: card.id,
           description: splits.length > 1 ? `${form.description} (${s.person})` : form.description,
           purchase_date: form.purchase_date, total_amount: s.amount, installments_count: n,
-          category_id: form.category_id || null, person: s.person,
+          category_id: form.category_id || null, person: s.person === "Família" ? "Familia" : s.person,
           brand: form.brand || null,
         }).select().single();
         if (pErr) throw pErr;
@@ -1813,7 +1816,7 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
           status: "paid",
           due_at: todayLocalISO(),
           posted_at: todayLocalISO(),
-          person: split.person,
+          person: split.person === "Família" ? "Familia" : split.person,
           paid_by: overrideActive ? split.person : null,
           category_id: "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
           card_installment_id: installment.id,
@@ -1832,7 +1835,7 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
             status: "paid",
             due_at: todayLocalISO(),
             posted_at: todayLocalISO(),
-            person: split.person,
+            person: split.person === "Família" ? "Familia" : split.person,
             category_id: "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a",
             notes: "Gerado automaticamente no pagamento da fatura",
           });

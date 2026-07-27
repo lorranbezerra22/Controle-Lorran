@@ -158,8 +158,10 @@ function LancamentosPage() {
   };
 
   const personOptions = useMemo(() => {
-    // Retorna apenas as pessoas cadastradas no sistema
-    return people.map((p: any) => p.name).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    // Retorna as pessoas cadastradas + Familia
+    const names = new Set(people.map((p: any) => p.name));
+    names.add("Familia");
+    return Array.from(names).sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [people]);
 
   const filtered = tx.filter((t: any) => {
@@ -740,11 +742,11 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
       // Em edições, preservar exatamente o que o usuário escolheu (ou o valor original),
       // sem trocar a conta silenciosamente — isso evita que o gatilho de saldo credite/debite
       // contas silenciosamente ao editar campos não financeiros (ex.: categoria).
-      const lorranFallback = accounts.find((a: any) => normStr(a.account_name || "") === "lorran")?.id
-        || accounts.find((a: any) => (a.bank || "").toLowerCase().includes("revolut"))?.id
+      const lorranFallback = accounts.find((a: any) => normStr(a.account_name || "").includes("lorran"))?.id
         || accounts.find((a: any) => (a.bank || "").toLowerCase().includes("nubank"))?.id
+        || accounts.find((a: any) => (a.bank || "").toLowerCase().includes("revolut"))?.id
         || accounts[0]?.id || null;
-      const mercadoFallback = accounts.find((a: any) => normStr(a.account_name || "") === "tayane")?.id
+      const tayaneFallback = accounts.find((a: any) => normStr(a.account_name || "").includes("tayane"))?.id
         || accounts.find((a: any) => (a.bank || "").toLowerCase().includes("mercado"))?.id || null;
       
       const isFamily = normStr(form.person || "") === "familia";
@@ -765,7 +767,7 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
         if (form.accountTayaneId === "__none__") {
           resolvedTayaneId = null;
         } else {
-          resolvedTayaneId = form.accountTayaneId || initial?.account_tayane_id || (isEdit ? null : mercadoFallback);
+          resolvedTayaneId = form.accountTayaneId || initial?.account_tayane_id || (isEdit ? null : tayaneFallback);
         }
       }
 
@@ -776,7 +778,7 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
         due_at: form.due_at,
         posted_at: form.posted_at,
         category_id,
-        person: form.person || null,
+        person: form.person === "Família" ? "Familia" : (form.person || null),
         is_fixed: form.is_fixed,
         status: form.status,
         account_id: resolvedAccountId,
