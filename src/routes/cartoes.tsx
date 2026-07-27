@@ -1797,7 +1797,13 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
       
       const splits = buildPaymentSplits(accounts, costPerson, amountToPay);
 
-      for (const split of splits) {
+          const validSplits = splits.filter(s => {
+            const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
+            const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
+            return hasLorranAcc || hasTayaneAcc;
+          });
+
+          for (const split of validSplits) {
         // 1. Criar transação de pagamento do valor informado
         await supabase.from("transacoes").insert({
           user_id: user!.id,
@@ -2172,7 +2178,13 @@ function EditPaidForm({ installment, onDone }: { installment: any, onDone: () =>
 
         const splits = buildPaymentSplits(accounts, originalPerson, Math.abs(diff));
 
-        for (const split of splits) {
+      const validSplits = splits.filter(s => {
+        const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
+        const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
+        return hasLorranAcc || hasTayaneAcc;
+      });
+
+      for (const split of validSplits) {
           await supabase.from("transacoes").insert({
             user_id: user!.id,
             description: `Ajuste Pagamento ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}`,
