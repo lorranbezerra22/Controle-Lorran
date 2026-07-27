@@ -37,7 +37,7 @@ const normalizeName = (s: string) => (s || "").normalize("NFD").replace(/[\u0300
 const pickPaymentAccount = (accounts: any[], personName: string, bankFallbacks: string[] = []) => {
   const target = normalizeName(personName);
   const ownAccounts = accounts
-    .filter((a: any) => normalizeName(a.account_name || "") === target)
+    .filter((a: any) => normalizeName(a.account_name || "").includes(target))
     .sort((a: any, b: any) => Number(b.balance ?? 0) - Number(a.balance ?? 0));
 
   if (ownAccounts.length > 0) return ownAccounts[0];
