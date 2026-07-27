@@ -36,7 +36,8 @@ const accountLabel = (account: any) => {
   return `${bank}${name}`;
 };
 
-function AccountSelectValue({ account }: { account: any }) {
+function AccountSelectValue({ account, isNone }: { account: any; isNone?: boolean }) {
+  if (isNone) return <span className="text-muted-foreground font-medium">Sem conta (apenas registro)</span>;
   if (!account) return <span className="text-muted-foreground">Selecione uma conta</span>;
 
   return (
@@ -252,7 +253,7 @@ function LancamentosPage() {
       invalidate("transactions");
       invalidate("accounts");
       toast.success(
-        !payAccount
+        (!payAccount || payAccount === "__none__") && (!payAccountTayane || payAccountTayane === "__none__")
           ? "Pago (sem débito em conta)"
           : useSplit
             ? "Pago: 50% debitado do Lorran e 50% da Tayane"
@@ -652,11 +653,12 @@ function LancamentosPage() {
                 {paying.kind === "expense" && norm(paying.person || "") === "familia" && (
                   <div className="grid gap-2">
                     <Label className="text-xs font-medium">Conta da Tayane (50%)</Label>
-                    <Select value={payAccountTayane || undefined} onValueChange={setPayAccountTayane}>
+                    <Select value={payAccountTayane ? payAccountTayane : "__none__"} onValueChange={(v) => setPayAccountTayane(v === "__none__" ? "" : v)}>
                       <SelectTrigger className="w-full h-11 rounded-xl shadow-sm border-border bg-background/50 hover:border-primary/50 transition-all">
                         <SelectValue placeholder="Selecione a conta" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="__none__" className="py-2.5">Sem conta (só registrar, não debita saldo)</SelectItem>
                         {accounts.map((a: any) => (
                           <SelectItem key={a.id} value={a.id} className="py-2.5">
                             <div className="flex items-center gap-2">
@@ -746,13 +748,26 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
         || accounts.find((a: any) => (a.bank || "").toLowerCase().includes("mercado"))?.id || null;
       
       const isFamily = normStr(form.person || "") === "familia";
-      const resolvedAccountId = form.status === "paid"
-        ? (form.accountId || initial?.account_id || (isEdit ? null : lorranFallback))
-        : null;
+      
+      let resolvedAccountId = null;
+      if (form.status === "paid") {
+        if (form.accountId === "__none__") {
+          resolvedAccountId = null;
+        } else {
+          resolvedAccountId = form.accountId || initial?.account_id || (isEdit ? null : lorranFallback);
+        }
+      }
+
       const isFamilyExpense = form.status === "paid" && isFamily && form.kind === "expense";
-      const resolvedTayaneId = isFamilyExpense
-        ? (form.accountTayaneId || initial?.account_tayane_id || (isEdit ? null : mercadoFallback))
-        : null;
+      
+      let resolvedTayaneId = null;
+      if (isFamilyExpense) {
+        if (form.accountTayaneId === "__none__") {
+          resolvedTayaneId = null;
+        } else {
+          resolvedTayaneId = form.accountTayaneId || initial?.account_tayane_id || (isEdit ? null : mercadoFallback);
+        }
+      }
 
       const payload = {
         description: form.description,
@@ -942,9 +957,12 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
             <Label className="text-xs font-semibold">{form.kind === "expense" && normStr(form.person) === "familia" ? "Conta do Lorran (50%)" : "Qual conta bancária?"}</Label>
             <Select value={form.accountId} onValueChange={(v) => setForm({ ...form, accountId: v })}>
               <SelectTrigger className="h-12 bg-background [&>span]:line-clamp-none">
-                <AccountSelectValue account={selectedAccount} />
+                <AccountSelectValue account={selectedAccount} isNone={form.accountId === "__none__"} />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="__none__" className="py-2.5 font-medium text-muted-foreground italic">
+                  Nenhuma (não debitar de conta)
+                </SelectItem>
                 {accounts.map((a: any) => (
                   <AccountSelectItem key={a.id} account={a} />
                 ))}
@@ -960,15 +978,18 @@ function TransactionForm({ cats, accounts = [], onDone, initial }: any) {
               <Label className="text-xs font-semibold">Conta da Tayane (50%)</Label>
               <Select value={form.accountTayaneId} onValueChange={(v) => setForm({ ...form, accountTayaneId: v })}>
                 <SelectTrigger className="h-12 bg-background [&>span]:line-clamp-none">
-                  <AccountSelectValue account={selectedTayaneAccount} />
+                  <AccountSelectValue account={selectedTayaneAccount} isNone={form.accountTayaneId === "__none__"} />
                 </SelectTrigger>
                 <SelectContent>
-                {accounts.map((a: any) => (
-                  <AccountSelectItem key={a.id} account={a} />
+                  <SelectItem value="__none__" className="py-2.5 font-medium text-muted-foreground italic">
+                    Nenhuma (não debitar de conta)
+                  </SelectItem>
+                  {accounts.map((a: any) => (
+                    <AccountSelectItem key={a.id} account={a} />
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-[10px] text-muted-foreground">Se não selecionar, usará o Mercado Pago por padrão.</p>
+              <p className="text-[10px] text-muted-foreground">Toda movimentação de saldo deve ser feita via Lançamentos ou Cartões.</p>
             </div>
           )}
         </div>
