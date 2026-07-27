@@ -36,6 +36,13 @@ const normalizeName = (s: string) => (s || "").normalize("NFD").replace(/[\u0300
 
 const pickPaymentAccount = (accounts: any[], personName: string, bankFallbacks: string[] = []) => {
   const target = normalizeName(personName);
+  
+  // Se for "Familia", priorizamos as contas específicas para Lorran/Tayane 
+  // que o trigger do banco usa para o split 50/50.
+  if (target === "familia") {
+    return undefined; // Deixa o buildPaymentSplits lidar com isso
+  }
+
   const ownAccounts = accounts
     .filter((a: any) => normalizeName(a.account_name || "") === target)
     .sort((a: any, b: any) => Number(b.balance ?? 0) - Number(a.balance ?? 0));
