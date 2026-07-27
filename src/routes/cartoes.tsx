@@ -341,8 +341,8 @@ function CartoesPage() {
           const overrideSuffix = useOverride ? ` (pago por ${costPerson}, dívida de ${originalPerson})` : "";
           
           const validSplits = splits.filter(s => {
-            const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
-            const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
+            const hasLorranAcc = !!s.accountId;
+            const hasTayaneAcc = !!s.accountTayaneId;
             return hasLorranAcc || hasTayaneAcc;
           });
 
