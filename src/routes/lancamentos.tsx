@@ -600,7 +600,7 @@ function LancamentosPage() {
             <div>
               <div className="px-6 pt-6 pb-4 border-b border-border/50 bg-gradient-to-br from-primary/10 via-transparent to-transparent">
                 <DialogHeader className="space-y-1">
-                  <DialogTitle className="text-lg font-semibold tracking-tight">Confirmar pagamento</DialogTitle>
+                  <DialogTitle className="text-lg font-semibold tracking-tight">{paying.kind === "income" ? "Confirmar recebimento" : "Confirmar pagamento"}</DialogTitle>
                   <p className="text-xs text-muted-foreground">Revise os detalhes antes de liquidar</p>
                 </DialogHeader>
               </div>
@@ -610,7 +610,7 @@ function LancamentosPage() {
                   <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Lançamento</div>
                   <div className="font-medium text-sm">{paying.description}</div>
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/40">
-                    <span className="text-xs text-muted-foreground">Dívida de <strong className="text-foreground">{paying.person || "—"}</strong></span>
+                    <span className="text-xs text-muted-foreground">{paying.kind === "income" ? "Receita de" : "Dívida de"} <strong className="text-foreground">{paying.person || "—"}</strong></span>
                     <span className="text-base font-semibold tabular-nums">{brl(paying.amount)}</span>
                   </div>
                 </div>
