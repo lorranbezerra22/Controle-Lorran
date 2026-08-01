@@ -243,7 +243,7 @@ function LancamentosPage() {
     const useSplit = isFamilyExpense;
     const splitPayBy = payBy ? payBy.split(",") : [];
     const firstPayBy = splitPayBy[0] || "";
-    const personIsDifferent = !isFamilyExpense && firstPayBy && norm(firstPayBy) !== norm(t.person || "");
+    const personIsDifferent = t.kind === "expense" && !isFamilyExpense && firstPayBy && norm(firstPayBy) !== norm(t.person || "");
     const { error } = await supabase.from("transacoes").update({
       status: "paid",
       account_id: payAccount || null,
@@ -600,7 +600,7 @@ function LancamentosPage() {
             <div>
               <div className="px-6 pt-6 pb-4 border-b border-border/50 bg-gradient-to-br from-primary/10 via-transparent to-transparent">
                 <DialogHeader className="space-y-1">
-                  <DialogTitle className="text-lg font-semibold tracking-tight">Confirmar pagamento</DialogTitle>
+                  <DialogTitle className="text-lg font-semibold tracking-tight">{paying.kind === "income" ? "Confirmar recebimento" : "Confirmar pagamento"}</DialogTitle>
                   <p className="text-xs text-muted-foreground">Revise os detalhes antes de liquidar</p>
                 </DialogHeader>
               </div>
@@ -610,12 +610,12 @@ function LancamentosPage() {
                   <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Lançamento</div>
                   <div className="font-medium text-sm">{paying.description}</div>
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/40">
-                    <span className="text-xs text-muted-foreground">Dívida de <strong className="text-foreground">{paying.person || "—"}</strong></span>
+                    <span className="text-xs text-muted-foreground">{paying.kind === "income" ? "Receita de" : "Dívida de"} <strong className="text-foreground">{paying.person || "—"}</strong></span>
                     <span className="text-base font-semibold tabular-nums">{brl(paying.amount)}</span>
                   </div>
                 </div>
 
-                {!(paying.kind === "expense" && norm(paying.person || "") === "familia") && (
+                {paying.kind === "expense" && !(norm(paying.person || "") === "familia") && (
                   <div className="grid gap-2">
                     <Label className="text-xs font-medium">Pago por</Label>
                     <PersonSelect 
@@ -631,7 +631,9 @@ function LancamentosPage() {
 
                 <div className="grid gap-2">
                   <Label className="text-xs font-medium">
-                    {paying.kind === "expense" && norm(paying.person || "") === "familia" ? "Conta do Lorran (50%)" : "Conta debitada"}
+                    {paying.kind === "income"
+                      ? "Conta creditada"
+                      : norm(paying.person || "") === "familia" ? "Conta do Lorran (50%)" : "Conta debitada"}
                   </Label>
                   <Select value={payAccount ? payAccount : "__none__"} onValueChange={(v) => setPayAccount(v === "__none__" ? "" : v)}>
                     <SelectTrigger className="w-full h-11 rounded-xl shadow-sm border-border bg-background/50 hover:border-primary/50 transition-all">
