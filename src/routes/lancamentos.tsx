@@ -243,7 +243,7 @@ function LancamentosPage() {
     const useSplit = isFamilyExpense;
     const splitPayBy = payBy ? payBy.split(",") : [];
     const firstPayBy = splitPayBy[0] || "";
-    const personIsDifferent = !isFamilyExpense && firstPayBy && norm(firstPayBy) !== norm(t.person || "");
+    const personIsDifferent = t.kind === "expense" && !isFamilyExpense && firstPayBy && norm(firstPayBy) !== norm(t.person || "");
     const { error } = await supabase.from("transacoes").update({
       status: "paid",
       account_id: payAccount || null,
