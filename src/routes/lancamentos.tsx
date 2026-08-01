@@ -615,7 +615,7 @@ function LancamentosPage() {
                   </div>
                 </div>
 
-                {!(paying.kind === "expense" && norm(paying.person || "") === "familia") && (
+                {paying.kind === "expense" && !(norm(paying.person || "") === "familia") && (
                   <div className="grid gap-2">
                     <Label className="text-xs font-medium">Pago por</Label>
                     <PersonSelect 
@@ -631,7 +631,9 @@ function LancamentosPage() {
 
                 <div className="grid gap-2">
                   <Label className="text-xs font-medium">
-                    {paying.kind === "expense" && norm(paying.person || "") === "familia" ? "Conta do Lorran (50%)" : "Conta debitada"}
+                    {paying.kind === "income"
+                      ? "Conta creditada"
+                      : norm(paying.person || "") === "familia" ? "Conta do Lorran (50%)" : "Conta debitada"}
                   </Label>
                   <Select value={payAccount ? payAccount : "__none__"} onValueChange={(v) => setPayAccount(v === "__none__" ? "" : v)}>
                     <SelectTrigger className="w-full h-11 rounded-xl shadow-sm border-border bg-background/50 hover:border-primary/50 transition-all">
