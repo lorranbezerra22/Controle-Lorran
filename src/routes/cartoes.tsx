@@ -317,7 +317,7 @@ function CartoesPage() {
       const paidAlready = Number(i.paid_amount || 0);
       const { data: { user } } = await supabase.auth.getUser();
       const originalPerson = i.cartao_compras?.person || "";
-      const useOverride = !!(paidByOverride && paidByOverride.trim() && paidByOverride.trim().toLowerCase() !== originalPerson.toLowerCase());
+      const useOverride = !!(paidByOverride && paidByOverride.trim() && normalizeName(paidByOverride) !== normalizeName(originalPerson));
       const costPerson = useOverride ? paidByOverride!.trim() : originalPerson;
       
       if (isPaying) {
@@ -352,7 +352,8 @@ function CartoesPage() {
             } as any);
 
             // Compensação só faz sentido quando quem paga é o próprio dono da dívida
-            if (!useOverride) {
+            // Se for despesa de "Familia", a compensação de receita deve ir para "Familia"
+            if (!useOverride || normalizeName(costPerson) === "familia") {
                 await supabase.from("transacoes").insert({
                 user_id: user!.id,
                 description: `Compensação Fatura ${i.cartoes?.name || "Cartão"} - ${i.cartao_compras?.description}${split.descriptionSuffix}`,
@@ -1772,7 +1773,7 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
 
   const { data: people = [] } = usePeople();
   const originalPerson = installment.cartao_compras?.person || "";
-  const overrideActive = !!paidBy && paidBy.trim().toLowerCase() !== originalPerson.toLowerCase();
+  const overrideActive = !!paidBy && paidBy.trim() && normalizeName(paidBy) !== normalizeName(originalPerson);
 
   const handlePartialPay = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1825,7 +1826,7 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
           notes: notes || null,
         } as any);
 
-        if (!overrideActive) {
+        if (!overrideActive || normalizeName(costPerson) === "familia") {
           // Compensação só quando o próprio dono da dívida paga
           await supabase.from("transacoes").insert({
             user_id: user!.id,
