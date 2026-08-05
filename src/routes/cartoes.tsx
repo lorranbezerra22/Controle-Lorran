@@ -369,8 +369,9 @@ function CartoesPage() {
               status: "paid",
               due_at: todayLocalISO(),
               posted_at: todayLocalISO(),
-              person: split.person,
-              paid_by: paidByOverride || null,
+              // SE houver override (ex: Tayane pagando dívida de Familia), a transação deve ser da Tayane
+              person: useOverride ? costPerson : split.person,
+              paid_by: useOverride ? costPerson : (i.status === "pending" && normalizeName(originalPerson) === "familia" ? null : originalPerson),
               category_id: i.cartao_compras?.category_id || "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
               card_installment_id: i.id,
               account_id: split.accountId,
