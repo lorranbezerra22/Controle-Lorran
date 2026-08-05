@@ -400,7 +400,7 @@ function CartoesPage() {
           const { error } = await supabase.from("cartao_parcelas").update({
             status: isFullyPaid ? "paid" : "pending",
             paid_amount: paidAlready + amountToPay,
-            paid_by: isFullyPaid ? (paidByOverride || null) : (i.paid_by || null),
+            paid_by: isFullyPaid ? (paidByOverride || (i.status === "pending" && !paidByOverride && normalizeName(originalPerson) === "familia" ? null : originalPerson)) : (i.paid_by || null),
             metadata: {
               ...(i.metadata as any || {}),
               last_payment_by: paidByOverride || null,
