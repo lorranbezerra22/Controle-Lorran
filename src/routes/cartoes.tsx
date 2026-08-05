@@ -63,10 +63,20 @@ type PaymentSplit = {
 
 // Para "Família": retorna 1 registro com ambas as contas e person='Familia'.
 // O trigger update_account_balance divide 50/50 automaticamente se account_id E account_tayane_id estiverem presentes.
-const buildPaymentSplits = (accounts: any[], person: string, amount: number, isPartial: boolean = false): PaymentSplit[] => {
+// Se um pagador específico (paidByOverride) for informado, retornamos apenas a conta dele para débito 100%.
+const buildPaymentSplits = (accounts: any[], person: string, amount: number, paidByOverride?: string | null): PaymentSplit[] => {
   const p = normalizeName(person);
+  const payer = paidByOverride ? normalizeName(paidByOverride) : p;
+
+  // Se a despesa é de Família, mas o pagador é alguém específico (Lorran ou Tayane),
+  // debita 100% de quem pagou em vez de dividir 50/50.
   if (p === "familia") {
-    // Para despesas de família, se as duas contas estiverem disponíveis, divide 50/50.
+    if (paidByOverride && (payer === "lorran" || payer === "tayane")) {
+      const target = pickPaymentAccount(accounts, paidByOverride, [paidByOverride]);
+      if (target) return [{ accountId: target.id, amount, person: paidByOverride, descriptionSuffix: ` (Dívida Família paga por ${paidByOverride})` }];
+    }
+
+    // Fluxo padrão 50/50
     const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"]);
     const tayaneAcc = pickPaymentAccount(accounts, "Tayane", ["mercado pago", "mercado"]);
 
@@ -84,10 +94,9 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, isP
     return [];
   }
 
-  // Lógica de antecipação: Se a dívida é de "Familia", mas um membro específico está pagando
-  // (caso de pagamento parcial ou pago por Lorran/Tayane), debitamos 100% de quem paga.
-  const target = pickPaymentAccount(accounts, person, [person]);
-  if (target) return [{ accountId: target.id, amount, person, descriptionSuffix: "" }];
+  // Despesa individual (Lorran ou Tayane)
+  const target = pickPaymentAccount(accounts, payer, [payer]);
+  if (target) return [{ accountId: target.id, amount, person: payer, descriptionSuffix: "" }];
   return [];
 };
 
@@ -302,7 +311,7 @@ function CartoesPage() {
 
 
 
-  const getPaymentSplits = (person: string, amount: number, isPartial: boolean = false) => buildPaymentSplits(accounts, person, amount, isPartial);
+  const getPaymentSplits = (person: string, amount: number, paidByOverride?: string | null) => buildPaymentSplits(accounts, person, amount, paidByOverride);
 
   const togglePaid = async (i: any, notes?: string, paidByOverride?: string | null) => {
     // Estornos (valor negativo) já abatem a fatura automaticamente — não devem
@@ -323,7 +332,7 @@ function CartoesPage() {
       if (isPaying) {
         const amountToPay = amount - paidAlready;
         if (amountToPay > 0) {
-          const splits = getPaymentSplits(costPerson, amountToPay);
+          const splits = getPaymentSplits(originalPerson, amountToPay, paidByOverride);
           const overrideSuffix = useOverride ? ` (pago por ${costPerson}, dívida de ${originalPerson})` : "";
           
           const validSplits = splits.filter(s => {
@@ -343,7 +352,7 @@ function CartoesPage() {
               due_at: todayLocalISO(),
               posted_at: todayLocalISO(),
               person: split.person,
-              paid_by: useOverride ? split.person : null,
+              paid_by: paidByOverride || null,
               category_id: i.cartao_compras?.category_id || "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
               card_installment_id: i.id,
               account_id: split.accountId,
@@ -373,7 +382,7 @@ function CartoesPage() {
         await supabase.from("cartao_parcelas").update({ 
           status: "paid", 
           paid_amount: amount,
-          paid_by: useOverride ? costPerson : null,
+          paid_by: paidByOverride || null,
         } as any).eq("id", i.id);
         toast.success(useOverride ? `Parcela paga por ${costPerson} (dívida de ${originalPerson})` : "Parcela marcada como paga e balanço compensado");
       } else {
