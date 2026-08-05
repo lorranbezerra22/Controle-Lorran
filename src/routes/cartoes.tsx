@@ -1803,11 +1803,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null) => void, onDone: () => void }) {
+  const [payMode, setPayMode] = useState<"total" | "anticipate" | null>(null);
   const [payAmount, setPayAmount] = useState(String(installment.amount));
   const [notes, setNotes] = useState("");
   const [paidBy, setPaidBy] = useState<string>(installment.cartao_compras?.person || "");
   const [saving, setSaving] = useState(false);
   const { data: accounts = [] } = useAccounts();
+
 
   const originalPerson = installment.cartao_compras?.person || "";
   const isFamilia = normalizeName(originalPerson) === "familia";
