@@ -1853,31 +1853,22 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const costPerson = overrideActive ? paidBy.trim() : originalPerson;
-      const overrideSuffix = overrideActive ? ` (antecipado por ${costPerson}, dívida de ${originalPerson})` : " (antecipado)";
+      const isPayerIndividual = overrideActive && (normalizeName(paidBy) === "lorran" || normalizeName(paidBy) === "tayane");
       
       const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null);
 
-      // CORREÇÃO: Para antecipação parcial de Família, se um indivíduo pagar, 
-      // devemos debitar apenas o valor dele, sem forçar o split 50/50 do buildPaymentSplits
-      // caso o buildPaymentSplits ainda esteja retornando split para Familia mesmo com override.
-      // O buildPaymentSplits atual na linha 73 já trata o override, mas vamos garantir que o person da transação seja o pagador.
-
-      const validSplits = splits.filter(s => {
-        const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
-        const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
-        return hasLorranAcc || hasTayaneAcc;
-      });
-
-      for (const split of validSplits) {
+      for (const split of splits) {
+        // Se a despesa for de Família e um indivíduo pagar (override), a transação deve ser individual.
+        // O buildPaymentSplits já retorna split.person como o indivíduo se houver override.
         await supabase.from("transacoes").insert({
           user_id: user!.id,
-          description: `Antecipação ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}${overrideSuffix}`,
+          description: `Antecipação ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}${overrideActive ? ` (pago por ${costPerson})` : ""}`,
           amount: split.amount,
           kind: "expense",
           status: "paid",
           due_at: todayLocalISO(),
           posted_at: todayLocalISO(),
-          person: split.person,
+          person: split.person, // Importante: usar o person do split
           paid_by: overrideActive ? costPerson : (isFamilia ? null : originalPerson),
           category_id: "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
           card_installment_id: installment.id,
@@ -1886,10 +1877,12 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           notes: notes || null,
         } as any);
 
+        // Só cria compensação se não for um pagamento individual assumindo dívida alheia/família
+        // (Ou se for Família pagando como Família no fluxo padrão)
         if (!overrideActive || normalizeName(costPerson) === "familia") {
           await supabase.from("transacoes").insert({
             user_id: user!.id,
-            description: `Compensação Fatura ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}`,
+            description: `Compensação Fatura ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}`,
             amount: split.amount,
             kind: "income",
             status: "paid",
