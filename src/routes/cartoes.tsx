@@ -1848,6 +1848,11 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
       
       const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null);
 
+      // CORREÇÃO: Para antecipação parcial de Família, se um indivíduo pagar, 
+      // devemos debitar apenas o valor dele, sem forçar o split 50/50 do buildPaymentSplits
+      // caso o buildPaymentSplits ainda esteja retornando split para Familia mesmo com override.
+      // O buildPaymentSplits atual na linha 73 já trata o override, mas vamos garantir que o person da transação seja o pagador.
+
       const validSplits = splits.filter(s => {
         const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
         const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
