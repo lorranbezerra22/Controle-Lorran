@@ -623,7 +623,8 @@ function LancamentosPage() {
                     <span className="text-xs text-muted-foreground">{paying.kind === "income" ? "Receita de" : "Dívida de"} <strong className="text-foreground">{paying.person || "—"}</strong></span>
                     <span className="text-base font-semibold tabular-nums">{brl(paying.amount)}</span>
                   </div>
-                  {paying.kind === "expense" && norm(paying.person || "") === "familia" && (
+                  {payBy && paying.kind === "expense" && norm(paying.person || "") === "familia" && (
+
                     <div className="mt-2 text-[10px] text-amber-500 font-medium flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3" />
                       Dividido: {brl(Number(paying.amount)/2)} para Lorran e {brl(Number(paying.amount)/2)} para Tayane
