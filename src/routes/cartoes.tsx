@@ -63,14 +63,13 @@ type PaymentSplit = {
 
 // Para "Família": retorna 1 registro com ambas as contas e person='Familia'.
 // O trigger update_account_balance divide 50/50 automaticamente se account_id E account_tayane_id estiverem presentes.
-const buildPaymentSplits = (accounts: any[], person: string, amount: number): PaymentSplit[] => {
+const buildPaymentSplits = (accounts: any[], person: string, amount: number, isPartial: boolean = false): PaymentSplit[] => {
   const p = normalizeName(person);
   if (p === "familia") {
+    // Para despesas de família, se as duas contas estiverem disponíveis, divide 50/50.
     const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"]);
     const tayaneAcc = pickPaymentAccount(accounts, "Tayane", ["mercado pago", "mercado"]);
 
-    // Se temos ambas as contas, retornamos um split que usa ambas.
-    // A trigger no banco de dados cuidará de descontar 50% de cada.
     if (lorranAcc && tayaneAcc) {
       return [{
         accountId: lorranAcc.id,
@@ -84,9 +83,10 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number): Pa
     if (only) return [{ accountId: only.id, amount, person: "Familia", descriptionSuffix: "" }];
     return [];
   }
-  const target = p === "lorran"
-    ? pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"])
-    : pickPaymentAccount(accounts, person, [person]);
+
+  // Lógica de antecipação: Se a dívida é de "Familia", mas um membro específico está pagando
+  // (caso de pagamento parcial ou pago por Lorran/Tayane), debitamos 100% de quem paga.
+  const target = pickPaymentAccount(accounts, person, [person]);
   if (target) return [{ accountId: target.id, amount, person, descriptionSuffix: "" }];
   return [];
 };
@@ -302,7 +302,7 @@ function CartoesPage() {
 
 
 
-  const getPaymentSplits = (person: string, amount: number) => buildPaymentSplits(accounts, person, amount);
+  const getPaymentSplits = (person: string, amount: number, isPartial: boolean = false) => buildPaymentSplits(accounts, person, amount, isPartial);
 
   const togglePaid = async (i: any, notes?: string, paidByOverride?: string | null) => {
     // Estornos (valor negativo) já abatem a fatura automaticamente — não devem
@@ -1798,7 +1798,7 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
       const p = (costPerson || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
       const overrideSuffix = overrideActive ? ` (pago por ${costPerson}, dívida de ${originalPerson})` : "";
       
-      const splits = buildPaymentSplits(accounts, costPerson, amountToPay);
+      const splits = buildPaymentSplits(accounts, costPerson, amountToPay, true);
 
           const validSplits = splits.filter(s => {
             const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
