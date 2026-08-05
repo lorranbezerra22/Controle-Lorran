@@ -846,7 +846,7 @@ function CartoesPage() {
                             if (isPartial || i.status === "paid") setEditPaidOpen(i);
                           }}
                           className={`w-7 h-7 rounded-md flex items-center justify-center ${i.status === "paid" ? "bg-success/20 text-success" : "bg-muted text-muted-foreground hover:bg-warning/20 hover:text-warning"}`}
-                          title={i.status === "paid" ? "Remover/Editar pagamento" : (isPartial ? "Clique esquerdo: editar pagamentos / Clique direito: ajuste manual" : "Pagar parcela")}
+                          title={i.status === "paid" ? "Remover/Editar pagamento" : (isPartial ? "Antecipar pagamento / Clique direito: ajuste manual" : "Antecipar pagamento")}
                         >
                           {i.status === "paid" ? <Check className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
                         </button>
@@ -892,12 +892,12 @@ function CartoesPage() {
 
 
       <Dialog open={!!partialPayOpen} onOpenChange={(o) => !o && setPartialPayOpen(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Pagar parcela</DialogTitle>
+            <DialogTitle>Antecipar Pagamento</DialogTitle>
           </DialogHeader>
           {partialPayOpen && (
-            <PartialPayForm 
+            <AnticipatePayForm 
               installment={partialPayOpen} 
               onFullPay={(notes, paidBy) => { togglePaid(partialPayOpen, notes, paidBy); setPartialPayOpen(null); }}
               onDone={() => { setPartialPayOpen(null); invalidate("installments"); invalidate("accounts"); invalidate("transactions"); }} 
@@ -1802,31 +1802,38 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null) => void, onDone: () => void }) {
+function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null) => void, onDone: () => void }) {
   const [payAmount, setPayAmount] = useState(String(installment.amount));
   const [notes, setNotes] = useState("");
   const [paidBy, setPaidBy] = useState<string>(installment.cartao_compras?.person || "");
   const [saving, setSaving] = useState(false);
   const { data: accounts = [] } = useAccounts();
 
-  const { data: people = [] } = usePeople();
   const originalPerson = installment.cartao_compras?.person || "";
+  const isFamilia = normalizeName(originalPerson) === "familia";
+  const quota = Number(installment.amount) / 2;
+  
   const overrideActive = !!paidBy && paidBy.trim() && normalizeName(paidBy) !== normalizeName(originalPerson);
 
-  const handlePartialPay = async (e: React.FormEvent) => {
+  const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
     const amountToPay = Number(payAmount);
     const originalAmount = Number(installment.amount);
 
     if (amountToPay <= 0) return toast.error("Valor inválido");
     
+    // Se for Família e estiver antecipando uma cota, limitamos ao valor da cota se o usuário for um indivíduo
+    if (isFamilia && overrideActive && amountToPay > quota + 0.01) {
+      return toast.error(`Para despesas de Família, cada pessoa pode antecipar no máximo sua parte (${brl(quota)})`);
+    }
+
     // Se o valor for igual ao total, usa o fluxo padrão de pagamento total
     if (Math.abs(amountToPay - originalAmount) < 0.01) {
       onFullPay(notes, overrideActive ? paidBy : null);
       return;
     }
 
-    if (amountToPay > originalAmount) return toast.error("O valor pago não pode ser maior que o valor da parcela");
+    if (amountToPay > originalAmount + 0.01) return toast.error("O valor não pode ser maior que o total da parcela");
 
     if (!__tryLock()) return;
 
@@ -1834,28 +1841,26 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const costPerson = overrideActive ? paidBy.trim() : originalPerson;
-      const p = (costPerson || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-      const overrideSuffix = overrideActive ? ` (pago por ${costPerson}, dívida de ${originalPerson})` : "";
+      const overrideSuffix = overrideActive ? ` (antecipado por ${costPerson}, dívida de ${originalPerson})` : " (antecipado)";
       
       const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null);
 
-          const validSplits = splits.filter(s => {
-            const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
-            const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
-            return hasLorranAcc || hasTayaneAcc;
-          });
+      const validSplits = splits.filter(s => {
+        const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
+        const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
+        return hasLorranAcc || hasTayaneAcc;
+      });
 
-          for (const split of validSplits) {
-        // 1. Criar transação de pagamento do valor informado
+      for (const split of validSplits) {
         await supabase.from("transacoes").insert({
           user_id: user!.id,
-          description: `Pagamento Parcial ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}${overrideSuffix}`,
+          description: `Antecipação ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}${overrideSuffix}`,
           amount: split.amount,
           kind: "expense",
           status: "paid",
           due_at: todayLocalISO(),
           posted_at: todayLocalISO(),
-          person: split.person === "Família" ? "Familia" : split.person,
+          person: split.person === "Familia" ? "Familia" : split.person,
           paid_by: overrideActive ? split.person : null,
           category_id: "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
           card_installment_id: installment.id,
@@ -1865,7 +1870,6 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
         } as any);
 
         if (!overrideActive || normalizeName(costPerson) === "familia") {
-          // Compensação só quando o próprio dono da dívida paga
           await supabase.from("transacoes").insert({
             user_id: user!.id,
             description: `Compensação Fatura ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}`,
@@ -1874,28 +1878,33 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
             status: "paid",
             due_at: todayLocalISO(),
             posted_at: todayLocalISO(),
-            person: split.person === "Família" ? "Familia" : split.person,
+            person: split.person === "Familia" ? "Familia" : split.person,
             category_id: "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a",
-            notes: "Gerado automaticamente no pagamento da fatura",
+            notes: "Gerado automaticamente na antecipação da fatura",
           });
         }
       }
 
-      // 3. Atualizar a parcela atual com o novo valor pago acumulado
       const newPaidAmount = Number((Number(installment.paid_amount || 0) + amountToPay).toFixed(2));
       const isFull = Math.abs(newPaidAmount - originalAmount) < 0.01;
+      
+      // Armazenar metadados de quem pagou o quê
+      const oldMetadata = installment.metadata || {};
+      const partials = oldMetadata.partial_payments || [];
+      const newPartials = [...partials, { person: costPerson, amount: amountToPay, date: todayLocalISO() }];
       
       await supabase.from("cartao_parcelas").update({ 
         paid_amount: newPaidAmount,
         status: isFull ? "paid" : "pending",
         notes: notes || null,
         paid_by: overrideActive ? paidBy : null,
+        metadata: { ...oldMetadata, partial_payments: newPartials }
       } as any).eq("id", installment.id);
 
       if (isFull) {
         toast.success("Parcela paga integralmente.");
       } else {
-        toast.success(`Pago ${brl(amountToPay)}. Falta ${brl(originalAmount - newPaidAmount)}.`);
+        toast.success(`Antecipado ${brl(amountToPay)}. Falta ${brl(originalAmount - newPaidAmount)}.`);
       }
 
       onDone();
@@ -1907,14 +1916,20 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
   };
 
   return (
-    <form onSubmit={handlePartialPay} className="space-y-4">
+    <form onSubmit={handlePay} className="space-y-4">
       <div className="bg-muted/50 p-3 rounded-lg border border-border space-y-1">
         <div className="text-xs text-muted-foreground uppercase">Valor total da parcela</div>
         <div className="text-lg font-bold">{brl(Number(installment.amount))}</div>
+        {isFamilia && (
+          <div className="text-[10px] text-amber-500 font-medium flex items-center gap-1 mt-1">
+            <AlertTriangle className="w-3 h-3" />
+            Dividido: {brl(quota)} para Lorran e {brl(quota)} para Tayane
+          </div>
+        )}
       </div>
       
       <div className="space-y-1.5">
-        <Label>Quanto você quer pagar agora?</Label>
+        <Label>Valor para antecipar</Label>
         <div className="relative">
           <Banknote className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
@@ -1927,10 +1942,16 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
             required
           />
         </div>
+        {isFamilia && overrideActive && (
+          <p className="text-[10px] text-amber-500">
+            Aviso: Você está pagando como <strong>{paidBy}</strong>. 
+            O limite para esta antecipação individual é <strong>{brl(quota)}</strong>.
+          </p>
+        )}
       </div>
 
       <div className="space-y-1.5">
-        <Label>Pago por</Label>
+        <Label>Antecipado por</Label>
         <PersonSelect value={paidBy} onChange={setPaidBy} extras={originalPerson ? [originalPerson] : []} />
         <p className="text-[11px] text-muted-foreground">
           {overrideActive
