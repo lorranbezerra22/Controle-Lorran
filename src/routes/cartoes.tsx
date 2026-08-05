@@ -68,16 +68,11 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
   const p = normalizeName(person);
   const payer = paidByOverride ? normalizeName(paidByOverride) : p;
 
-  // Se um pagador específico (Lorran ou Tayane) for informado, debita 100% da conta dele.
-  // Isso vale tanto para despesas individuais quanto de Família.
   if (paidByOverride && (payer === "lorran" || payer === "tayane")) {
     const target = pickPaymentAccount(accounts, paidByOverride, [paidByOverride]);
-    // Retornamos person: paidByOverride para garantir que a transação NÃO seja vinculada a 'Familia'
-    // quando um indivíduo assume o pagamento total daquela parcela/antecipação.
     if (target) return [{ accountId: target.id, amount, person: paidByOverride, descriptionSuffix: p === "familia" ? ` (Dívida Família paga por ${paidByOverride})` : "" }];
   }
 
-  // Se for despesa de Família e NÃO houver override de pagador (fluxo padrão 50/50)
   if (p === "familia") {
     const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"]);
     const tayaneAcc = pickPaymentAccount(accounts, "Tayane", ["mercado pago", "mercado"]);
@@ -96,7 +91,6 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
     return [];
   }
 
-  // Despesa individual (Lorran ou Tayane) - sem override ou override ignorado
   const target = pickPaymentAccount(accounts, payer, [payer]);
   if (target) return [{ accountId: target.id, amount, person: payer, descriptionSuffix: "" }];
   return [];
