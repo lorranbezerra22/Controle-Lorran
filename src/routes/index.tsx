@@ -1,4 +1,5 @@
-// sobre a antencipação já existe um split de 50/50 é para manter, apenas quero antencipar 50% de x pessoa. se o valor é de 340 fica metade pra cada. se Tayane quer antencipar a parte dela a do lorran continua pendente os 50%.
+// ao antencipador um valor da familia selecionando uma pessoa. TODO o valor pago e restante está indo para resposabilidade da pessoa que antencipou, ESTÁ ERRADO. 
+// ao cadastrar o valor para a familia já tem como responsabilidade de 50% para tayane e 50% para lorran, se a tayane quer antencipar é apenas o valor referente ao custo dela.
 import { createFileRoute } from "@tanstack/react-router";
 import { ProtectedShell } from "@/components/ProtectedShell";
 import { useTransactions, useInstallments, useCards, useInvalidate, usePeople, useCategories, useAccounts } from "@/lib/queries";
