@@ -696,31 +696,29 @@ function LancamentosPage() {
                     </div>
                   )}
 
-                  <div className="grid gap-1.5">
-                    <Label className="text-xs font-medium">
-                      {paying.kind === "income"
-                        ? "Conta creditada"
-                        : (norm(paying.person || "") === "familia" && (!payBy || payBy === "Familia")) ? "Conta do Lorran (50%)" : "Conta debitada"}
-                    </Label>
-                    <Select value={payAccount ? payAccount : "__none__"} onValueChange={(v) => setPayAccount(v === "__none__" ? "" : v)}>
-                      <SelectTrigger className="w-full h-10 rounded-xl shadow-sm border-border bg-background/50 hover:border-primary/50 transition-all">
-                        <SelectValue placeholder="Selecione a conta" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__" className="py-2.5">Sem conta (só registrar, não debita saldo)</SelectItem>
-                        {accounts.map((a: any) => (
-                          <SelectItem key={a.id} value={a.id} className="py-2.5">
-                            <div className="flex items-center gap-2">
-                              <BankIcon bank={a.bank} size={18} square />
-                              <span>{a.bank}{a.account_name ? ` · ${a.account_name}` : ""} — <strong className="text-success">{brl(a.balance ?? 0)}</strong></span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {payBy && (
+                    <div className="grid gap-1.5">
+                      <Label className="text-xs font-medium">
+                        {paying.kind === "income"
+                          ? "Conta creditada"
+                          : (norm(paying.person || "") === "familia" && (!payBy || payBy === "Familia")) ? "Conta do Lorran (50%)" : "Conta debitada"}
+                      </Label>
+                      <Select value={payAccount ? payAccount : "__none__"} onValueChange={(v) => setPayAccount(v === "__none__" ? "" : v)}>
+                        <SelectTrigger className="w-full h-10 rounded-xl shadow-sm border-border bg-background/50 hover:border-primary/50 transition-all">
+                          <SelectValue placeholder="Selecione a conta" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__" className="py-2.5">Sem conta (só registrar, não debita saldo)</SelectItem>
+                          {accounts.map((a: any) => (
+                            <AccountSelectItem key={a.id} account={a} />
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
-                  {paying.kind === "expense" && norm(paying.person || "") === "familia" && (!payBy || payBy === "Familia") && (
+                  {payBy && paying.kind === "expense" && norm(paying.person || "") === "familia" && (!payBy || payBy === "Familia") && (
+
                     <div className="grid gap-1.5">
                       <Label className="text-xs font-medium">Conta da Tayane (50%)</Label>
                       <Select value={payAccountTayane ? payAccountTayane : "__none__"} onValueChange={(v) => setPayAccountTayane(v === "__none__" ? "" : v)}>
