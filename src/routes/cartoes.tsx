@@ -1918,10 +1918,71 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
     }
   };
 
+  if (!payMode) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-muted/50 p-4 rounded-xl border border-border text-center">
+          <p className="text-sm text-muted-foreground mb-4">O que você deseja fazer com esta parcela de <strong className="text-foreground">{brl(Number(installment.amount))}</strong>?</p>
+          <div className="grid grid-cols-1 gap-3">
+            <Button 
+              className="h-12 text-sm font-semibold rounded-xl shadow-md"
+              onClick={() => setPayMode("total")}
+            >
+              Pagar Total
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-12 text-sm font-semibold rounded-xl"
+              onClick={() => setPayMode("anticipate")}
+            >
+              Antecipar Pagamento
+            </Button>
+          </div>
+        </div>
+        <Button variant="ghost" className="w-full text-xs" onClick={() => onDone()}>Cancelar</Button>
+      </div>
+    );
+  }
+
+  if (payMode === "total") {
+    return (
+      <form onSubmit={(e) => { e.preventDefault(); onFullPay(notes, overrideActive ? paidBy : null); }} className="space-y-4">
+        <div className="bg-muted/50 p-3 rounded-lg border border-border space-y-1">
+          <div className="text-xs text-muted-foreground uppercase">Pagamento Total</div>
+          <div className="text-lg font-bold">{brl(Number(installment.amount))}</div>
+        </div>
+        
+        <div className="space-y-1.5">
+          <Label>Quem está pagando?</Label>
+          <PersonSelect value={paidBy} onChange={setPaidBy} extras={originalPerson ? [originalPerson] : []} />
+          <p className="text-[11px] text-muted-foreground">
+            {overrideActive
+              ? `Dívida de ${originalPerson} será debitada da conta de ${paidBy}.`
+              : "Padrão: a própria pessoa da dívida paga."}
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Observação</Label>
+          <Input 
+            value={notes} 
+            onChange={e => setNotes(e.target.value)} 
+            placeholder="Ex: Pagamento total da parcela"
+          />
+        </div>
+
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" className="flex-1" onClick={() => setPayMode(null)}>Voltar</Button>
+          <Button type="submit" className="flex-1" disabled={saving}>Confirmar Pagamento</Button>
+        </div>
+      </form>
+    );
+  }
+
   return (
     <form onSubmit={handlePay} className="space-y-4">
       <div className="bg-muted/50 p-3 rounded-lg border border-border space-y-1">
-        <div className="text-xs text-muted-foreground uppercase">Valor total da parcela</div>
+        <div className="text-xs text-muted-foreground uppercase">Antecipação Parcial</div>
         <div className="text-lg font-bold">{brl(Number(installment.amount))}</div>
         {isFamilia && (
           <div className="text-[10px] text-amber-500 font-medium flex items-center gap-1 mt-1">
@@ -1931,6 +1992,17 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
         )}
       </div>
       
+      <div className="space-y-1.5">
+        <Label>Quem está antecipando?</Label>
+        <PersonSelect value={paidBy} onChange={setPaidBy} extras={originalPerson ? [originalPerson] : []} />
+        {isFamilia && overrideActive && (
+          <p className="text-[10px] text-amber-500">
+            Aviso: Você está pagando como <strong>{paidBy}</strong>. 
+            O limite para esta antecipação individual é <strong>{brl(quota)}</strong>.
+          </p>
+        )}
+      </div>
+
       <div className="space-y-1.5">
         <Label>Valor para antecipar</Label>
         <div className="relative">
@@ -1945,22 +2017,6 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
             required
           />
         </div>
-        {isFamilia && overrideActive && (
-          <p className="text-[10px] text-amber-500">
-            Aviso: Você está pagando como <strong>{paidBy}</strong>. 
-            O limite para esta antecipação individual é <strong>{brl(quota)}</strong>.
-          </p>
-        )}
-      </div>
-
-      <div className="space-y-1.5">
-        <Label>Antecipado por</Label>
-        <PersonSelect value={paidBy} onChange={setPaidBy} extras={originalPerson ? [originalPerson] : []} />
-        <p className="text-[11px] text-muted-foreground">
-          {overrideActive
-            ? `Dívida de ${originalPerson} será debitada da conta de ${paidBy}.`
-            : "Padrão: a própria pessoa da dívida paga."}
-        </p>
       </div>
 
       <div className="space-y-1.5">
@@ -1968,35 +2024,28 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
         <Input 
           value={notes} 
           onChange={e => setNotes(e.target.value)} 
-          placeholder="Ex: Pagamento via PIX"
+          placeholder="Ex: Antecipação parcial"
         />
       </div>
 
       <div className="flex gap-2">
-        <Button 
-          type="button" 
-          variant="outline" 
-          className="flex-1" 
-          onClick={() => onFullPay(notes, overrideActive ? paidBy : null)}
-          disabled={saving}
-        >
-          Pagar Total
-        </Button>
+        <Button type="button" variant="outline" className="flex-1" onClick={() => setPayMode(null)}>Voltar</Button>
         <Button 
           type="submit" 
           className="flex-1" 
           disabled={saving || Number(payAmount) <= 0}
         >
-          {saving ? "Processando..." : "Pagar Parcial"}
+          {saving ? "Processando..." : "Confirmar Antecipação"}
         </Button>
       </div>
       
       <p className="text-[10px] text-muted-foreground text-center">
-        Se pagar um valor menor, o saldo restante continuará pendente no mesmo mês.
+        O saldo restante continuará pendente no mesmo mês.
       </p>
     </form>
   );
 }
+
 
 function RemovePaymentForm({ installment, allTransactions, onDone, transactionIdToEdit, mode = "auto" }: { installment: any, allTransactions: any[], onDone: () => void, transactionIdToEdit?: string, mode?: "auto" | "edit" | "remove" }) {
   const [selectedTransactionId, setSelectedTransactionId] = useState<string>(transactionIdToEdit || "");
