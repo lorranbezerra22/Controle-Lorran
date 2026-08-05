@@ -396,13 +396,26 @@ function CartoesPage() {
             }
           }
         }
-        
-        await supabase.from("cartao_parcelas").update({ 
-          status: "paid", 
-          paid_amount: amount,
-          paid_by: paidByOverride || null,
-        } as any).eq("id", i.id);
-        toast.success(useOverride ? `Parcela paga por ${costPerson} (dívida de ${originalPerson})` : "Parcela marcada como paga e balanço compensado");
+          const isFullyPaid = (paidAlready + amountToPay) >= (amount - 0.01);
+          
+          const { error } = await supabase.from("cartao_parcelas").update({
+            status: isFullyPaid ? "paid" : "pending",
+            paid_amount: paidAlready + amountToPay,
+            paid_by: isFullyPaid ? (paidByOverride || null) : (i.paid_by || null),
+            // Armazena quem pagou esta parte específica nos metadados para o dashboard saber
+            metadata: {
+              ...(i.metadata || {}),
+              last_payment_by: paidByOverride || null,
+              partial_payments: [
+                ...(i.metadata?.partial_payments || []),
+                { amount: amountToPay, person: costPerson, date: todayLocalISO() }
+              ]
+            }
+          }).eq("id", i.id);
+
+          if (error) throw error;
+          toast.success(useOverride ? `Parcela paga por ${costPerson} (dívida de ${originalPerson})` : "Parcela marcada como paga e balanço compensado");
+        }
       } else {
         const { data: linkedTxs } = await supabase.from("transacoes").select("*").eq("card_installment_id", i.id);
         if (linkedTxs && linkedTxs.length > 0) {
