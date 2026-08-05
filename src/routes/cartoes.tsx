@@ -1835,6 +1835,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
 
     if (amountToPay > originalAmount + 0.01) return toast.error("O valor não pode ser maior que o total da parcela");
 
+
     if (!__tryLock()) return;
 
     setSaving(true);
