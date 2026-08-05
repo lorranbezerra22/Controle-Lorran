@@ -352,7 +352,8 @@ function CartoesPage() {
             } as any);
 
             // Compensação só faz sentido quando quem paga é o próprio dono da dívida
-            if (!useOverride) {
+            // Se for despesa de "Familia", a compensação de receita deve ir para "Familia"
+            if (!useOverride || normalizeName(costPerson) === "familia") {
                 await supabase.from("transacoes").insert({
                 user_id: user!.id,
                 description: `Compensação Fatura ${i.cartoes?.name || "Cartão"} - ${i.cartao_compras?.description}${split.descriptionSuffix}`,
@@ -1825,7 +1826,7 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
           notes: notes || null,
         } as any);
 
-        if (!overrideActive) {
+        if (!overrideActive || normalizeName(costPerson) === "familia") {
           // Compensação só quando o próprio dono da dívida paga
           await supabase.from("transacoes").insert({
             user_id: user!.id,
