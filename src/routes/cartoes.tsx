@@ -72,6 +72,8 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
   // Isso vale tanto para despesas individuais quanto de Família.
   if (paidByOverride && (payer === "lorran" || payer === "tayane")) {
     const target = pickPaymentAccount(accounts, paidByOverride, [paidByOverride]);
+    // Retornamos person: paidByOverride para garantir que a transação NÃO seja vinculada a 'Familia'
+    // quando um indivíduo assume o pagamento total daquela parcela/antecipação.
     if (target) return [{ accountId: target.id, amount, person: paidByOverride, descriptionSuffix: p === "familia" ? ` (Dívida Família paga por ${paidByOverride})` : "" }];
   }
 
@@ -344,6 +346,7 @@ function CartoesPage() {
       const paidAlready = Number(i.paid_amount || 0);
       const { data: { user } } = await supabase.auth.getUser();
       const originalPerson = i.cartao_compras?.person || "";
+      const isFamilia = normalizeName(originalPerson) === "familia";
       const useOverride = !!(paidByOverride && paidByOverride.trim() && normalizeName(paidByOverride) !== normalizeName(originalPerson));
       const costPerson = useOverride ? paidByOverride!.trim() : originalPerson;
       
