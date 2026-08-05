@@ -1140,7 +1140,9 @@ function computePaidRest(targetName: string, monthTx: any[], monthInst: any[], a
   const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   const isTarget = (p?: string | null) => norm(p || "") === norm(targetName);
   const isNameFamilia = norm(targetName) === "familia";
-  const splitsFamilia = norm(targetName) === "lorran" || norm(targetName) === "tayane";
+  const isNameLorran = norm(targetName) === "lorran";
+  const isNameTayane = norm(targetName) === "tayane";
+  
   let rest = 0;
   let paidAmt = 0;
 
@@ -1151,38 +1153,59 @@ function computePaidRest(targetName: string, monthTx: any[], monthInst: any[], a
       const itemPerson = (sh.person || "").trim();
       const isItemFamilia = norm(itemPerson) === "familia";
       let myShare = 0;
+      
       if (isNameFamilia) {
         if (isItemFamilia) myShare = sh.amount;
-      } else {
+      } else if (isNameLorran || isNameTayane) {
         const isItemMe = isTarget(itemPerson);
-        if (isItemMe) myShare = sh.amount;
-        else if (isItemFamilia && splitsFamilia) myShare = sh.amount / 2;
+        if (isItemMe) {
+          myShare = sh.amount;
+        } else if (isItemFamilia) {
+          myShare = sh.amount / 2;
+        }
+      } else {
+        // Outras pessoas específicas
+        if (isTarget(itemPerson)) myShare = sh.amount;
       }
-      if (myShare === 0) return;
-      if (t.status === "paid") paidAmt += myShare;
-      else rest += myShare;
+
+      if (myShare <= 0) return;
+      
+      if (t.status === "paid") {
+        paidAmt += myShare;
+      } else {
+        rest += myShare;
+      }
     });
   });
 
   monthInst.forEach(i => {
-    const v = Number(i.amount);
+    const v = Number(i.amount || 0);
     const paid = Number(i.paid_amount || 0);
     const itemPerson = (i.cartao_compras?.person || "").trim();
     const isItemFamilia = norm(itemPerson) === "familia";
     let factor = 0;
+
     if (isNameFamilia) {
       if (isItemFamilia) factor = 1;
-    } else {
+    } else if (isNameLorran || isNameTayane) {
       const isItemMe = isTarget(itemPerson);
       if (isItemMe) factor = 1;
-      else if (isItemFamilia && splitsFamilia) factor = 0.5;
-    }
-    if (factor === 0) return;
-    if (i.status === "paid") {
-      paidAmt += v * factor;
+      else if (isItemFamilia) factor = 0.5;
     } else {
-      paidAmt += paid * factor;
-      rest += (v - paid) * factor;
+      if (isTarget(itemPerson)) factor = 1;
+    }
+
+    if (factor <= 0) return;
+    
+    const myTotal = v * factor;
+    const myPaid = paid * factor;
+    const myRest = Math.max(0, myTotal - myPaid);
+
+    if (i.status === "paid") {
+      paidAmt += myTotal;
+    } else {
+      paidAmt += myPaid;
+      rest += myRest;
     }
   });
 
