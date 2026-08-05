@@ -846,7 +846,7 @@ function CartoesPage() {
                             if (isPartial || i.status === "paid") setEditPaidOpen(i);
                           }}
                           className={`w-7 h-7 rounded-md flex items-center justify-center ${i.status === "paid" ? "bg-success/20 text-success" : "bg-muted text-muted-foreground hover:bg-warning/20 hover:text-warning"}`}
-                          title={i.status === "paid" ? "Remover/Editar pagamento" : (isPartial ? "Clique esquerdo: editar pagamentos / Clique direito: ajuste manual" : "Pagar parcela")}
+                          title={i.status === "paid" ? "Remover/Editar pagamento" : (isPartial ? "Antecipar pagamento / Clique direito: ajuste manual" : "Antecipar pagamento")}
                         >
                           {i.status === "paid" ? <Check className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
                         </button>
