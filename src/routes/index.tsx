@@ -1,5 +1,3 @@
-// ao antencipador um valor da familia selecionando uma pessoa. TODO o valor pago e restante está indo para resposabilidade da pessoa que antencipou, ESTÁ ERRADO. 
-// ao cadastrar o valor para a familia já tem como responsabilidade de 50% para tayane e 50% para lorran, se a tayane quer antencipar é apenas o valor referente ao custo dela.
 import { createFileRoute } from "@tanstack/react-router";
 import { ProtectedShell } from "@/components/ProtectedShell";
 import { useTransactions, useInstallments, useCards, useInvalidate, usePeople, useCategories, useAccounts } from "@/lib/queries";
@@ -266,48 +264,34 @@ function Dashboard() {
   const peopleAnalytics = useMemo(() => {
     const tot: Record<string, { tx: number; card: number; restante: number }> = {};
     const ensure = (p: string) => (tot[p] = tot[p] ?? { tx: 0, card: 0, restante: 0 });
-    const addTx = (rawPerson: string, amount: number, paid: boolean, metadata?: any) => {
+    const addTx = (rawPerson: string, amount: number, paid: boolean) => {
       const p = (rawPerson || "").trim();
       if (!p) return;
-      
-      // Se for um pagamento antecipado individual de uma dívida de Família,
-      // ele NÃO deve ser dividido 50/50. O pagador assume 100% daquela transação específica.
-      const isPartialIndividual = metadata?.is_partial_individual_pay === true;
-      
-      if (isFamilia(p) && !isPartialIndividual) {
-        ensure(p).tx += amount;
-        if (!paid) ensure(p).restante += amount;
+      ensure(p).tx += amount;
+      if (!paid) ensure(p).restante += amount;
+      if (isFamilia(p)) {
         ensure("Lorran").tx += amount / 2;
         ensure("Tayane").tx += amount / 2;
         if (!paid) { ensure("Lorran").restante += amount / 2; ensure("Tayane").restante += amount / 2; }
-      } else {
-        ensure(p).tx += amount;
-        if (!paid) ensure(p).restante += amount;
       }
     };
-    const addCard = (rawPerson: string, amount: number, paid: boolean, metadata?: any) => {
+    const addCard = (rawPerson: string, amount: number, paid: boolean) => {
       const p = (rawPerson || "").trim();
       if (!p) return;
-
-      const isPartialIndividual = metadata?.is_partial_individual_pay === true;
-
-      if (isFamilia(p) && !isPartialIndividual) {
-        ensure(p).card += amount;
-        if (!paid) ensure(p).restante += amount;
+      ensure(p).card += amount;
+      if (!paid) ensure(p).restante += amount;
+      if (isFamilia(p)) {
         ensure("Lorran").card += amount / 2;
         ensure("Tayane").card += amount / 2;
         if (!paid) { ensure("Lorran").restante += amount / 2; ensure("Tayane").restante += amount / 2; }
-      } else {
-        ensure(p).card += amount;
-        if (!paid) ensure(p).restante += amount;
       }
     };
     monthTx.forEach((t: any) => {
       if (t.kind !== "expense" || t.card_installment_id || t.category_id === "0494a63e-6737-4a3c-8778-67ce5f96a0a1") return;
-      addTx(t.person || "", Number(t.amount), t.status === "paid", t.metadata);
+      addTx(t.person || "", Number(t.amount), t.status === "paid");
     });
     monthInst.forEach((i: any) => {
-      addCard(i.cartao_compras?.person || "", Number(i.amount), i.status === "paid", i.metadata);
+      addCard(i.cartao_compras?.person || "", Number(i.amount), i.status === "paid");
     });
     const cardMap: Record<string, Record<string, number>> = {};
     monthInst.forEach((i: any) => {

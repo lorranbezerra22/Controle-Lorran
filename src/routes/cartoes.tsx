@@ -68,11 +68,14 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
   const p = normalizeName(person);
   const payer = paidByOverride ? normalizeName(paidByOverride) : p;
 
+  // Se um pagador específico (Lorran ou Tayane) for informado, debita 100% da conta dele.
+  // Isso vale tanto para despesas individuais quanto de Família.
   if (paidByOverride && (payer === "lorran" || payer === "tayane")) {
     const target = pickPaymentAccount(accounts, paidByOverride, [paidByOverride]);
     if (target) return [{ accountId: target.id, amount, person: paidByOverride, descriptionSuffix: p === "familia" ? ` (Dívida Família paga por ${paidByOverride})` : "" }];
   }
 
+  // Se for despesa de Família e NÃO houver override de pagador (fluxo padrão 50/50)
   if (p === "familia") {
     const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"]);
     const tayaneAcc = pickPaymentAccount(accounts, "Tayane", ["mercado pago", "mercado"]);
@@ -91,6 +94,7 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
     return [];
   }
 
+  // Despesa individual (Lorran ou Tayane) - sem override ou override ignorado
   const target = pickPaymentAccount(accounts, payer, [payer]);
   if (target) return [{ accountId: target.id, amount, person: payer, descriptionSuffix: "" }];
   return [];
@@ -276,7 +280,7 @@ function CartoesPage() {
       const isFamilia = person === "familia";
       
       // Se tiver filtro ativo, só conta se a pessoa bater com algum dos filtros
-      const matchesFilter = filter === "all" || person === filter || (isFamilia && (filter === "lorran" || filter === "tayane")) || person === filter2 || (isFamilia && (filter2 === "lorran" || filter2 === "tayane"));
+      const matchesFilter = filter === "all" || person === filter || (isFamilia && filter === "lorran") || person === filter2 || (isFamilia && filter2 === "lorran");
 
       if (matchesFilter) {
         let valueForFilter = v;
@@ -291,21 +295,15 @@ function CartoesPage() {
           const totalOriginal = Number(i.amount) || 0;
           const quota = totalOriginal / 2;
           
-          let myPaid = 0;
-          let myQuota = 0;
-
+          // Se o filtro é Lorran
           if (filter === "lorran" || filter2 === "lorran") {
-            myPaid += paidByLorran;
-            myQuota += quota;
-          }
-          if (filter === "tayane" || filter2 === "tayane") {
-            myPaid += paidByTayane;
-            myQuota += quota;
-          }
-
-          if (myQuota > 0) {
-            const myRemaining = Math.max(0, myQuota - myPaid);
-            valueForFilter = statusFilter === "paid" ? myPaid : (statusFilter === "pending" ? myRemaining : myQuota);
+            const myPaid = paidByLorran;
+            const myRemaining = Math.max(0, quota - myPaid);
+            valueForFilter = statusFilter === "paid" ? myPaid : (statusFilter === "pending" ? myRemaining : quota);
+          } else if (filter === "tayane" || filter2 === "tayane") {
+            const myPaid = paidByTayane;
+            const myRemaining = Math.max(0, quota - myPaid);
+            valueForFilter = statusFilter === "paid" ? myPaid : (statusFilter === "pending" ? myRemaining : quota);
           } else {
             // "Familia" ou "Todos" - mostra o consolidado (já está em 'v')
             valueForFilter = v;
@@ -346,7 +344,6 @@ function CartoesPage() {
       const paidAlready = Number(i.paid_amount || 0);
       const { data: { user } } = await supabase.auth.getUser();
       const originalPerson = i.cartao_compras?.person || "";
-      const isFamilia = normalizeName(originalPerson) === "familia";
       const useOverride = !!(paidByOverride && paidByOverride.trim() && normalizeName(paidByOverride) !== normalizeName(originalPerson));
       const costPerson = useOverride ? paidByOverride!.trim() : originalPerson;
       
@@ -372,13 +369,9 @@ function CartoesPage() {
               status: "paid",
               due_at: todayLocalISO(),
               posted_at: todayLocalISO(),
-              person: split.person,
-              paid_by: useOverride ? costPerson : (isFamilia ? null : originalPerson),
-              metadata: { 
-                ...(i.metadata as any || {}),
-                original_person: originalPerson,
-                is_partial_individual_pay: isFamilia && useOverride
-              },
+              // SE houver override (ex: Tayane pagando dívida de Familia), a transação deve ser da Tayane
+              person: useOverride ? costPerson : split.person,
+              paid_by: useOverride ? costPerson : (i.status === "pending" && normalizeName(originalPerson) === "familia" ? null : originalPerson),
               category_id: i.cartao_compras?.category_id || "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
               card_installment_id: i.id,
               account_id: split.accountId,
@@ -1852,28 +1845,32 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const costPerson = overrideActive ? paidBy.trim() : originalPerson;
-      const isPayerIndividual = overrideActive && (normalizeName(paidBy) === "lorran" || normalizeName(paidBy) === "tayane");
+      const overrideSuffix = overrideActive ? ` (antecipado por ${costPerson}, dívida de ${originalPerson})` : " (antecipado)";
       
       const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null);
 
-      for (const split of splits) {
-        // Se a despesa for de Família e um indivíduo pagar (override), a transação deve ser individual.
-        // O buildPaymentSplits já retorna split.person como o indivíduo se houver override.
+      // CORREÇÃO: Para antecipação parcial de Família, se um indivíduo pagar, 
+      // devemos debitar apenas o valor dele, sem forçar o split 50/50 do buildPaymentSplits
+      // caso o buildPaymentSplits ainda esteja retornando split para Familia mesmo com override.
+      // O buildPaymentSplits atual na linha 73 já trata o override, mas vamos garantir que o person da transação seja o pagador.
+
+      const validSplits = splits.filter(s => {
+        const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
+        const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
+        return hasLorranAcc || hasTayaneAcc;
+      });
+
+      for (const split of validSplits) {
         await supabase.from("transacoes").insert({
           user_id: user!.id,
-          description: `Antecipação ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}${overrideActive ? ` (pago por ${costPerson})` : ""}`,
+          description: `Antecipação ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}${overrideSuffix}`,
           amount: split.amount,
           kind: "expense",
           status: "paid",
           due_at: todayLocalISO(),
           posted_at: todayLocalISO(),
-          person: split.person,
-          paid_by: overrideActive ? costPerson : (isFamilia ? null : originalPerson),
-          metadata: { 
-            ...(installment.metadata as any || {}),
-            original_person: originalPerson,
-            is_partial_individual_pay: isFamilia && overrideActive
-          },
+          person: split.person === "Familia" ? "Familia" : split.person,
+          paid_by: overrideActive ? split.person : (installment.status === "pending" && normalizeName(originalPerson) === "familia" ? null : originalPerson),
           category_id: "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
           card_installment_id: installment.id,
           account_id: split.accountId,
@@ -1881,18 +1878,16 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           notes: notes || null,
         } as any);
 
-        // Só cria compensação se não for um pagamento individual assumindo dívida alheia/família
-        // (Ou se for Família pagando como Família no fluxo padrão)
         if (!overrideActive || normalizeName(costPerson) === "familia") {
           await supabase.from("transacoes").insert({
             user_id: user!.id,
-            description: `Compensação Fatura ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}`,
+            description: `Compensação Fatura ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}`,
             amount: split.amount,
             kind: "income",
             status: "paid",
             due_at: todayLocalISO(),
             posted_at: todayLocalISO(),
-            person: split.person,
+            person: split.person === "Familia" ? "Familia" : split.person,
             category_id: "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a",
             notes: "Gerado automaticamente na antecipação da fatura",
           });
