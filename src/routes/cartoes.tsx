@@ -63,14 +63,15 @@ type PaymentSplit = {
 
 // Para "Família": retorna 1 registro com ambas as contas e person='Familia'.
 // O trigger update_account_balance divide 50/50 automaticamente se account_id E account_tayane_id estiverem presentes.
-const buildPaymentSplits = (accounts: any[], person: string, amount: number): PaymentSplit[] => {
+const buildPaymentSplits = (accounts: any[], person: string, amount: number, isPartial: boolean = false): PaymentSplit[] => {
   const p = normalizeName(person);
   if (p === "familia") {
+    // Se for pagamento parcial e a pessoa selecionada para pagar não for Família, 
+    // debitamos 100% de quem está pagando.
+    // Caso contrário (pagamento total ou pago por "Familia"), divide 50/50.
     const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"]);
     const tayaneAcc = pickPaymentAccount(accounts, "Tayane", ["mercado pago", "mercado"]);
 
-    // Se temos ambas as contas, retornamos um split que usa ambas.
-    // A trigger no banco de dados cuidará de descontar 50% de cada.
     if (lorranAcc && tayaneAcc) {
       return [{
         accountId: lorranAcc.id,
@@ -302,7 +303,7 @@ function CartoesPage() {
 
 
 
-  const getPaymentSplits = (person: string, amount: number) => buildPaymentSplits(accounts, person, amount);
+  const getPaymentSplits = (person: string, amount: number, isPartial: boolean = false) => buildPaymentSplits(accounts, person, amount, isPartial);
 
   const togglePaid = async (i: any, notes?: string, paidByOverride?: string | null) => {
     // Estornos (valor negativo) já abatem a fatura automaticamente — não devem
@@ -1798,7 +1799,7 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
       const p = (costPerson || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
       const overrideSuffix = overrideActive ? ` (pago por ${costPerson}, dívida de ${originalPerson})` : "";
       
-      const splits = buildPaymentSplits(accounts, costPerson, amountToPay);
+      const splits = buildPaymentSplits(accounts, costPerson, amountToPay, true);
 
           const validSplits = splits.filter(s => {
             const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
