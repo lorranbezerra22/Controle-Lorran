@@ -253,7 +253,7 @@ function LancamentosPage() {
       status: "paid",
       account_id: payAccount || null,
       account_tayane_id: useSplit ? (payAccountTayane || null) : null,
-      paid_by: personIsDifferent ? firstPayBy : null,
+      paid_by: paidByOverride || (personIsDifferent ? firstPayBy : null),
     };
 
     const { error } = await supabase.from("transacoes").update(updatePayload).eq("id", t.id);
