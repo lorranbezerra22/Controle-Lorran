@@ -1867,8 +1867,13 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           status: "paid",
           due_at: todayLocalISO(),
           posted_at: todayLocalISO(),
-          person: split.person, // Importante: usar o person do split
+          person: split.person,
           paid_by: overrideActive ? costPerson : (isFamilia ? null : originalPerson),
+          metadata: { 
+            ...(installment.metadata as any || {}),
+            original_person: originalPerson,
+            is_partial_individual_pay: isFamilia && overrideActive
+          },
           category_id: "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
           card_installment_id: installment.id,
           account_id: split.accountId,
