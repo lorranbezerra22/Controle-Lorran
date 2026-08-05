@@ -1,3 +1,4 @@
+// sobre a antencipação já existe um split de 50/50 é para manter, apenas quero antencipar 50% de x pessoa. se o valor é de 340 fica metade pra cada. se Tayane quer antencipar a parte dela a do lorran continua pendente os 50%.
 import { createFileRoute } from "@tanstack/react-router";
 import { ProtectedShell } from "@/components/ProtectedShell";
 import { useTransactions, useInstallments, useCards, useInvalidate, usePeople, useCategories, useAccounts } from "@/lib/queries";
