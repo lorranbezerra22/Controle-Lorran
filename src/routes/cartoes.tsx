@@ -68,15 +68,15 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
   const p = normalizeName(person);
   const payer = paidByOverride ? normalizeName(paidByOverride) : p;
 
-  // Se a despesa é de Família, mas o pagador é alguém específico (Lorran ou Tayane),
-  // debita 100% de quem pagou em vez de dividir 50/50.
-  if (p === "familia") {
-    if (paidByOverride && (payer === "lorran" || payer === "tayane")) {
-      const target = pickPaymentAccount(accounts, paidByOverride, [paidByOverride]);
-      if (target) return [{ accountId: target.id, amount, person: paidByOverride, descriptionSuffix: ` (Dívida Família paga por ${paidByOverride})` }];
-    }
+  // Se um pagador específico (Lorran ou Tayane) for informado, debita 100% da conta dele.
+  // Isso vale tanto para despesas individuais quanto de Família.
+  if (paidByOverride && (payer === "lorran" || payer === "tayane")) {
+    const target = pickPaymentAccount(accounts, paidByOverride, [paidByOverride]);
+    if (target) return [{ accountId: target.id, amount, person: paidByOverride, descriptionSuffix: p === "familia" ? ` (Dívida Família paga por ${paidByOverride})` : "" }];
+  }
 
-    // Fluxo padrão 50/50
+  // Se for despesa de Família e NÃO houver override de pagador (fluxo padrão 50/50)
+  if (p === "familia") {
     const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"]);
     const tayaneAcc = pickPaymentAccount(accounts, "Tayane", ["mercado pago", "mercado"]);
 
@@ -94,7 +94,7 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
     return [];
   }
 
-  // Despesa individual (Lorran ou Tayane)
+  // Despesa individual (Lorran ou Tayane) - sem override ou override ignorado
   const target = pickPaymentAccount(accounts, payer, [payer]);
   if (target) return [{ accountId: target.id, amount, person: payer, descriptionSuffix: "" }];
   return [];
@@ -126,6 +126,9 @@ const getInstallmentPaymentState = (installment: any) => {
 
   const paid = installment.status === "paid" && rawPaid <= 0 ? total : Math.min(total, Math.max(0, rawPaid));
   const remaining = installment.status === "paid" ? 0 : Math.max(0, Number((total - paid).toFixed(2)));
+
+  // Se for Família, o total e o restante são divididos por 2 para exibição individual se houver filtros.
+  // Porém, aqui retornamos o estado absoluto. A divisão acontece no useMemo(totals).
 
   return {
     total,
@@ -281,9 +284,30 @@ function CartoesPage() {
 
       if (matchesFilter) {
         let valueForFilter = v;
+        
+        // Lógica de abatimento proporcional para Família
         if (isFamilia && (filter !== "all" || filter2 !== "all")) {
-          // Se for família e houver filtro de pessoa, cada um paga metade
-          valueForFilter = v / 2;
+          // Se alguém já pagou uma parte, precisamos saber QUEM pagou
+          const partials = i.metadata?.partial_payments || [];
+          const paidByLorran = partials.filter((p: any) => normalizeName(p.person) === "lorran").reduce((s: number, p: any) => s + Number(p.amount), 0);
+          const paidByTayane = partials.filter((p: any) => normalizeName(p.person) === "tayane").reduce((s: number, p: any) => s + Number(p.amount), 0);
+          
+          const totalOriginal = Number(i.amount) || 0;
+          const quota = totalOriginal / 2;
+          
+          // Se o filtro é Lorran
+          if (filter === "lorran" || filter2 === "lorran") {
+            const myPaid = paidByLorran;
+            const myRemaining = Math.max(0, quota - myPaid);
+            valueForFilter = statusFilter === "paid" ? myPaid : (statusFilter === "pending" ? myRemaining : quota);
+          } else if (filter === "tayane" || filter2 === "tayane") {
+            const myPaid = paidByTayane;
+            const myRemaining = Math.max(0, quota - myPaid);
+            valueForFilter = statusFilter === "paid" ? myPaid : (statusFilter === "pending" ? myRemaining : quota);
+          } else {
+            // "Familia" ou "Todos" - mostra o consolidado (já está em 'v')
+            valueForFilter = v;
+          }
         }
         
         m.fatura += valueForFilter;
@@ -293,16 +317,10 @@ function CartoesPage() {
         m.brandTotals[b].fatura += valueForFilter;
 
         if (statusFilter !== "paid" && payment.hasPending) {
-          let pendingForFilter = payment.remaining;
-          
-          if (isFamilia && (filter !== "all" || filter2 !== "all")) {
-            pendingForFilter = payment.remaining / 2;
-          }
-          
-          m.restante += pendingForFilter;
+          m.restante += valueForFilter; // Já calculado acima respeitando o filtro
           const b = i.cartao_compras?.brand || "Default";
           m.brandTotals[b] = m.brandTotals[b] ?? { fatura: 0, restante: 0 };
-          m.brandTotals[b].restante += pendingForFilter;
+          m.brandTotals[b].restante += valueForFilter;
         }
       }
     });
@@ -377,14 +395,25 @@ function CartoesPage() {
               });
             }
           }
+          const isFullyPaid = (paidAlready + amountToPay) >= (amount - 0.01);
+          
+          const { error } = await supabase.from("cartao_parcelas").update({
+            status: isFullyPaid ? "paid" : "pending",
+            paid_amount: paidAlready + amountToPay,
+            paid_by: isFullyPaid ? (paidByOverride || null) : (i.paid_by || null),
+            metadata: {
+              ...(i.metadata as any || {}),
+              last_payment_by: paidByOverride || null,
+              partial_payments: [
+                ...((i.metadata as any)?.partial_payments || []),
+                { amount: amountToPay, person: costPerson, date: todayLocalISO() }
+              ]
+            }
+          } as any).eq("id", i.id);
+
+          if (error) throw error;
+          toast.success(useOverride ? `Parcela paga por ${costPerson} (dívida de ${originalPerson})` : "Parcela marcada como paga e balanço compensado");
         }
-        
-        await supabase.from("cartao_parcelas").update({ 
-          status: "paid", 
-          paid_amount: amount,
-          paid_by: paidByOverride || null,
-        } as any).eq("id", i.id);
-        toast.success(useOverride ? `Parcela paga por ${costPerson} (dívida de ${originalPerson})` : "Parcela marcada como paga e balanço compensado");
       } else {
         const { data: linkedTxs } = await supabase.from("transacoes").select("*").eq("card_installment_id", i.id);
         if (linkedTxs && linkedTxs.length > 0) {

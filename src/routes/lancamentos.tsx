@@ -247,12 +247,16 @@ function LancamentosPage() {
     const splitPayBy = payBy ? payBy.split(",") : [];
     const firstPayBy = splitPayBy[0] || "";
     const personIsDifferent = t.kind === "expense" && !isFamilyExpense && firstPayBy && norm(firstPayBy) !== norm(t.person || "");
-    const { error } = await supabase.from("transacoes").update({
+    
+    // Se for pagamento parcial de Família por uma única pessoa, o split_paid_by deve refletir isso
+    const updatePayload: any = {
       status: "paid",
       account_id: payAccount || null,
       account_tayane_id: useSplit ? (payAccountTayane || null) : null,
       paid_by: personIsDifferent ? firstPayBy : null,
-    }).eq("id", t.id);
+    };
+
+    const { error } = await supabase.from("transacoes").update(updatePayload).eq("id", t.id);
     if (error) toast.error(error.message);
     else {
       invalidate("transactions");
