@@ -68,15 +68,15 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
   const p = normalizeName(person);
   const payer = paidByOverride ? normalizeName(paidByOverride) : p;
 
-  // Se a despesa é de Família, mas o pagador é alguém específico (Lorran ou Tayane),
-  // debita 100% de quem pagou em vez de dividir 50/50.
-  if (p === "familia") {
-    if (paidByOverride && (payer === "lorran" || payer === "tayane")) {
-      const target = pickPaymentAccount(accounts, paidByOverride, [paidByOverride]);
-      if (target) return [{ accountId: target.id, amount, person: paidByOverride, descriptionSuffix: ` (Dívida Família paga por ${paidByOverride})` }];
-    }
+  // Se um pagador específico (Lorran ou Tayane) for informado, debita 100% da conta dele.
+  // Isso vale tanto para despesas individuais quanto de Família.
+  if (paidByOverride && (payer === "lorran" || payer === "tayane")) {
+    const target = pickPaymentAccount(accounts, paidByOverride, [paidByOverride]);
+    if (target) return [{ accountId: target.id, amount, person: paidByOverride, descriptionSuffix: p === "familia" ? ` (Dívida Família paga por ${paidByOverride})` : "" }];
+  }
 
-    // Fluxo padrão 50/50
+  // Se for despesa de Família e NÃO houver override de pagador (fluxo padrão 50/50)
+  if (p === "familia") {
     const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"]);
     const tayaneAcc = pickPaymentAccount(accounts, "Tayane", ["mercado pago", "mercado"]);
 
@@ -94,7 +94,7 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
     return [];
   }
 
-  // Despesa individual (Lorran ou Tayane)
+  // Despesa individual (Lorran ou Tayane) - sem override ou override ignorado
   const target = pickPaymentAccount(accounts, payer, [payer]);
   if (target) return [{ accountId: target.id, amount, person: payer, descriptionSuffix: "" }];
   return [];
@@ -126,6 +126,9 @@ const getInstallmentPaymentState = (installment: any) => {
 
   const paid = installment.status === "paid" && rawPaid <= 0 ? total : Math.min(total, Math.max(0, rawPaid));
   const remaining = installment.status === "paid" ? 0 : Math.max(0, Number((total - paid).toFixed(2)));
+
+  // Se for Família, o total e o restante são divididos por 2 para exibição individual se houver filtros.
+  // Porém, aqui retornamos o estado absoluto. A divisão acontece no useMemo(totals).
 
   return {
     total,
