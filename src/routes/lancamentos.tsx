@@ -723,10 +723,6 @@ function LancamentosPage() {
           )}
         </DialogContent>
       </Dialog>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
 
     </div>
