@@ -317,7 +317,7 @@ function CartoesPage() {
       const paidAlready = Number(i.paid_amount || 0);
       const { data: { user } } = await supabase.auth.getUser();
       const originalPerson = i.cartao_compras?.person || "";
-      const useOverride = !!(paidByOverride && paidByOverride.trim() && paidByOverride.trim().toLowerCase() !== originalPerson.toLowerCase());
+      const useOverride = !!(paidByOverride && paidByOverride.trim() && normalizeName(paidByOverride) !== normalizeName(originalPerson));
       const costPerson = useOverride ? paidByOverride!.trim() : originalPerson;
       
       if (isPaying) {
@@ -1772,7 +1772,7 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
 
   const { data: people = [] } = usePeople();
   const originalPerson = installment.cartao_compras?.person || "";
-  const overrideActive = !!paidBy && paidBy.trim().toLowerCase() !== originalPerson.toLowerCase();
+  const overrideActive = !!paidBy && paidBy.trim() && normalizeName(paidBy) !== normalizeName(originalPerson);
 
   const handlePartialPay = async (e: React.FormEvent) => {
     e.preventDefault();
