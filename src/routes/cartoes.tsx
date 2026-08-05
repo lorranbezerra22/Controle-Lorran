@@ -66,9 +66,7 @@ type PaymentSplit = {
 const buildPaymentSplits = (accounts: any[], person: string, amount: number, isPartial: boolean = false): PaymentSplit[] => {
   const p = normalizeName(person);
   if (p === "familia") {
-    // Se for pagamento parcial e a pessoa selecionada para pagar não for Família, 
-    // debitamos 100% de quem está pagando.
-    // Caso contrário (pagamento total ou pago por "Familia"), divide 50/50.
+    // Para despesas de família, se as duas contas estiverem disponíveis, divide 50/50.
     const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"]);
     const tayaneAcc = pickPaymentAccount(accounts, "Tayane", ["mercado pago", "mercado"]);
 
@@ -85,9 +83,10 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, isP
     if (only) return [{ accountId: only.id, amount, person: "Familia", descriptionSuffix: "" }];
     return [];
   }
-  const target = p === "lorran"
-    ? pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"])
-    : pickPaymentAccount(accounts, person, [person]);
+
+  // Lógica de antecipação: Se a dívida é de "Familia", mas um membro específico está pagando
+  // (caso de pagamento parcial ou pago por Lorran/Tayane), debitamos 100% de quem paga.
+  const target = pickPaymentAccount(accounts, person, [person]);
   if (target) return [{ accountId: target.id, amount, person, descriptionSuffix: "" }];
   return [];
 };
