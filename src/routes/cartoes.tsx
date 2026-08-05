@@ -369,9 +369,8 @@ function CartoesPage() {
               status: "paid",
               due_at: todayLocalISO(),
               posted_at: todayLocalISO(),
-              // SE houver override (ex: Tayane pagando dívida de Familia), a transação deve ser da Tayane
-              person: useOverride ? costPerson : split.person,
-              paid_by: useOverride ? costPerson : (i.status === "pending" && normalizeName(originalPerson) === "familia" ? null : originalPerson),
+              person: split.person,
+              paid_by: paidByOverride || null,
               category_id: i.cartao_compras?.category_id || "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
               card_installment_id: i.id,
               account_id: split.accountId,
@@ -1849,11 +1848,6 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
       
       const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null);
 
-      // CORREÇÃO: Para antecipação parcial de Família, se um indivíduo pagar, 
-      // devemos debitar apenas o valor dele, sem forçar o split 50/50 do buildPaymentSplits
-      // caso o buildPaymentSplits ainda esteja retornando split para Familia mesmo com override.
-      // O buildPaymentSplits atual na linha 73 já trata o override, mas vamos garantir que o person da transação seja o pagador.
-
       const validSplits = splits.filter(s => {
         const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
         const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
@@ -1870,7 +1864,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           due_at: todayLocalISO(),
           posted_at: todayLocalISO(),
           person: split.person === "Familia" ? "Familia" : split.person,
-          paid_by: overrideActive ? split.person : (installment.status === "pending" && normalizeName(originalPerson) === "familia" ? null : originalPerson),
+          paid_by: overrideActive ? split.person : null,
           category_id: "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
           card_installment_id: installment.id,
           account_id: split.accountId,

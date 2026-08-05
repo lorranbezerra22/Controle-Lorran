@@ -256,9 +256,6 @@ function LancamentosPage() {
       account_id: payAccount || null,
       account_tayane_id: useSplit ? (payAccountTayane || null) : null,
       paid_by: paidByOverride || (personIsDifferent ? firstPayBy : null),
-      // CORREÇÃO: Se for despesa de Família paga por um indivíduo, a transação deve ser 100% dele.
-      // O split 50/50 só ocorre se person="Familia" E useSplit=true.
-      person: paidByOverride ? paidByOverride : t.person,
     };
 
     const { error } = await supabase.from("transacoes").update(updatePayload).eq("id", t.id);
