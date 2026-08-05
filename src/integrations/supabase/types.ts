@@ -147,6 +147,7 @@ export type Database = {
           id: string
           import_batch_id: string | null
           installment_number: number
+          metadata: Json | null
           notes: string | null
           paid_amount: number | null
           paid_by: string | null
@@ -162,6 +163,7 @@ export type Database = {
           id?: string
           import_batch_id?: string | null
           installment_number: number
+          metadata?: Json | null
           notes?: string | null
           paid_amount?: number | null
           paid_by?: string | null
@@ -177,6 +179,7 @@ export type Database = {
           id?: string
           import_batch_id?: string | null
           installment_number?: number
+          metadata?: Json | null
           notes?: string | null
           paid_amount?: number | null
           paid_by?: string | null
