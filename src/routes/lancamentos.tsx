@@ -260,7 +260,8 @@ function LancamentosPage() {
       person: paidByOverride ? paidByOverride : t.person,
       metadata: {
         ...(t.metadata || {}),
-        original_person: t.person
+        original_person: t.person,
+        is_partial_individual_pay: isFamilyExpense && !!paidByOverride
       }
     };
 
