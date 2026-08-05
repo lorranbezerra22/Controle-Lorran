@@ -674,7 +674,8 @@ function LancamentosPage() {
                     </div>
                   )}
 
-                  {paying.kind === "expense" && norm(paying.person || "") === "familia" && (
+                  {payBy && paying.kind === "expense" && norm(paying.person || "") === "familia" && (
+
                     <div className="grid gap-1.5">
                       <Label className="text-xs font-medium">Pago por</Label>
                       <Select value={payBy} onValueChange={setPayBy}>
