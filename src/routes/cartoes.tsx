@@ -1889,7 +1889,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
             status: "paid",
             due_at: todayLocalISO(),
             posted_at: todayLocalISO(),
-            person: split.person === "Familia" ? "Familia" : split.person,
+            person: split.person,
             category_id: "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a",
             notes: "Gerado automaticamente na antecipação da fatura",
           });
