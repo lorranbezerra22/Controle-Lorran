@@ -67,30 +67,32 @@ type PaymentSplit = {
 const buildPaymentSplits = (accounts: any[], person: string, amount: number, paidByOverride?: string | null): PaymentSplit[] => {
   const p = normalizeName(person);
   
-  // Casos de Override: se houver um pagador específico informado (Lorran ou Tayane), 
-  // debita 100% da conta dele. Isso é usado quando alguém decide pagar sozinho uma despesa.
-  if (paidByOverride && (normalizeName(paidByOverride) === "lorran" || normalizeName(paidByOverride) === "tayane")) {
-    const target = pickPaymentAccount(accounts, paidByOverride, [paidByOverride]);
-    if (target) return [{ 
-      accountId: target.id, 
-      amount, 
-      person: paidByOverride, 
-      descriptionSuffix: p === "familia" ? ` (Dívida Família paga integralmente por ${paidByOverride})` : "" 
-    }];
-  }
-
-  // Se for despesa de Família e NÃO houver override de pagador (fluxo padrão 50/50)
+  // Se for despesa de Família
   if (p === "familia") {
     const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"]);
     const tayaneAcc = pickPaymentAccount(accounts, "Tayane", ["mercado pago", "mercado"]);
 
+    // Casos de Override para Família: se um pagador individual foi selecionado
+    if (paidByOverride && (normalizeName(paidByOverride) === "lorran" || normalizeName(paidByOverride) === "tayane")) {
+      const isLorran = normalizeName(paidByOverride) === "lorran";
+      const target = isLorran ? lorranAcc : tayaneAcc;
+      
+      if (target) {
+        return [{
+          accountId: target.id,
+          amount,
+          person: paidByOverride,
+          descriptionSuffix: ` (Cota individual de ${paidByOverride} em despesa Família)`
+        }];
+      }
+    }
+
+    // Fluxo padrão 50/50: debita de ambas as contas
     if (lorranAcc && tayaneAcc) {
-      // Retornamos um split que contém as duas contas.
-      // O trigger no banco divide automaticamente se account_id e account_tayane_id estiverem presentes.
       return [{
         accountId: lorranAcc.id,
         accountTayaneId: tayaneAcc.id,
-        amount, // O valor TOTAL da transação; o banco dividirá em 50% para cada conta.
+        amount, // O valor TOTAL; o trigger no banco divide 50/50 entre as contas
         person: "Familia",
         descriptionSuffix: " (Família 50/50)",
       }];
