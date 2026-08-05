@@ -1245,7 +1245,7 @@ function PersonCard({ name, value, monthInst, monthTx, adjMap, expanded = true, 
         )}
       </div>
 
-      <div className="text-2xl font-bold tabular-nums leading-tight relative text-foreground">{brl(value)}</div>
+      <div className="text-2xl font-bold tabular-nums leading-tight relative text-foreground">{brl(totalPago + totalRestante)}</div>
 
       {expanded && (
         <div className="pt-2 border-t border-border/50 space-y-1.5 relative">
