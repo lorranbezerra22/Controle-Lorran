@@ -632,7 +632,34 @@ function LancamentosPage() {
                 </div>
 
                 <div className="grid gap-4">
-                  {paying.kind === "expense" && !(norm(paying.person || "") === "familia") && (
+                  {paying.kind === "expense" && !payBy && (
+                    <div className="grid grid-cols-1 gap-3 px-2">
+                      <p className="text-sm text-center text-muted-foreground mb-2">Como deseja realizar este pagamento de <strong className="text-foreground">{brl(Number(paying.amount))}</strong>?</p>
+                      <Button 
+                        className="h-11 rounded-xl shadow-md font-semibold"
+                        onClick={() => {
+                          setPayBy(norm(paying.person || "") === "familia" ? "Familia" : (paying.person || "Lorran"));
+                        }}
+                      >
+                        Pagar Total
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="h-11 rounded-xl font-semibold"
+                        onClick={() => {
+                          setPayBy(paying.person || "Lorran");
+                          // Se for individual, ele vai cair no seletor de "Pago por" de qualquer forma
+                          // Se for família, ele vai cair no seletor de Lorran/Tayane/Ambos
+                        }}
+                      >
+                        Antecipar Pagamento
+                      </Button>
+                      <Button variant="ghost" className="mt-2 text-xs" onClick={() => setPaying(null)}>Cancelar</Button>
+                    </div>
+                  )}
+
+                  {payBy && paying.kind === "expense" && !(norm(paying.person || "") === "familia") && (
+
                     <div className="grid gap-1.5">
                       <Label className="text-xs font-medium">Pago por</Label>
                       <PersonSelect 
