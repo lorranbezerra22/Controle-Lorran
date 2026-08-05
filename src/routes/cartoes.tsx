@@ -892,12 +892,12 @@ function CartoesPage() {
 
 
       <Dialog open={!!partialPayOpen} onOpenChange={(o) => !o && setPartialPayOpen(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Pagar parcela</DialogTitle>
+            <DialogTitle>Antecipar Pagamento</DialogTitle>
           </DialogHeader>
           {partialPayOpen && (
-            <PartialPayForm 
+            <AnticipatePayForm 
               installment={partialPayOpen} 
               onFullPay={(notes, paidBy) => { togglePaid(partialPayOpen, notes, paidBy); setPartialPayOpen(null); }}
               onDone={() => { setPartialPayOpen(null); invalidate("installments"); invalidate("accounts"); invalidate("transactions"); }} 
