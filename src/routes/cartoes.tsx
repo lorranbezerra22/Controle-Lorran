@@ -374,6 +374,11 @@ function CartoesPage() {
               posted_at: todayLocalISO(),
               person: split.person,
               paid_by: useOverride ? costPerson : (isFamilia ? null : originalPerson),
+              metadata: { 
+                ...(i.metadata as any || {}),
+                original_person: originalPerson,
+                is_partial_individual_pay: isFamilia && useOverride
+              },
               category_id: i.cartao_compras?.category_id || "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
               card_installment_id: i.id,
               account_id: split.accountId,
