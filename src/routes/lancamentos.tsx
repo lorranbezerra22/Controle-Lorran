@@ -238,9 +238,12 @@ function LancamentosPage() {
     const t = paying;
     const isFamilyExpense = t.kind === "expense" && norm(t.person || "") === "familia";
     const payByNorm = norm(payBy || "");
-    // Despesa de Família sempre debita 50% da conta do Lorran e 50% da conta da Tayane.
-    // O campo "Pago por" não deve transformar Família em débito 100% de uma pessoa.
-    const useSplit = isFamilyExpense;
+    const paidByOverride = (payBy && payByNorm !== "familia") ? payBy : null;
+    
+    // Se a despesa é de Família, mas o pagador é alguém específico (Lorran ou Tayane),
+    // desativamos o split para debitar 100% da conta escolhida (payAccount).
+    const useSplit = isFamilyExpense && !paidByOverride;
+    
     const splitPayBy = payBy ? payBy.split(",") : [];
     const firstPayBy = splitPayBy[0] || "";
     const personIsDifferent = t.kind === "expense" && !isFamilyExpense && firstPayBy && norm(firstPayBy) !== norm(t.person || "");
