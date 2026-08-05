@@ -230,8 +230,10 @@ function LancamentosPage() {
     setPayBy(t.person || "");
     setPayAccount(t.account_id || autoAccount || lorranAcc || "");
     setPayAccountTayane(t.account_tayane_id || tayaneAcc || "");
+    setPayBy(""); // Reset payBy to trigger initial choice dialog
     setPaying(t);
   };
+
 
   const confirmPay = async () => {
     if (!paying) return;
