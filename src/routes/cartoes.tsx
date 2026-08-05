@@ -282,7 +282,7 @@ function CartoesPage() {
       const isFamilia = person === "familia";
       
       // Se tiver filtro ativo, só conta se a pessoa bater com algum dos filtros
-      const matchesFilter = filter === "all" || person === filter || (isFamilia && filter === "lorran") || person === filter2 || (isFamilia && filter2 === "lorran");
+      const matchesFilter = filter === "all" || person === filter || (isFamilia && (filter === "lorran" || filter === "tayane")) || person === filter2 || (isFamilia && (filter2 === "lorran" || filter2 === "tayane"));
 
       if (matchesFilter) {
         let valueForFilter = v;
@@ -297,15 +297,21 @@ function CartoesPage() {
           const totalOriginal = Number(i.amount) || 0;
           const quota = totalOriginal / 2;
           
-          // Se o filtro é Lorran
+          let myPaid = 0;
+          let myQuota = 0;
+
           if (filter === "lorran" || filter2 === "lorran") {
-            const myPaid = paidByLorran;
-            const myRemaining = Math.max(0, quota - myPaid);
-            valueForFilter = statusFilter === "paid" ? myPaid : (statusFilter === "pending" ? myRemaining : quota);
-          } else if (filter === "tayane" || filter2 === "tayane") {
-            const myPaid = paidByTayane;
-            const myRemaining = Math.max(0, quota - myPaid);
-            valueForFilter = statusFilter === "paid" ? myPaid : (statusFilter === "pending" ? myRemaining : quota);
+            myPaid += paidByLorran;
+            myQuota += quota;
+          }
+          if (filter === "tayane" || filter2 === "tayane") {
+            myPaid += paidByTayane;
+            myQuota += quota;
+          }
+
+          if (myQuota > 0) {
+            const myRemaining = Math.max(0, myQuota - myPaid);
+            valueForFilter = statusFilter === "paid" ? myPaid : (statusFilter === "pending" ? myRemaining : myQuota);
           } else {
             // "Familia" ou "Todos" - mostra o consolidado (já está em 'v')
             valueForFilter = v;
