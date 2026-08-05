@@ -692,7 +692,7 @@ function LancamentosPage() {
                       </Select>
                       {payBy && payBy !== "Familia" && (
                         <p className="text-[10px] text-amber-500">
-                          Aviso: Você está antecipando apenas a parte de <strong>{payBy}</strong> ({brl(Number(paying.amount)/2)}).
+                          Aviso: Você está antecipando integralmente o valor de <strong>{brl(Number(paying.amount))}</strong> como <strong>{payBy}</strong>.
                         </p>
                       )}
                     </div>

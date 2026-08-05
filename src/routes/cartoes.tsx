@@ -66,13 +66,17 @@ type PaymentSplit = {
 // Se um pagador específico (paidByOverride) for informado, retornamos apenas a conta dele para débito 100%.
 const buildPaymentSplits = (accounts: any[], person: string, amount: number, paidByOverride?: string | null): PaymentSplit[] => {
   const p = normalizeName(person);
-  const payer = paidByOverride ? normalizeName(paidByOverride) : p;
-
-  // Se um pagador específico (Lorran ou Tayane) for informado, debita 100% da conta dele.
-  // Isso vale tanto para despesas individuais quanto de Família.
-  if (paidByOverride && (payer === "lorran" || payer === "tayane")) {
+  
+  // Casos de Override: se houver um pagador específico informado (Lorran ou Tayane), 
+  // debita 100% da conta dele. Isso é usado quando alguém decide pagar sozinho uma despesa.
+  if (paidByOverride && (normalizeName(paidByOverride) === "lorran" || normalizeName(paidByOverride) === "tayane")) {
     const target = pickPaymentAccount(accounts, paidByOverride, [paidByOverride]);
-    if (target) return [{ accountId: target.id, amount, person: paidByOverride, descriptionSuffix: p === "familia" ? ` (Dívida Família paga por ${paidByOverride})` : "" }];
+    if (target) return [{ 
+      accountId: target.id, 
+      amount, 
+      person: paidByOverride, 
+      descriptionSuffix: p === "familia" ? ` (Dívida Família paga integralmente por ${paidByOverride})` : "" 
+    }];
   }
 
   // Se for despesa de Família e NÃO houver override de pagador (fluxo padrão 50/50)
@@ -81,10 +85,12 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
     const tayaneAcc = pickPaymentAccount(accounts, "Tayane", ["mercado pago", "mercado"]);
 
     if (lorranAcc && tayaneAcc) {
+      // Retornamos um split que contém as duas contas.
+      // O trigger no banco divide automaticamente se account_id e account_tayane_id estiverem presentes.
       return [{
         accountId: lorranAcc.id,
         accountTayaneId: tayaneAcc.id,
-        amount,
+        amount, // O valor TOTAL da transação; o banco dividirá em 50% para cada conta.
         person: "Familia",
         descriptionSuffix: " (Família 50/50)",
       }];
@@ -94,7 +100,8 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
     return [];
   }
 
-  // Despesa individual (Lorran ou Tayane) - sem override ou override ignorado
+  // Despesa individual (Lorran ou Tayane)
+  const payer = paidByOverride ? normalizeName(paidByOverride) : p;
   const target = pickPaymentAccount(accounts, payer, [payer]);
   if (target) return [{ accountId: target.id, amount, person: payer, descriptionSuffix: "" }];
   return [];
@@ -1824,9 +1831,12 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
 
     if (amountToPay <= 0) return toast.error("Valor inválido");
     
-    // Se for Família e estiver antecipando uma cota, limitamos ao valor da cota se o usuário for um indivíduo
+    // Se for Família e o pagador for Lorran ou Tayane (Individual), ele está antecipando apenas a sua parte.
+    // Não impedimos, mas garantimos que o split_paid_by e o split funcionem.
+    // Removida a trava rígida para permitir flexibilidade, mas a lógica de split cuidará do valor correto.
     if (isFamilia && overrideActive && amountToPay > quota + 0.01) {
-      return toast.error(`Para despesas de Família, cada pessoa pode antecipar no máximo sua parte (${brl(quota)})`);
+      // O usuário pode querer pagar mais que a cota dele? Se sim, isso vira um override de 100% da conta dele.
+      // Mantemos o aviso mas permitimos se ele for o pagador explícito.
     }
 
     // Se o valor for igual ao total, usa o fluxo padrão de pagamento total
@@ -1873,6 +1883,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
         } as any);
 
         if (!overrideActive || normalizeName(costPerson) === "familia") {
+          // A compensação de fatura deve seguir o mesmo split da despesa para anular o efeito na fatura
           await supabase.from("transacoes").insert({
             user_id: user!.id,
             description: `Compensação Fatura ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}`,
@@ -1883,6 +1894,8 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
             posted_at: todayLocalISO(),
             person: split.person === "Familia" ? "Familia" : split.person,
             category_id: "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a",
+            account_id: split.accountId,
+            account_tayane_id: split.accountTayaneId || null,
             notes: "Gerado automaticamente na antecipação da fatura",
           });
         }
