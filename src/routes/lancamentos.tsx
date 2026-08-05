@@ -243,14 +243,15 @@ function LancamentosPage() {
     const paidByOverride = (payBy && payByNorm !== "familia") ? payBy : null;
     
     // Se a despesa é de Família, mas o pagador é alguém específico (Lorran ou Tayane),
-    // desativamos o split para debitar 100% da conta escolhida (payAccount).
+    // o sistema agora suporta antecipação da cota individual ou pagamento integral.
+    // Se useSplit for true, o trigger do banco dividirá o valor 50/50 entre Lorran e Tayane.
     const useSplit = isFamilyExpense && !paidByOverride;
     
     const splitPayBy = payBy ? payBy.split(",") : [];
     const firstPayBy = splitPayBy[0] || "";
     const personIsDifferent = t.kind === "expense" && !isFamilyExpense && firstPayBy && norm(firstPayBy) !== norm(t.person || "");
     
-    // Se for pagamento parcial de Família por uma única pessoa, o split_paid_by deve refletir isso
+    // Se for pagamento de Família por uma única pessoa, account_tayane_id deve ser nulo para evitar o split automático do banco
     const updatePayload: any = {
       status: "paid",
       account_id: payAccount || null,
