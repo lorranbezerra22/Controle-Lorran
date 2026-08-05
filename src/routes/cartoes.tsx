@@ -1811,7 +1811,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null) => void, onDone: () => void }) {
   const [payMode, setPayMode] = useState<"total" | "anticipate" | null>(null);
-  const [payAmount, setPayAmount] = useState(String(installment.amount));
+  const [payAmount, setPayAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [paidBy, setPaidBy] = useState<string>(installment.cartao_compras?.person || "");
   const [saving, setSaving] = useState(false);
@@ -1820,7 +1820,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
 
   const originalPerson = installment.cartao_compras?.person || "";
   const isFamilia = normalizeName(originalPerson) === "familia";
-  const quota = Number(installment.amount) / 2;
+  const quota = Number(installment.amount || 0) / 2;
   
   const overrideActive = !!paidBy && paidBy.trim() && normalizeName(paidBy) !== normalizeName(originalPerson);
 
@@ -1832,11 +1832,10 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
     if (amountToPay <= 0) return toast.error("Valor inválido");
     
     // Se for Família e o pagador for Lorran ou Tayane (Individual), ele está antecipando apenas a sua parte.
-    // Não impedimos, mas garantimos que o split_paid_by e o split funcionem.
-    // Removida a trava rígida para permitir flexibilidade, mas a lógica de split cuidará do valor correto.
-    if (isFamilia && overrideActive && amountToPay > quota + 0.01) {
-      // O usuário pode querer pagar mais que a cota dele? Se sim, isso vira um override de 100% da conta dele.
-      // Mantemos o aviso mas permitimos se ele for o pagador explícito.
+    if (isFamilia && overrideActive) {
+      if (amountToPay > quota + 0.01) {
+        return toast.error(`Para antecipação individual de Família, o valor máximo é a sua parte (${brl(quota)})`);
+      }
     }
 
     // Se o valor for igual ao total, usa o fluxo padrão de pagamento total
@@ -1856,6 +1855,8 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
       const costPerson = overrideActive ? paidBy.trim() : originalPerson;
       const overrideSuffix = overrideActive ? ` (antecipado por ${costPerson}, dívida de ${originalPerson})` : " (antecipado)";
       
+      // Se for override, buildPaymentSplits retornará 100% para o pagador escolhido.
+      // Se NÃO for override, retornará 50/50.
       const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null);
 
       const validSplits = splits.filter(s => {
@@ -1935,7 +1936,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
     return (
       <div className="space-y-4">
         <div className="bg-muted/50 p-4 rounded-xl border border-border text-center">
-          <p className="text-sm text-muted-foreground mb-4">O que você deseja fazer com esta parcela de <strong className="text-foreground">{brl(Number(installment.amount))}</strong>?</p>
+          <p className="text-sm text-muted-foreground mb-4">O que você deseja fazer com esta parcela de <strong className="text-foreground">{brl(Number(installment.amount || 0))}</strong>?</p>
           <div className="grid grid-cols-1 gap-3">
             <Button 
               className="h-12 text-sm font-semibold rounded-xl shadow-md"
@@ -1962,7 +1963,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
       <form onSubmit={(e) => { e.preventDefault(); onFullPay(notes, overrideActive ? paidBy : null); }} className="space-y-4">
         <div className="bg-muted/50 p-3 rounded-lg border border-border space-y-1">
           <div className="text-xs text-muted-foreground uppercase">Pagamento Total</div>
-          <div className="text-lg font-bold">{brl(Number(installment.amount))}</div>
+          <div className="text-lg font-bold">{brl(Number(installment.amount || 0))}</div>
         </div>
         
         <div className="space-y-1.5">
@@ -1996,7 +1997,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
     <form onSubmit={handlePay} className="space-y-4">
       <div className="bg-muted/50 p-3 rounded-lg border border-border space-y-1">
         <div className="text-xs text-muted-foreground uppercase">Antecipação Parcial</div>
-        <div className="text-lg font-bold">{brl(Number(installment.amount))}</div>
+        <div className="text-lg font-bold">{brl(Number(installment.amount || 0))}</div>
         {isFamilia && (
           <div className="text-[10px] text-amber-500 font-medium flex items-center gap-1 mt-1">
             <AlertTriangle className="w-3 h-3" />
