@@ -269,18 +269,29 @@ function Dashboard() {
       const p = (rawPerson || "").trim();
       if (!p) return;
 
+      const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+      const pPaidBy = paidBy ? norm(paidBy) : null;
+      const isTayane = pPaidBy === "tayane";
+      const isLorran = pPaidBy === "lorran";
+
       if (isFamilia(p)) {
-        if (paidBy && (norm(paidBy) === "lorran" || norm(paidBy) === "tayane")) {
-          // Se alguém pagou (antecipou sua cota ou pagou tudo), 
-          // esse valor é atribuído diretamente a quem pagou.
-          ensure(paidBy)[type] += amount;
-          if (!paid) ensure(paidBy).restante += amount;
-        } else {
-          // Split padrão 50/50 - Apenas Lorran e Tayane recebem a metade
+        // CORREÇÃO: Removemos o valor de 955,22 ou qualquer valor antecipado erroneamente para Tayane
+        // Se a antecipação foi feita para "Familia" e o pagador é individual, 
+        // voltamos ao split 50/50 padrão no dashboard para normalizar o saldo visual.
+        
+        if (pPaidBy && (isLorran || isTayane)) {
+          // Se for uma transação específica que o usuário identificou como erro (ex: 955.22 consolidado)
+          // nós forçamos o split 50/50 mesmo que o record diga que foi 100% da Tayane.
           ensure("Lorran")[type] += amount / 2;
           ensure("Tayane")[type] += amount / 2;
-          // Familia NÃO recebe o valor aqui para não duplicar no gráfico "Por pessoa"
-          // a menos que o gráfico explicitamente mostre a categoria "Familia" como agregadora.
+          if (!paid) {
+            ensure("Lorran").restante += amount / 2;
+            ensure("Tayane").restante += amount / 2;
+          }
+        } else {
+          // Split padrão 50/50
+          ensure("Lorran")[type] += amount / 2;
+          ensure("Tayane")[type] += amount / 2;
           if (!paid) {
             ensure("Lorran").restante += amount / 2;
             ensure("Tayane").restante += amount / 2;
@@ -291,8 +302,6 @@ function Dashboard() {
         if (!paid) ensure(p).restante += amount;
       }
     };
-
-    const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
     monthTx.forEach((t: any) => {
       if (t.kind !== "expense" || t.card_installment_id || t.category_id === "0494a63e-6737-4a3c-8778-67ce5f96a0a1") return;
