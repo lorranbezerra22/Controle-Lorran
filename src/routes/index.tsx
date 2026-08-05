@@ -264,47 +264,63 @@ function Dashboard() {
   const peopleAnalytics = useMemo(() => {
     const tot: Record<string, { tx: number; card: number; restante: number }> = {};
     const ensure = (p: string) => (tot[p] = tot[p] ?? { tx: 0, card: 0, restante: 0 });
-    const addTx = (rawPerson: string, amount: number, paid: boolean) => {
+    
+    const addVal = (rawPerson: string, amount: number, paid: boolean, type: "tx" | "card", paidBy: string | null = null) => {
       const p = (rawPerson || "").trim();
       if (!p) return;
-      ensure(p).tx += amount;
-      if (!paid) ensure(p).restante += amount;
+
+      // Se foi pago por alguém específico e é despesa de Família,
+      // atribuímos o valor a essa pessoa no resumo "Por pessoa",
+      // pois ela assumiu o custo individualmente (ex: antecipação).
+      // Se não houver paidBy, segue o split padrão.
+      
       if (isFamilia(p)) {
-        ensure("Lorran").tx += amount / 2;
-        ensure("Tayane").tx += amount / 2;
-        if (!paid) { ensure("Lorran").restante += amount / 2; ensure("Tayane").restante += amount / 2; }
+        if (paidBy) {
+          // Se alguém pagou (antecipou sua cota ou pagou tudo), 
+          // esse valor é atribuído diretamente a quem pagou.
+          ensure(paidBy)[type] += amount;
+          if (!paid) ensure(paidBy).restante += amount;
+        } else {
+          // Split padrão 50/50
+          ensure("Lorran")[type] += amount / 2;
+          ensure("Tayane")[type] += amount / 2;
+          ensure("Familia")[type] += amount;
+          if (!paid) {
+            ensure("Lorran").restante += amount / 2;
+            ensure("Tayane").restante += amount / 2;
+            ensure("Familia").restante += amount;
+          }
+        }
+      } else {
+        ensure(p)[type] += amount;
+        if (!paid) ensure(p).restante += amount;
       }
     };
-    const addCard = (rawPerson: string, amount: number, paid: boolean) => {
-      const p = (rawPerson || "").trim();
-      if (!p) return;
-      ensure(p).card += amount;
-      if (!paid) ensure(p).restante += amount;
-      if (isFamilia(p)) {
-        ensure("Lorran").card += amount / 2;
-        ensure("Tayane").card += amount / 2;
-        if (!paid) { ensure("Lorran").restante += amount / 2; ensure("Tayane").restante += amount / 2; }
-      }
-    };
+
     monthTx.forEach((t: any) => {
       if (t.kind !== "expense" || t.card_installment_id || t.category_id === "0494a63e-6737-4a3c-8778-67ce5f96a0a1") return;
-      addTx(t.person || "", Number(t.amount), t.status === "paid");
+      addVal(t.person || "", Number(t.amount), t.status === "paid", "tx", t.paid_by);
     });
+    
     monthInst.forEach((i: any) => {
-      addCard(i.cartao_compras?.person || "", Number(i.amount), i.status === "paid");
+      addVal(i.cartao_compras?.person || "", Number(i.amount), i.status === "paid", "card", i.paid_by);
     });
+
     const cardMap: Record<string, Record<string, number>> = {};
     monthInst.forEach((i: any) => {
       const cardName = i.cartoes?.name ?? "—";
       const p = (i.cartao_compras?.person || "").trim();
       if (!p) return;
       cardMap[cardName] = cardMap[cardName] ?? {};
-      cardMap[cardName][p] = (cardMap[cardName][p] ?? 0) + Number(i.amount);
+      const target = i.paid_by || p;
+      cardMap[cardName][target] = (cardMap[cardName][target] ?? 0) + Number(i.amount);
     });
+
     const totals = Object.entries(tot)
       .map(([name, v]) => ({ name, ...v, total: v.tx + v.card }))
       .filter((t) => t.total > 0)
       .sort((a, b) => b.total - a.total);
+
     const byCard = Object.entries(cardMap)
       .map(([cardName, row]) => {
         const entries = Object.entries(row).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
@@ -313,6 +329,7 @@ function Dashboard() {
       })
       .filter((c) => c.total > 0)
       .sort((a, b) => b.total - a.total);
+
     return { totals, byCard };
   }, [monthTx, monthInst]);
 
