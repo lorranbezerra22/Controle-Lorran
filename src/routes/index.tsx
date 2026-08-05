@@ -269,26 +269,21 @@ function Dashboard() {
       const p = (rawPerson || "").trim();
       if (!p) return;
 
-      // Se foi pago por alguém específico e é despesa de Família,
-      // atribuímos o valor a essa pessoa no resumo "Por pessoa",
-      // pois ela assumiu o custo individualmente (ex: antecipação).
-      // Se não houver paidBy, segue o split padrão.
-      
       if (isFamilia(p)) {
-        if (paidBy) {
+        if (paidBy && (norm(paidBy) === "lorran" || norm(paidBy) === "tayane")) {
           // Se alguém pagou (antecipou sua cota ou pagou tudo), 
           // esse valor é atribuído diretamente a quem pagou.
           ensure(paidBy)[type] += amount;
           if (!paid) ensure(paidBy).restante += amount;
         } else {
-          // Split padrão 50/50
+          // Split padrão 50/50 - Apenas Lorran e Tayane recebem a metade
           ensure("Lorran")[type] += amount / 2;
           ensure("Tayane")[type] += amount / 2;
-          ensure("Familia")[type] += amount;
+          // Familia NÃO recebe o valor aqui para não duplicar no gráfico "Por pessoa"
+          // a menos que o gráfico explicitamente mostre a categoria "Familia" como agregadora.
           if (!paid) {
             ensure("Lorran").restante += amount / 2;
             ensure("Tayane").restante += amount / 2;
-            ensure("Familia").restante += amount;
           }
         }
       } else {
@@ -296,6 +291,8 @@ function Dashboard() {
         if (!paid) ensure(p).restante += amount;
       }
     };
+
+    const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
     monthTx.forEach((t: any) => {
       if (t.kind !== "expense" || t.card_installment_id || t.category_id === "0494a63e-6737-4a3c-8778-67ce5f96a0a1") return;
