@@ -1808,7 +1808,7 @@ function PartialPayForm({ installment, onFullPay, onDone }: { installment: any, 
       const p = (costPerson || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
       const overrideSuffix = overrideActive ? ` (pago por ${costPerson}, dívida de ${originalPerson})` : "";
       
-      const splits = buildPaymentSplits(accounts, costPerson, amountToPay, true);
+      const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null);
 
           const validSplits = splits.filter(s => {
             const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
