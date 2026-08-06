@@ -1808,17 +1808,26 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
       }
     }
 
-    if (Math.abs(amountToPay - originalAmount) < 0.01) {
+    const costPerson = overrideActive ? paidBy.trim() : originalPerson;
+
+    // Buscar participação atual desta pessoa para esta parcela
+    const currentPart = (installment.participacoes || []).find((p: any) => normalizeName(p.person) === normalizeName(costPerson));
+    const alreadyPaid = Number(currentPart?.amount || 0);
+    const personRemaining = isFamilia ? Math.max(0, quota - alreadyPaid) : Math.max(0, Number(installment.amount) - Number(installment.paid_amount || 0));
+
+    if (amountToPay > personRemaining + 0.01) {
+      return toast.error(`Valor excede o saldo pendente de ${costPerson} (${brl(personRemaining)})`);
+    }
+
+    if (Math.abs(amountToPay - originalAmount) < 0.01 && !isFamilia) {
       onFullPay(notes, overrideActive ? paidBy : null);
       return;
     }
 
-    if (amountToPay > originalAmount + 0.01) return toast.error("O valor não pode ser maior que o total da parcela");
-
     if (!__tryLock()) return;
     setSaving(true);
     try {
-      const costPerson = overrideActive ? paidBy.trim() : originalPerson;
+      const newPersonPaid = Number((alreadyPaid + amountToPay).toFixed(2));
       const newPaidAmount = Number((Number(installment.paid_amount || 0) + amountToPay).toFixed(2));
       const isFull = Math.abs(newPaidAmount - originalAmount) < 0.01;
       
@@ -1830,8 +1839,8 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
         user_id: user.id,
         installment_id: installment.id,
         person: costPerson,
-        amount: amountToPay,
-        status: "paid",
+        amount: newPersonPaid,
+        status: (isFamilia ? Math.abs(newPersonPaid - quota) < 0.01 : isFull) ? "paid" : "pending",
         paid_at: new Date().toISOString()
       } as any, { onConflict: 'installment_id,person' });
 
@@ -1841,15 +1850,15 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
       const { error } = await supabase.from("cartao_parcelas").update({ 
         paid_amount: newPaidAmount,
         status: isFull ? "paid" : "pending",
-        paid_by: isFull ? (overrideActive ? paidBy : (normalizeName(originalPerson) === "familia" ? null : originalPerson)) : (installment.paid_by || null),
+        paid_by: isFull ? (overrideActive ? paidBy : (isFamilia ? null : originalPerson)) : (installment.paid_by || null),
       } as any).eq("id", installment.id);
 
       if (error) throw error;
 
       if (isFull) {
-        toast.success("Parcela antecipada e quitada.");
+        toast.success("Parcela totalmente quitada.");
       } else {
-        toast.success(`Cota de ${brl(amountToPay)} antecipada.`);
+        toast.success(`Cota de ${costPerson} atualizada: ${brl(newPersonPaid)} pagos.`);
       }
 
       onDone();
