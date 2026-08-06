@@ -1884,6 +1884,8 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
       const validSplits = splits.filter(s => {
         const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
         const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
+        // Se houver override (Lorran ou Tayane pagando sua parte), accountTayaneId será undefined.
+        // O buildPaymentSplits já cuida disso, aqui apenas filtramos splits válidos.
         return hasLorranAcc || hasTayaneAcc;
       });
 
@@ -1901,7 +1903,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           category_id: "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
           card_installment_id: installment.id,
           account_id: split.accountId,
-          account_tayane_id: split.accountTayaneId || null,
+          account_tayane_id: split.accountTayaneId ?? null, // Garantir nulo em vez de undefined
           notes: notes || null,
         } as any);
 
