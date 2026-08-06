@@ -317,13 +317,11 @@ function Dashboard() {
 
     monthTx.forEach((t: any) => {
       if (t.kind !== "expense" || t.card_installment_id || t.category_id === "0494a63e-6737-4a3c-8778-67ce5f96a0a1") return;
-      addVal(t.person || "", Number(t.amount), t.status === "paid", "tx", t.paid_by, t.description || "");
+      addVal(t.person || "", Number(t.amount), t.status === "paid", "tx", t.paid_by, t.description || "", t.category_id);
     });
     
     monthInst.forEach((i: any) => {
-      // Ignorar compensações de fatura geradas na antecipação para não duplicar crédito
-      if (i.category_id === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a") return;
-      addVal(i.cartao_compras?.person || "", Number(i.amount), i.status === "paid", "card", i.paid_by, i.cartao_compras?.description || "");
+      addVal(i.cartao_compras?.person || "", Number(i.amount), i.status === "paid", "card", i.paid_by, i.cartao_compras?.description || "", i.category_id);
     });
 
     const cardMap: Record<string, Record<string, number>> = {};
