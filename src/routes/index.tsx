@@ -1189,7 +1189,6 @@ function computePaidRest(targetName: string, monthTx: any[], monthInst: any[], a
   monthInst.forEach(i => {
     if (i.category_id === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a") return;
     const v = Number(i.amount);
-    const paid = Number(i.paid_amount || 0);
     const itemPerson = (i.cartao_compras?.person || "").trim();
     const isItemFamilia = norm(itemPerson) === "familia";
     let factor = 0;
@@ -1201,11 +1200,24 @@ function computePaidRest(targetName: string, monthTx: any[], monthInst: any[], a
       else if (isItemFamilia && splitsFamilia) factor = 0.5;
     }
     if (factor === 0) return;
+
     if (i.status === "paid") {
       paidAmt += v * factor;
     } else {
-      paidAmt += paid * factor;
-      rest += (v - paid) * factor;
+      // Usar nova tabela de participações se disponível, fallback para paid_amount legado
+      const parts = i.participacoes || [];
+      const myPaid = parts.filter((p: any) => isTarget(p.person) && p.status === "paid").reduce((s: number, p: any) => s + Number(p.amount), 0);
+      
+      // Se for família, e estamos olhando Lorran/Tayane, eles podem ter antecipado a parte deles
+      if (isItemFamilia && splitsFamilia && myPaid > 0) {
+        paidAmt += myPaid;
+        rest += (v * 0.5) - myPaid;
+      } else {
+        // Lógica legada ou fallback
+        const paid = Number(i.paid_amount || 0);
+        paidAmt += paid * factor;
+        rest += (v - paid) * factor;
+      }
     }
   });
 
