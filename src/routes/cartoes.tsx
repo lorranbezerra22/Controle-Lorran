@@ -1907,7 +1907,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           notes: notes || null,
         } as any);
 
-        if (!overrideActive || normalizeName(costPerson) === "familia") {
+        if (true) { // Sempre criar compensação para manter saldo da fatura correto
           // A compensação de fatura deve seguir o mesmo split da despesa para anular o efeito na fatura
           await supabase.from("transacoes").insert({
             user_id: user!.id,
