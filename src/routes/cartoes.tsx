@@ -1793,14 +1793,12 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
 
     if (amountToPay <= 0) return toast.error("Valor inválido");
     
-    // Se for Família e o pagador for Lorran ou Tayane (Individual), ele está antecipando apenas a sua parte.
     if (isFamilia && overrideActive) {
       if (amountToPay > quota + 0.01) {
         return toast.error(`Para antecipação individual de Família, o valor máximo é a sua parte (${brl(quota)})`);
       }
     }
 
-    // Se o valor for igual ao total, usa o fluxo padrão de pagamento total
     if (Math.abs(amountToPay - originalAmount) < 0.01) {
       onFullPay(notes, overrideActive ? paidBy : null);
       return;
@@ -1808,86 +1806,30 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
 
     if (amountToPay > originalAmount + 0.01) return toast.error("O valor não pode ser maior que o total da parcela");
 
-
     if (!__tryLock()) return;
-
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       const costPerson = overrideActive ? paidBy.trim() : originalPerson;
-      const overrideSuffix = overrideActive ? ` (antecipado por ${costPerson}, dívida de ${originalPerson})` : " (antecipado)";
-      
-      // Se for override, buildPaymentSplits retornará 100% para o pagador escolhido.
-      // Se NÃO for override, retornará 50/50.
-      // Se for override (Lorran ou Tayane antecipando sua parte da Família), buildPaymentSplits retornará 100% para o pagador.
-      // Se NÃO for override (Família 50/50), retornará 1 registro com ambas as contas.
-      const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null);
-
-      const validSplits = splits.filter(s => {
-        const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
-        const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
-        return hasLorranAcc || hasTayaneAcc;
-      });
-
-      for (const split of validSplits) {
-        // 1. Débito real na conta bancária (Gera gasto)
-        await supabase.from("transacoes").insert({
-          user_id: user!.id,
-          description: `Antecipação ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}${overrideSuffix}`,
-          amount: split.amount,
-          kind: "expense",
-          status: "paid",
-          due_at: todayLocalISO(),
-          posted_at: todayLocalISO(),
-          person: split.person, // Se for Lorran pagando sua parte da Família, person será "Lorran"
-          paid_by: overrideActive ? split.person : null,
-          category_id: "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
-          card_installment_id: installment.id,
-          account_id: split.accountId,
-          account_tayane_id: split.accountTayaneId ?? null,
-          notes: notes || null,
-        } as any);
-
-        // 2. Crédito na fatura (Compensação visual)
-        // Se for antecipação parcial de Família (Lorran pagando sua parte), o crédito deve manter a pessoa como "Familia" 
-        // para que o valor total da fatura (que é da "Familia") seja abatido corretamente,
-        // mas o débito (passo 1) foi na conta individual.
-        await supabase.from("transacoes").insert({
-          user_id: user!.id,
-          description: `Compensação Fatura ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}`,
-          amount: split.amount,
-          kind: "income",
-          status: "paid",
-          due_at: todayLocalISO(),
-          posted_at: todayLocalISO(),
-          person: originalPerson, // MANTER como "Familia" (original) para abater a fatura correta
-          category_id: "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a",
-          account_id: split.accountId,
-          account_tayane_id: split.accountTayaneId || null,
-          notes: "Gerado automaticamente na antecipação da fatura",
-        });
-      }
-
       const newPaidAmount = Number((Number(installment.paid_amount || 0) + amountToPay).toFixed(2));
       const isFull = Math.abs(newPaidAmount - originalAmount) < 0.01;
       
-      // Armazenar metadados de quem pagou o quê
       const oldMetadata = installment.metadata || {};
       const partials = oldMetadata.partial_payments || [];
-      const newPartials = [...partials, { person: costPerson, amount: amountToPay, date: todayLocalISO() }];
+      const newPartials = [...partials, { person: costPerson, amount: amountToPay, date: todayLocalISO(), notes }];
       
-      await supabase.from("cartao_parcelas").update({ 
+      const { error } = await supabase.from("cartao_parcelas").update({ 
         paid_amount: newPaidAmount,
         status: isFull ? "paid" : "pending",
-        notes: notes || null,
-        paid_by: overrideActive ? paidBy : null,
-        metadata: { ...oldMetadata, partial_payments: newPartials }
+        paid_by: isFull ? (overrideActive ? paidBy : (normalizeName(originalPerson) === "familia" ? null : originalPerson)) : (installment.paid_by || null),
+        metadata: { ...oldMetadata, partial_payments: newPartials, last_payment_by: paidBy || null }
       } as any).eq("id", installment.id);
 
+      if (error) throw error;
+
       if (isFull) {
-        toast.success("Parcela paga integralmente.");
+        toast.success("Parcela antecipada e quitada.");
       } else {
-        toast.success(`Antecipado ${brl(amountToPay)}. Falta ${brl(originalAmount - newPaidAmount)}.`);
+        toast.success(`Cota de ${brl(amountToPay)} antecipada.`);
       }
 
       onDone();
