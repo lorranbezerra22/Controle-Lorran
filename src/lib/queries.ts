@@ -58,7 +58,15 @@ export const useInstallments = () =>
     queryFn: async () => {
       const { data, error } = await supabase
         .from("cartao_parcelas")
-        .select("*, cartao_compras:purchase_id(description, person, total_amount, installments_count, purchase_date, category_id, brand, categorias:category_id(name, icon)), cartoes:card_id(name, color, bank)")
+        .select(`
+          *,
+          cartao_compras:purchase_id(
+            description, person, total_amount, installments_count, purchase_date, category_id, brand,
+            categorias:category_id(name, icon)
+          ),
+          cartoes:card_id(name, color, bank),
+          participacoes:participacoes_parcelas(*)
+        `)
         .order("due_at", { ascending: false })
         .limit(2000);
       if (error) throw error;

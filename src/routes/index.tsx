@@ -265,12 +265,11 @@ function Dashboard() {
     const tot: Record<string, { tx: number; card: number; restante: number }> = {};
     const ensure = (p: string) => (tot[p] = tot[p] ?? { tx: 0, card: 0, restante: 0 });
     
-    const addVal = (rawPerson: string, amount: number, status: string, type: "tx" | "card", paidBy: string | null = null, description: string = "", categoryId: string | null = null, metadata: any = null, paidAmount: number = 0) => {
+    const addVal = (rawPerson: string, amount: number, status: string, type: "tx" | "card", paidBy: string | null = null, description: string = "", categoryId: string | null = null, metadata: any = null, paidAmount: number = 0, participacoes: any[] = []) => {
       let p = (rawPerson || "").trim();
       if (!p) return;
 
       const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-      const desc = (description || "").toLowerCase();
       const isPaid = status === "paid";
 
       if (categoryId === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a") return;
@@ -279,9 +278,11 @@ function Dashboard() {
         const totalOriginal = amount;
         const quota = totalOriginal / 2;
         
-        const partials = metadata?.partial_payments || [];
-        const paidByLorran = partials.filter((pa: any) => norm(pa.person) === "lorran").reduce((s: number, pa: any) => s + Number(pa.amount), 0);
-        const paidByTayane = partials.filter((pa: any) => norm(pa.person) === "tayane").reduce((s: number, pa: any) => s + Number(pa.amount), 0);
+        // Priorizar nova tabela de participações, fallback para metadata legado
+        const parts = participacoes && participacoes.length > 0 ? participacoes : (metadata?.partial_payments || []);
+        
+        const paidByLorran = parts.filter((pa: any) => norm(pa.person) === "lorran" && (pa.status === "paid" || pa.amount > 0)).reduce((s: number, pa: any) => s + Number(pa.amount), 0);
+        const paidByTayane = parts.filter((pa: any) => norm(pa.person) === "tayane" && (pa.status === "paid" || pa.amount > 0)).reduce((s: number, pa: any) => s + Number(pa.amount), 0);
         
         // Lorran
         ensure("Lorran")[type] += quota;
@@ -307,7 +308,7 @@ function Dashboard() {
     });
     
     monthInst.forEach((i: any) => {
-      addVal(i.cartao_compras?.person || "", Number(i.amount), i.status, "card", i.paid_by, i.cartao_compras?.description || "", i.category_id, i.metadata, Number(i.paid_amount || 0));
+      addVal(i.cartao_compras?.person || "", Number(i.amount), i.status, "card", i.paid_by, i.cartao_compras?.description || "", i.category_id, i.metadata, Number(i.paid_amount || 0), i.participacoes);
     });
 
     const cardMap: Record<string, Record<string, number>> = {};
@@ -1188,7 +1189,6 @@ function computePaidRest(targetName: string, monthTx: any[], monthInst: any[], a
   monthInst.forEach(i => {
     if (i.category_id === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a") return;
     const v = Number(i.amount);
-    const paid = Number(i.paid_amount || 0);
     const itemPerson = (i.cartao_compras?.person || "").trim();
     const isItemFamilia = norm(itemPerson) === "familia";
     let factor = 0;
@@ -1200,11 +1200,24 @@ function computePaidRest(targetName: string, monthTx: any[], monthInst: any[], a
       else if (isItemFamilia && splitsFamilia) factor = 0.5;
     }
     if (factor === 0) return;
+
     if (i.status === "paid") {
       paidAmt += v * factor;
     } else {
-      paidAmt += paid * factor;
-      rest += (v - paid) * factor;
+      // Usar nova tabela de participações se disponível, fallback para paid_amount legado
+      const parts = i.participacoes || [];
+      const myPaid = parts.filter((p: any) => isTarget(p.person) && p.status === "paid").reduce((s: number, p: any) => s + Number(p.amount), 0);
+      
+      // Se for família, e estamos olhando Lorran/Tayane, eles podem ter antecipado a parte deles
+      if (isItemFamilia && splitsFamilia && myPaid > 0) {
+        paidAmt += myPaid;
+        rest += (v * 0.5) - myPaid;
+      } else {
+        // Lógica legada ou fallback
+        const paid = Number(i.paid_amount || 0);
+        paidAmt += paid * factor;
+        rest += (v - paid) * factor;
+      }
     }
   });
 

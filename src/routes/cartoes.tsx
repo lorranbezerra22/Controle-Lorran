@@ -349,30 +349,39 @@ function CartoesPage() {
     const isPaying = i.status !== "paid";
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+      
       const originalPerson = i.cartao_compras?.person || "";
       const useOverride = !!(paidByOverride && paidByOverride.trim() && normalizeName(paidByOverride) !== normalizeName(originalPerson));
       const costPerson = useOverride ? paidByOverride!.trim() : originalPerson;
 
       if (isPaying) {
-        // Fluxo de Pagamento Total: Apenas marca status e registra quem pagou no metadata
-        const oldMetadata = i.metadata || {};
-        const partials = oldMetadata.partial_payments || [];
         const amount = Number(i.amount);
         
-        // Se for total, limpamos parciais anteriores e definimos como 100% pago
-        const newPartials = [{ person: costPerson, amount: amount, date: todayLocalISO(), isFull: true }];
-        
+        // Registrar participação total na nova tabela
+        const { error: partError } = await supabase.from("participacoes_parcelas").upsert({
+          user_id: user.id,
+          installment_id: i.id,
+          person: costPerson,
+          amount: amount,
+          status: "paid",
+          paid_at: new Date().toISOString()
+        } as any, { onConflict: 'installment_id,person' });
+
+        if (partError) throw partError;
+
         const { error } = await supabase.from("cartao_parcelas").update({
           status: "paid",
           paid_amount: amount,
           paid_by: paidByOverride || null,
-          metadata: { ...oldMetadata, partial_payments: newPartials, last_payment_by: paidByOverride || null }
         } as any).eq("id", i.id);
 
         if (error) throw error;
         toast.success("Parcela marcada como paga.");
       } else {
-        // Cancelar Pagamento: Apenas reseta o status e o valor pago na parcela
+        // Cancelar Pagamento: Remove participações e reseta parcela
+        await supabase.from("participacoes_parcelas").delete().eq("installment_id", i.id);
+        
         await supabase.from("cartao_parcelas").update({ 
           status: "pending", 
           paid_amount: 0,
@@ -1813,15 +1822,26 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
       const newPaidAmount = Number((Number(installment.paid_amount || 0) + amountToPay).toFixed(2));
       const isFull = Math.abs(newPaidAmount - originalAmount) < 0.01;
       
-      const oldMetadata = installment.metadata || {};
-      const partials = oldMetadata.partial_payments || [];
-      const newPartials = [...partials, { person: costPerson, amount: amountToPay, date: todayLocalISO(), notes }];
-      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      // 1. Registrar a participação na nova tabela (Solução Definitiva)
+      const { error: partError } = await supabase.from("participacoes_parcelas").upsert({
+        user_id: user.id,
+        installment_id: installment.id,
+        person: costPerson,
+        amount: amountToPay,
+        status: "paid",
+        paid_at: new Date().toISOString()
+      } as any, { onConflict: 'installment_id,person' });
+
+      if (partError) throw partError;
+
+      // 2. Atualizar a parcela (apenas status e valor total pago)
       const { error } = await supabase.from("cartao_parcelas").update({ 
         paid_amount: newPaidAmount,
         status: isFull ? "paid" : "pending",
         paid_by: isFull ? (overrideActive ? paidBy : (normalizeName(originalPerson) === "familia" ? null : originalPerson)) : (installment.paid_by || null),
-        metadata: { ...oldMetadata, partial_payments: newPartials, last_payment_by: paidBy || null }
       } as any).eq("id", installment.id);
 
       if (error) throw error;
