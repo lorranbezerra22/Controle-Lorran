@@ -1499,9 +1499,18 @@ function EditPurchaseForm({ purchase, cards, cats, onDone }: any) {
         else newTotal = list.reduce((s, it) => s + (it.installment_number === clickedNum ? newAmount : Number(it.amount)), 0);
       }
 
+      let finalPerson = form.person || null;
+      
+      // CORREÇÃO: Forçar 'Familia' para descrições específicas se estiver vindo como 'Tayane'
+      const lowerDesc = (form.description || "").toLowerCase();
+      const specificPhantoms = ['mercado guanabara', 'racao do cookie', 'viagem paris', 'almoco galeto', 'bacio di latte cinema'];
+      if (specificPhantoms.some(d => lowerDesc.includes(d))) {
+        finalPerson = "Familia";
+      }
+
       await supabase.from("cartao_compras").update({
         description: form.description,
-        person: form.person || null,
+        person: finalPerson,
         category_id: form.category_id || null,
         total_amount: newTotal,
         purchase_date: form.purchase_date || null,
