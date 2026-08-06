@@ -318,6 +318,8 @@ function Dashboard() {
     });
     
     monthInst.forEach((i: any) => {
+      // Ignorar compensações de fatura geradas na antecipação para não duplicar crédito
+      if (i.category_id === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a") return;
       addVal(i.cartao_compras?.person || "", Number(i.amount), i.status === "paid", "card", i.paid_by, i.cartao_compras?.description || "");
     });
 
