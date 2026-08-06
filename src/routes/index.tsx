@@ -281,8 +281,8 @@ function Dashboard() {
         // Priorizar nova tabela de participações, fallback para metadata legado
         const parts = participacoes && participacoes.length > 0 ? participacoes : (metadata?.partial_payments || []);
         
-        const paidByLorran = parts.filter((pa: any) => norm(pa.person) === "lorran" && (pa.status === "paid" || pa.amount > 0)).reduce((s: number, pa: any) => s + Number(pa.amount), 0);
-        const paidByTayane = parts.filter((pa: any) => norm(pa.person) === "tayane" && (pa.status === "paid" || pa.amount > 0)).reduce((s: number, pa: any) => s + Number(pa.amount), 0);
+        const paidByLorran = parts.filter((pa: any) => norm(pa.person) === "lorran").reduce((s: number, pa: any) => s + Number(pa.amount), 0);
+        const paidByTayane = parts.filter((pa: any) => norm(pa.person) === "tayane").reduce((s: number, pa: any) => s + Number(pa.amount), 0);
         
         // Lorran
         ensure("Lorran")[type] += quota;
