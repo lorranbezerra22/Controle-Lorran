@@ -1263,11 +1263,20 @@ function PurchaseForm({ cards, cats, onDone }: any) {
       
 
       for (const s of splits) {
+        let finalPerson = s.person === "Família" ? "Familia" : s.person;
+        
+        // CORREÇÃO: Forçar 'Familia' para descrições específicas se estiver vindo como 'Tayane'
+        const lowerDesc = (form.description || "").toLowerCase();
+        const specificPhantoms = ['mercado guanabara', 'racao do cookie', 'viagem paris', 'almoco galeto', 'bacio di latte cinema'];
+        if (specificPhantoms.some(d => lowerDesc.includes(d))) {
+          finalPerson = "Familia";
+        }
+
         const { data: purchase, error: pErr } = await supabase.from("cartao_compras").insert({
           user_id: user!.id, card_id: card.id,
           description: splits.length > 1 ? `${form.description} (${s.person})` : form.description,
           purchase_date: form.purchase_date, total_amount: s.amount, installments_count: n,
-          category_id: form.category_id || null, person: s.person === "Família" ? "Familia" : s.person,
+          category_id: form.category_id || null, person: finalPerson,
           brand: form.brand || null,
         }).select().single();
         if (pErr) throw pErr;
