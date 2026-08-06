@@ -265,63 +265,49 @@ function Dashboard() {
     const tot: Record<string, { tx: number; card: number; restante: number }> = {};
     const ensure = (p: string) => (tot[p] = tot[p] ?? { tx: 0, card: 0, restante: 0 });
     
-    const addVal = (rawPerson: string, amount: number, paid: boolean, type: "tx" | "card", paidBy: string | null = null, description: string = "", categoryId: string | null = null) => {
+    const addVal = (rawPerson: string, amount: number, status: string, type: "tx" | "card", paidBy: string | null = null, description: string = "", categoryId: string | null = null, metadata: any = null, paidAmount: number = 0) => {
       let p = (rawPerson || "").trim();
       if (!p) return;
 
       const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-      const pPaidBy = paidBy ? norm(paidBy) : null;
-      const isTayane = pPaidBy === "tayane";
-      const isLorran = pPaidBy === "lorran";
       const desc = (description || "").toLowerCase();
+      const isPaid = status === "paid";
 
-      // Ignorar compensações de fatura geradas na antecipação para não duplicar crédito nos gráficos
       if (categoryId === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a") return;
 
-      // CORREÇÃO DOS REGISTROS ESPECÍFICOS IDENTIFICADOS PELO USUÁRIO
-      const specificPhantoms = [
-        'mercado guanabara',
-        'racao do cookie',
-        'viagem paris',
-        'almoco galeto',
-        'bacio di latte cinema'
-      ];
-      
-      const isSpecificPhantom = specificPhantoms.some(s => desc.includes(s));
-
-      // Se for um dos registros específicos ou o valor consolidado de 955,22, tratamos como Família
-      const isProblematicAmount = Math.abs(amount - 955.22) < 0.01;
-      const isPhantom = (isProblematicAmount || isSpecificPhantom) && isTayane;
-
-      if (isFamilia(p) || isSpecificPhantom) {
-        // Forçamos que pertença à Família se for um dos específicos
-        if (isSpecificPhantom) p = "Familia";
-
-        if (isProblematicAmount && isTayane && isFamilia(p)) {
-          // Se for o registro consolidado fantasma, ignoramos para não duplicar
-          return;
-        }
-
-        // Split padrão 50/50 para Família
-        ensure("Lorran")[type] += amount / 2;
-        ensure("Tayane")[type] += amount / 2;
-        if (!paid) {
-          ensure("Lorran").restante += amount / 2;
-          ensure("Tayane").restante += amount / 2;
-        }
+      if (isFamilia(p)) {
+        const totalOriginal = amount;
+        const quota = totalOriginal / 2;
+        
+        const partials = metadata?.partial_payments || [];
+        const paidByLorran = partials.filter((pa: any) => norm(pa.person) === "lorran").reduce((s: number, pa: any) => s + Number(pa.amount), 0);
+        const paidByTayane = partials.filter((pa: any) => norm(pa.person) === "tayane").reduce((s: number, pa: any) => s + Number(pa.amount), 0);
+        
+        // Lorran
+        ensure("Lorran")[type] += quota;
+        const lorranPaid = isPaid ? quota : Math.min(quota, paidByLorran);
+        ensure("Lorran").restante += Math.max(0, quota - lorranPaid);
+        
+        // Tayane
+        ensure("Tayane")[type] += quota;
+        const tayanePaid = isPaid ? quota : Math.min(quota, paidByTayane);
+        ensure("Tayane").restante += Math.max(0, quota - tayanePaid);
       } else {
         ensure(p)[type] += amount;
-        if (!paid) ensure(p).restante += amount;
+        if (!isPaid) {
+          const actualPaid = Math.max(0, paidAmount || 0);
+          ensure(p).restante += Math.max(0, amount - actualPaid);
+        }
       }
     };
 
     monthTx.forEach((t: any) => {
       if (t.kind !== "expense" || t.card_installment_id || t.category_id === "0494a63e-6737-4a3c-8778-67ce5f96a0a1") return;
-      addVal(t.person || "", Number(t.amount), t.status === "paid", "tx", t.paid_by, t.description || "", t.category_id);
+      addVal(t.person || "", Number(t.amount), t.status, "tx", t.paid_by, t.description || "", t.category_id);
     });
     
     monthInst.forEach((i: any) => {
-      addVal(i.cartao_compras?.person || "", Number(i.amount), i.status === "paid", "card", i.paid_by, i.cartao_compras?.description || "", i.category_id);
+      addVal(i.cartao_compras?.person || "", Number(i.amount), i.status, "card", i.paid_by, i.cartao_compras?.description || "", i.category_id, i.metadata, Number(i.paid_amount || 0));
     });
 
     const cardMap: Record<string, Record<string, number>> = {};
