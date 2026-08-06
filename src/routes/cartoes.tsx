@@ -342,108 +342,48 @@ function CartoesPage() {
   const getPaymentSplits = (person: string, amount: number, paidByOverride?: string | null) => buildPaymentSplits(accounts, person, amount, paidByOverride);
 
   const togglePaid = async (i: any, notes?: string, paidByOverride?: string | null) => {
-    // Estornos (valor negativo) já abatem a fatura automaticamente — não devem
-    // gerar transação de pagamento nem ser marcados como pagos.
     if (Number(i.amount) < 0) {
-      toast.info("Estorno já abate a fatura automaticamente — não precisa marcar como pago.");
+      toast.info("Estorno já abate a fatura automaticamente.");
       return;
     }
     const isPaying = i.status !== "paid";
     try {
-      const amount = Number(i.amount);
-      const paidAlready = Number(i.paid_amount || 0);
       const { data: { user } } = await supabase.auth.getUser();
       const originalPerson = i.cartao_compras?.person || "";
       const useOverride = !!(paidByOverride && paidByOverride.trim() && normalizeName(paidByOverride) !== normalizeName(originalPerson));
       const costPerson = useOverride ? paidByOverride!.trim() : originalPerson;
-      
+
       if (isPaying) {
-        const amountToPay = amount - paidAlready;
-        if (amountToPay > 0) {
-          // Se for Família e tiver override (Lorran ou Tayane pagando sua parte), buildPaymentSplits cuidará de não fazer o split
-          const splits = getPaymentSplits(originalPerson, amountToPay, paidByOverride);
-          const overrideSuffix = useOverride ? ` (pago por ${costPerson}, dívida de ${originalPerson})` : "";
-          
-          const validSplits = splits.filter(s => {
-            const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
-            const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
-            return hasLorranAcc || hasTayaneAcc;
-          });
+        // Fluxo de Pagamento Total: Apenas marca status e registra quem pagou no metadata
+        const oldMetadata = i.metadata || {};
+        const partials = oldMetadata.partial_payments || [];
+        const amount = Number(i.amount);
+        
+        // Se for total, limpamos parciais anteriores e definimos como 100% pago
+        const newPartials = [{ person: costPerson, amount: amount, date: todayLocalISO(), isFull: true }];
+        
+        const { error } = await supabase.from("cartao_parcelas").update({
+          status: "paid",
+          paid_amount: amount,
+          paid_by: paidByOverride || null,
+          metadata: { ...oldMetadata, partial_payments: newPartials, last_payment_by: paidByOverride || null }
+        } as any).eq("id", i.id);
 
-          for (const split of validSplits) {
-            // Criar transação para histórico
-            await supabase.from("transacoes").insert({
-              user_id: user!.id,
-              description: `Pagamento ${i.cartoes?.name || "Cartão"} - ${i.cartao_compras?.description}${split.descriptionSuffix}${overrideSuffix}`,
-              amount: split.amount,
-              kind: "expense",
-              status: "paid",
-              due_at: todayLocalISO(),
-              posted_at: todayLocalISO(),
-              person: split.person,
-              paid_by: paidByOverride || null,
-              category_id: i.cartao_compras?.category_id || "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
-              card_installment_id: i.id,
-              account_id: split.accountId,
-              account_tayane_id: split.accountTayaneId || null,
-              notes: notes || null,
-            } as any);
-
-            // Compensação só faz sentido quando quem paga é o próprio dono da dívida
-            // Se for despesa de "Familia", a compensação de receita deve ir para "Familia"
-            if (!useOverride || normalizeName(costPerson) === "familia") {
-                await supabase.from("transacoes").insert({
-                user_id: user!.id,
-                description: `Compensação Fatura ${i.cartoes?.name || "Cartão"} - ${i.cartao_compras?.description}${split.descriptionSuffix}`,
-                amount: split.amount,
-                kind: "income",
-                status: "paid",
-                due_at: todayLocalISO(),
-                posted_at: todayLocalISO(),
-                person: split.person,
-                category_id: "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a", 
-                notes: "Gerado automaticamente no pagamento da fatura",
-              });
-            }
-          }
-          const isFullyPaid = (paidAlready + amountToPay) >= (amount - 0.01);
-          
-          const { error } = await supabase.from("cartao_parcelas").update({
-            status: isFullyPaid ? "paid" : "pending",
-            paid_amount: paidAlready + amountToPay,
-            paid_by: isFullyPaid ? (paidByOverride || (i.status === "pending" && !paidByOverride && normalizeName(originalPerson) === "familia" ? null : originalPerson)) : (i.paid_by || null),
-            metadata: {
-              ...(i.metadata as any || {}),
-              last_payment_by: paidByOverride || null,
-              partial_payments: [
-                ...((i.metadata as any)?.partial_payments || []),
-                { amount: amountToPay, person: costPerson, date: todayLocalISO() }
-              ]
-            }
-          } as any).eq("id", i.id);
-
-          if (error) throw error;
-          toast.success(useOverride ? `Parcela paga por ${costPerson} (dívida de ${originalPerson})` : "Parcela marcada como paga e balanço compensado");
-        }
+        if (error) throw error;
+        toast.success("Parcela marcada como paga.");
       } else {
-        const { data: linkedTxs } = await supabase.from("transacoes").select("*").eq("card_installment_id", i.id);
-        if (linkedTxs && linkedTxs.length > 0) {
-          await supabase.from("transacoes").delete().eq("card_installment_id", i.id);
-        }
+        // Cancelar Pagamento: Apenas reseta o status e o valor pago na parcela
         await supabase.from("cartao_parcelas").update({ 
           status: "pending", 
           paid_amount: 0,
           paid_by: null,
+          metadata: { ...((i.metadata as any) || {}), partial_payments: [] }
         } as any).eq("id", i.id);
-        await supabase.from("transacoes").delete()
-          .eq("person", i.cartao_compras?.person)
-          .eq("kind", "income")
-          .ilike("description", `Compensação Fatura ${i.cartoes?.name || "Cartão"}%`);
+        
         toast.success("Pagamento removido");
       }
       invalidate("installments");
       invalidate("accounts");
-      invalidate("transactions");
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -1853,14 +1793,12 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
 
     if (amountToPay <= 0) return toast.error("Valor inválido");
     
-    // Se for Família e o pagador for Lorran ou Tayane (Individual), ele está antecipando apenas a sua parte.
     if (isFamilia && overrideActive) {
       if (amountToPay > quota + 0.01) {
         return toast.error(`Para antecipação individual de Família, o valor máximo é a sua parte (${brl(quota)})`);
       }
     }
 
-    // Se o valor for igual ao total, usa o fluxo padrão de pagamento total
     if (Math.abs(amountToPay - originalAmount) < 0.01) {
       onFullPay(notes, overrideActive ? paidBy : null);
       return;
@@ -1868,86 +1806,30 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
 
     if (amountToPay > originalAmount + 0.01) return toast.error("O valor não pode ser maior que o total da parcela");
 
-
     if (!__tryLock()) return;
-
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       const costPerson = overrideActive ? paidBy.trim() : originalPerson;
-      const overrideSuffix = overrideActive ? ` (antecipado por ${costPerson}, dívida de ${originalPerson})` : " (antecipado)";
-      
-      // Se for override, buildPaymentSplits retornará 100% para o pagador escolhido.
-      // Se NÃO for override, retornará 50/50.
-      // Se for override (Lorran ou Tayane antecipando sua parte da Família), buildPaymentSplits retornará 100% para o pagador.
-      // Se NÃO for override (Família 50/50), retornará 1 registro com ambas as contas.
-      const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null);
-
-      const validSplits = splits.filter(s => {
-        const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
-        const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
-        return hasLorranAcc || hasTayaneAcc;
-      });
-
-      for (const split of validSplits) {
-        // 1. Débito real na conta bancária (Gera gasto)
-        await supabase.from("transacoes").insert({
-          user_id: user!.id,
-          description: `Antecipação ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}${overrideSuffix}`,
-          amount: split.amount,
-          kind: "expense",
-          status: "paid",
-          due_at: todayLocalISO(),
-          posted_at: todayLocalISO(),
-          person: split.person, // Se for Lorran pagando sua parte da Família, person será "Lorran"
-          paid_by: overrideActive ? split.person : null,
-          category_id: "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
-          card_installment_id: installment.id,
-          account_id: split.accountId,
-          account_tayane_id: split.accountTayaneId ?? null,
-          notes: notes || null,
-        } as any);
-
-        // 2. Crédito na fatura (Compensação visual)
-        // Se for antecipação parcial de Família (Lorran pagando sua parte), o crédito deve manter a pessoa como "Familia" 
-        // para que o valor total da fatura (que é da "Familia") seja abatido corretamente,
-        // mas o débito (passo 1) foi na conta individual.
-        await supabase.from("transacoes").insert({
-          user_id: user!.id,
-          description: `Compensação Fatura ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}`,
-          amount: split.amount,
-          kind: "income",
-          status: "paid",
-          due_at: todayLocalISO(),
-          posted_at: todayLocalISO(),
-          person: originalPerson, // MANTER como "Familia" (original) para abater a fatura correta
-          category_id: "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a",
-          account_id: split.accountId,
-          account_tayane_id: split.accountTayaneId || null,
-          notes: "Gerado automaticamente na antecipação da fatura",
-        });
-      }
-
       const newPaidAmount = Number((Number(installment.paid_amount || 0) + amountToPay).toFixed(2));
       const isFull = Math.abs(newPaidAmount - originalAmount) < 0.01;
       
-      // Armazenar metadados de quem pagou o quê
       const oldMetadata = installment.metadata || {};
       const partials = oldMetadata.partial_payments || [];
-      const newPartials = [...partials, { person: costPerson, amount: amountToPay, date: todayLocalISO() }];
+      const newPartials = [...partials, { person: costPerson, amount: amountToPay, date: todayLocalISO(), notes }];
       
-      await supabase.from("cartao_parcelas").update({ 
+      const { error } = await supabase.from("cartao_parcelas").update({ 
         paid_amount: newPaidAmount,
         status: isFull ? "paid" : "pending",
-        notes: notes || null,
-        paid_by: overrideActive ? paidBy : null,
-        metadata: { ...oldMetadata, partial_payments: newPartials }
+        paid_by: isFull ? (overrideActive ? paidBy : (normalizeName(originalPerson) === "familia" ? null : originalPerson)) : (installment.paid_by || null),
+        metadata: { ...oldMetadata, partial_payments: newPartials, last_payment_by: paidBy || null }
       } as any).eq("id", installment.id);
 
+      if (error) throw error;
+
       if (isFull) {
-        toast.success("Parcela paga integralmente.");
+        toast.success("Parcela antecipada e quitada.");
       } else {
-        toast.success(`Antecipado ${brl(amountToPay)}. Falta ${brl(originalAmount - newPaidAmount)}.`);
+        toast.success(`Cota de ${brl(amountToPay)} antecipada.`);
       }
 
       onDone();
