@@ -1180,7 +1180,7 @@ function computePaidRest(targetName: string, monthTx: any[], monthInst: any[], a
   let paidAmt = 0;
 
   monthTx.forEach(t => {
-    if (t.kind !== "expense" || t.card_installment_id || t.category_id === "0494a63e-6737-4a3c-8778-67ce5f96a0a1") return;
+    if (t.kind !== "expense" || t.card_installment_id || t.category_id === "0494a63e-6737-4a3c-8778-67ce5f96a0a1" || t.category_id === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a") return;
     const shares = effectiveShares(t, adjMap);
     shares.forEach(sh => {
       const itemPerson = (sh.person || "").trim();
