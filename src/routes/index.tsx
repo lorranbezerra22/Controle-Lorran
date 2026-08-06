@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ProtectedShell } from "@/components/ProtectedShell";
 import { useTransactions, useInstallments, useCards, useInvalidate, usePeople, useCategories, useAccounts } from "@/lib/queries";
 import { brl, fmtDate, monthLabel } from "@/lib/format";
-import { TrendingUp, TrendingDown, Wallet, CreditCard, ChevronDown, ChevronRight, Eye, EyeOff, Users, Activity, Sparkles } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, CreditCard, ChevronDown, ChevronRight, Eye, EyeOff, Users, Activity, Sparkles, AlertTriangle } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -265,7 +265,7 @@ function Dashboard() {
     const tot: Record<string, { tx: number; card: number; restante: number }> = {};
     const ensure = (p: string) => (tot[p] = tot[p] ?? { tx: 0, card: 0, restante: 0 });
     
-    const addVal = (rawPerson: string, amount: number, paid: boolean, type: "tx" | "card", paidBy: string | null = null, description: string = "") => {
+    const addVal = (rawPerson: string, amount: number, paid: boolean, type: "tx" | "card", paidBy: string | null = null, description: string = "", categoryId: string | null = null) => {
       let p = (rawPerson || "").trim();
       if (!p) return;
 
@@ -274,6 +274,9 @@ function Dashboard() {
       const isTayane = pPaidBy === "tayane";
       const isLorran = pPaidBy === "lorran";
       const desc = (description || "").toLowerCase();
+
+      // Ignorar compensações de fatura geradas na antecipação para não duplicar crédito nos gráficos
+      if (categoryId === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a") return;
 
       // CORREÇÃO DOS REGISTROS ESPECÍFICOS IDENTIFICADOS PELO USUÁRIO
       const specificPhantoms = [
@@ -314,11 +317,11 @@ function Dashboard() {
 
     monthTx.forEach((t: any) => {
       if (t.kind !== "expense" || t.card_installment_id || t.category_id === "0494a63e-6737-4a3c-8778-67ce5f96a0a1") return;
-      addVal(t.person || "", Number(t.amount), t.status === "paid", "tx", t.paid_by, t.description || "");
+      addVal(t.person || "", Number(t.amount), t.status === "paid", "tx", t.paid_by, t.description || "", t.category_id);
     });
     
     monthInst.forEach((i: any) => {
-      addVal(i.cartao_compras?.person || "", Number(i.amount), i.status === "paid", "card", i.paid_by, i.cartao_compras?.description || "");
+      addVal(i.cartao_compras?.person || "", Number(i.amount), i.status === "paid", "card", i.paid_by, i.cartao_compras?.description || "", i.category_id);
     });
 
     const cardMap: Record<string, Record<string, number>> = {};
@@ -1177,7 +1180,7 @@ function computePaidRest(targetName: string, monthTx: any[], monthInst: any[], a
   let paidAmt = 0;
 
   monthTx.forEach(t => {
-    if (t.kind !== "expense" || t.card_installment_id || t.category_id === "0494a63e-6737-4a3c-8778-67ce5f96a0a1") return;
+    if (t.kind !== "expense" || t.card_installment_id || t.category_id === "0494a63e-6737-4a3c-8778-67ce5f96a0a1" || t.category_id === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a") return;
     const shares = effectiveShares(t, adjMap);
     shares.forEach(sh => {
       const itemPerson = (sh.person || "").trim();
@@ -1197,6 +1200,7 @@ function computePaidRest(targetName: string, monthTx: any[], monthInst: any[], a
   });
 
   monthInst.forEach(i => {
+    if (i.category_id === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a") return;
     const v = Number(i.amount);
     const paid = Number(i.paid_amount || 0);
     const itemPerson = (i.cartao_compras?.person || "").trim();
