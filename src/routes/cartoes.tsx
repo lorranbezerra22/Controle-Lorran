@@ -2208,39 +2208,6 @@ function EditPaidForm({ installment, onDone }: { installment: any, onDone: () =>
     try {
       const diff = val - oldVal;
       
-      // Se houver mudança, registre um lançamento; o saldo é ajustado pelo gatilho do banco.
-      if (Math.abs(diff) > 0.01) {
-        const originalPerson = installment.cartao_compras?.person || "";
-        const { data: { user } } = await supabase.auth.getUser();
-
-        const splits = buildPaymentSplits(accounts, originalPerson, Math.abs(diff));
-
-      const validSplits = splits.filter(s => {
-        const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
-        const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
-        return hasLorranAcc || hasTayaneAcc;
-      });
-
-      for (const split of validSplits) {
-          await supabase.from("transacoes").insert({
-            user_id: user!.id,
-            description: `Ajuste Pagamento ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}`,
-            amount: split.amount,
-            kind: diff > 0 ? "expense" : "income",
-            status: "paid",
-            due_at: todayLocalISO(),
-            posted_at: todayLocalISO(),
-            person: split.person,
-            category_id: "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
-            card_installment_id: installment.id,
-            account_id: split.accountId,
-            account_tayane_id: split.accountTayaneId || null,
-          } as any);
-        }
-      }
-
-
-
       // Ao ajustar o valor manualmente via botão direito, limpamos o histórico de transações específicas
       // para manter o controle manual conforme solicitado
       await supabase.from("transacoes").delete().eq("card_installment_id", installment.id);
