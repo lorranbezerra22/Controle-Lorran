@@ -775,6 +775,63 @@ export type Database = {
         }
         Relationships: []
       }
+      participacoes_parcelas: {
+        Row: {
+          account_id: string | null
+          amount: number
+          created_at: string | null
+          id: string
+          installment_id: string
+          metadata: Json | null
+          paid_at: string | null
+          person: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          created_at?: string | null
+          id?: string
+          installment_id: string
+          metadata?: Json | null
+          paid_at?: string | null
+          person: string
+          status: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string | null
+          id?: string
+          installment_id?: string
+          metadata?: Json | null
+          paid_at?: string | null
+          person?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participacoes_parcelas_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "contas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participacoes_parcelas_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
+            referencedRelation: "cartao_parcelas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       perfis: {
         Row: {
           created_at: string
