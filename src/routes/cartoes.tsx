@@ -80,6 +80,7 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
       if (target) {
         return [{
           accountId: target.id,
+          accountTayaneId: undefined, // Garantir que não haja split automático
           amount,
           person: paidByOverride,
           descriptionSuffix: ` (Cota individual de ${paidByOverride} em despesa Família)`
@@ -359,6 +360,7 @@ function CartoesPage() {
       if (isPaying) {
         const amountToPay = amount - paidAlready;
         if (amountToPay > 0) {
+          // Se for Família e tiver override (Lorran ou Tayane pagando sua parte), buildPaymentSplits cuidará de não fazer o split
           const splits = getPaymentSplits(originalPerson, amountToPay, paidByOverride);
           const overrideSuffix = useOverride ? ` (pago por ${costPerson}, dívida de ${originalPerson})` : "";
           
