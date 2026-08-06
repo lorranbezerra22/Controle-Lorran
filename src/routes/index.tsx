@@ -1200,6 +1200,7 @@ function computePaidRest(targetName: string, monthTx: any[], monthInst: any[], a
   });
 
   monthInst.forEach(i => {
+    if (i.category_id === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a") return;
     const v = Number(i.amount);
     const paid = Number(i.paid_amount || 0);
     const itemPerson = (i.cartao_compras?.person || "").trim();
