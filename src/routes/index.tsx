@@ -265,7 +265,7 @@ function Dashboard() {
     const tot: Record<string, { tx: number; card: number; restante: number }> = {};
     const ensure = (p: string) => (tot[p] = tot[p] ?? { tx: 0, card: 0, restante: 0 });
     
-    const addVal = (rawPerson: string, amount: number, paid: boolean, type: "tx" | "card", paidBy: string | null = null, description: string = "") => {
+    const addVal = (rawPerson: string, amount: number, paid: boolean, type: "tx" | "card", paidBy: string | null = null, description: string = "", categoryId: string | null = null) => {
       let p = (rawPerson || "").trim();
       if (!p) return;
 
@@ -274,6 +274,9 @@ function Dashboard() {
       const isTayane = pPaidBy === "tayane";
       const isLorran = pPaidBy === "lorran";
       const desc = (description || "").toLowerCase();
+
+      // Ignorar compensações de fatura geradas na antecipação para não duplicar crédito nos gráficos
+      if (categoryId === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a") return;
 
       // CORREÇÃO DOS REGISTROS ESPECÍFICOS IDENTIFICADOS PELO USUÁRIO
       const specificPhantoms = [
