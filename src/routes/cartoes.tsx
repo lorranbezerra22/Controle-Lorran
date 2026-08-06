@@ -1879,17 +1879,18 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
       
       // Se for override, buildPaymentSplits retornará 100% para o pagador escolhido.
       // Se NÃO for override, retornará 50/50.
+      // Se for override (Lorran ou Tayane antecipando sua parte da Família), buildPaymentSplits retornará 100% para o pagador.
+      // Se NÃO for override (Família 50/50), retornará 1 registro com ambas as contas.
       const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null);
 
       const validSplits = splits.filter(s => {
         const hasLorranAcc = !!s.accountId && s.accountId !== "__none__";
         const hasTayaneAcc = !!s.accountTayaneId && s.accountTayaneId !== "__none__";
-        // Se houver override (Lorran ou Tayane pagando sua parte), accountTayaneId será undefined.
-        // O buildPaymentSplits já cuida disso, aqui apenas filtramos splits válidos.
         return hasLorranAcc || hasTayaneAcc;
       });
 
       for (const split of validSplits) {
+        // 1. Débito real na conta bancária (Gera gasto)
         await supabase.from("transacoes").insert({
           user_id: user!.id,
           description: `Antecipação ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}${overrideSuffix}`,
@@ -1898,32 +1899,33 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           status: "paid",
           due_at: todayLocalISO(),
           posted_at: todayLocalISO(),
-          person: split.person === "Familia" ? "Familia" : split.person,
+          person: split.person, // Se for Lorran pagando sua parte da Família, person será "Lorran"
           paid_by: overrideActive ? split.person : null,
           category_id: "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
           card_installment_id: installment.id,
           account_id: split.accountId,
-          account_tayane_id: split.accountTayaneId ?? null, // Garantir nulo em vez de undefined
+          account_tayane_id: split.accountTayaneId ?? null,
           notes: notes || null,
         } as any);
 
-        if (true) { // Sempre criar compensação para manter saldo da fatura correto
-          // A compensação de fatura deve seguir o mesmo split da despesa para anular o efeito na fatura
-          await supabase.from("transacoes").insert({
-            user_id: user!.id,
-            description: `Compensação Fatura ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}`,
-            amount: split.amount,
-            kind: "income",
-            status: "paid",
-            due_at: todayLocalISO(),
-            posted_at: todayLocalISO(),
-            person: split.person === "Familia" ? "Familia" : split.person,
-            category_id: "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a",
-            account_id: split.accountId,
-            account_tayane_id: split.accountTayaneId || null,
-            notes: "Gerado automaticamente na antecipação da fatura",
-          });
-        }
+        // 2. Crédito na fatura (Compensação visual)
+        // Se for antecipação parcial de Família (Lorran pagando sua parte), o crédito deve manter a pessoa como "Familia" 
+        // para que o valor total da fatura (que é da "Familia") seja abatido corretamente,
+        // mas o débito (passo 1) foi na conta individual.
+        await supabase.from("transacoes").insert({
+          user_id: user!.id,
+          description: `Compensação Fatura ${installment.cartoes?.name || "Cartão"} - ${installment.cartao_compras?.description}${split.descriptionSuffix}`,
+          amount: split.amount,
+          kind: "income",
+          status: "paid",
+          due_at: todayLocalISO(),
+          posted_at: todayLocalISO(),
+          person: originalPerson, // MANTER como "Familia" (original) para abater a fatura correta
+          category_id: "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a",
+          account_id: split.accountId,
+          account_tayane_id: split.accountTayaneId || null,
+          notes: "Gerado automaticamente na antecipação da fatura",
+        });
       }
 
       const newPaidAmount = Number((Number(installment.paid_amount || 0) + amountToPay).toFixed(2));
