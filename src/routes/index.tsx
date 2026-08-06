@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ProtectedShell } from "@/components/ProtectedShell";
 import { useTransactions, useInstallments, useCards, useInvalidate, usePeople, useCategories, useAccounts } from "@/lib/queries";
 import { brl, fmtDate, monthLabel } from "@/lib/format";
-import { TrendingUp, TrendingDown, Wallet, CreditCard, ChevronDown, ChevronRight, Eye, EyeOff, Users, Activity, Sparkles } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, CreditCard, ChevronDown, ChevronRight, Eye, EyeOff, Users, Activity, Sparkles, AlertTriangle } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
