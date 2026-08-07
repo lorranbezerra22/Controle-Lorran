@@ -374,7 +374,7 @@ function CartoesPage() {
             account_tayane_id: split.accountTayaneId || null,
             person: split.person,
             card_installment_id: i.id,
-            category_id: "0494a63e-6737-4a3c-8778-67ce5f96a0a1", // Categoria Pagamento Cartão
+            category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", // Categoria Cartão de Crédito (ID correto do banco)
           } as any);
           if (txErr) throw txErr;
         }
@@ -1872,7 +1872,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           account_tayane_id: split.accountTayaneId || null,
           person: split.person,
           card_installment_id: installment.id,
-          category_id: "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
+          category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", // Categoria Cartão de Crédito (ID correto do banco)
         } as any);
         if (txErr) throw txErr;
       }
