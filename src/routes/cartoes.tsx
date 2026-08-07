@@ -358,7 +358,28 @@ function CartoesPage() {
       if (isPaying) {
         const amount = Number(i.amount);
         
-        // Registrar participação total na nova tabela
+        // 1. Criar transação de débito no banco se houver split ou conta definida
+        const splits = buildPaymentSplits(accounts, originalPerson, amount, paidByOverride);
+        if (splits.length > 0) {
+          const split = splits[0];
+          const { error: txErr } = await supabase.from("transacoes").insert({
+            user_id: user.id,
+            description: `${i.cartao_compras?.description || "Pagamento Cartão"} - Parcela ${i.installment_number}${split.descriptionSuffix}`,
+            amount: split.amount,
+            kind: "expense",
+            status: "paid",
+            due_at: todayLocalISO(),
+            posted_at: todayLocalISO(),
+            account_id: split.accountId,
+            account_tayane_id: split.accountTayaneId || null,
+            person: split.person,
+            card_installment_id: i.id,
+            category_id: "0494a63e-6737-4a3c-8778-67ce5f96a0a1", // Categoria Pagamento Cartão
+          } as any);
+          if (txErr) throw txErr;
+        }
+
+        // 2. Registrar participação total na nova tabela
         const { error: partError } = await supabase.from("participacoes_parcelas").upsert({
           user_id: user.id,
           installment_id: i.id,
@@ -379,7 +400,8 @@ function CartoesPage() {
         if (error) throw error;
         toast.success("Parcela marcada como paga.");
       } else {
-        // Cancelar Pagamento: Remove participações e reseta parcela
+        // Cancelar Pagamento: Remove transações, participações e reseta parcela
+        await supabase.from("transacoes").delete().eq("card_installment_id", i.id);
         await supabase.from("participacoes_parcelas").delete().eq("installment_id", i.id);
         
         await supabase.from("cartao_parcelas").update({ 
@@ -1834,7 +1856,28 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
 
-      // 1. Registrar a participação na nova tabela (Solução Definitiva)
+      // 1. Criar transação de débito no banco
+      const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null);
+      if (splits.length > 0) {
+        const split = splits[0];
+        const { error: txErr } = await supabase.from("transacoes").insert({
+          user_id: user.id,
+          description: `${installment.cartao_compras?.description || "Antecipação Cartão"} - Parcela ${installment.installment_number}${split.descriptionSuffix}`,
+          amount: split.amount,
+          kind: "expense",
+          status: "paid",
+          due_at: todayLocalISO(),
+          posted_at: todayLocalISO(),
+          account_id: split.accountId,
+          account_tayane_id: split.accountTayaneId || null,
+          person: split.person,
+          card_installment_id: installment.id,
+          category_id: "0494a63e-6737-4a3c-8778-67ce5f96a0a1",
+        } as any);
+        if (txErr) throw txErr;
+      }
+
+      // 2. Registrar a participação na nova tabela (Solução Definitiva)
       const { error: partError } = await supabase.from("participacoes_parcelas").upsert({
         user_id: user.id,
         installment_id: installment.id,
@@ -1846,7 +1889,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
 
       if (partError) throw partError;
 
-      // 2. Atualizar a parcela (apenas status e valor total pago)
+      // 3. Atualizar a parcela (apenas status e valor total pago)
       const { error } = await supabase.from("cartao_parcelas").update({ 
         paid_amount: newPaidAmount,
         status: isFull ? "paid" : "pending",
