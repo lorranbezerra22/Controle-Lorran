@@ -1857,7 +1857,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
       if (!user) throw new Error("Não autenticado");
 
       // 1. Criar transação de débito no banco
-      const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, paidByOverride);
+      const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null);
       if (splits.length > 0) {
         const split = splits[0];
         const { error: txErr } = await supabase.from("transacoes").insert({
