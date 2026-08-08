@@ -97,8 +97,8 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
       
       if (target) {
         return [{
-          accountId: target.id,
-          accountTayaneId: undefined, // Garantir que não haja split automático
+          accountId: target ? target.id : null,
+          accountTayaneId: null, // Garantir que não haja split automático
           amount: absAmount,
           person: paidByOverride,
           descriptionSuffix: ` (Cota individual de ${paidByOverride} em despesa Família)`
