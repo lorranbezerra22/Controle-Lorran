@@ -303,9 +303,42 @@ function CartoesPage() {
 
 
   const personOptions = useMemo(() => {
-    // Retorna apenas as pessoas cadastradas no sistema
-    return people.map((p: any) => p.name).sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [people]);
+    // Pessoas que aparecem nas compras desse mês/ano
+    const relevant = inst.filter((i: any) => {
+      const d = new Date(i.due_at + "T00:00:00");
+      return d.getFullYear() === year && d.getMonth() === monthN - 1;
+    });
+    const names = new Set(relevant.map((i: any) => i.cartao_compras?.person).filter(Boolean));
+    return Array.from(names).sort((a: any, b: any) => String(a).localeCompare(String(b), "pt-BR"));
+  }, [inst, year, monthN]);
+
+  const cardOptions = useMemo(() => {
+    const relevant = inst.filter((i: any) => {
+      const d = new Date(i.due_at + "T00:00:00");
+      return d.getFullYear() === year && d.getMonth() === monthN - 1;
+    });
+    const cardIds = new Set(relevant.map((i: any) => i.card_id));
+    return cards.filter(c => cardIds.has(c.id)).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }, [inst, year, monthN, cards]);
+
+  const brandOptions = useMemo(() => {
+    const relevant = inst.filter((i: any) => {
+      const d = new Date(i.due_at + "T00:00:00");
+      return d.getFullYear() === year && d.getMonth() === monthN - 1;
+    });
+    const brands = new Set(relevant.map((i: any) => i.cartao_compras?.brand).filter(Boolean));
+    return Array.from(brands).sort((a: any, b: any) => String(a).localeCompare(String(b), "pt-BR"));
+  }, [inst, year, monthN]);
+
+  const categoryOptions = useMemo(() => {
+    const relevant = inst.filter((i: any) => {
+      const d = new Date(i.due_at + "T00:00:00");
+      return d.getFullYear() === year && d.getMonth() === monthN - 1;
+    });
+    const catIds = new Set(relevant.map((i: any) => i.cartao_compras?.category_id));
+    return cats.filter(c => catIds.has(c.id)).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }, [inst, year, monthN, cats]);
+
 
   const totals = useMemo(() => {
     const map: Record<string, { fatura: number; restante: number; brandTotals: Record<string, { fatura: number; restante: number }> }> = {};
@@ -648,6 +681,7 @@ function CartoesPage() {
                 <SelectContent>
                   <SelectItem value="all">Adicionar pessoa</SelectItem>
                   {personOptions.map((p: string) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+
                 </SelectContent>
               </Select>
             </Field>
@@ -658,9 +692,10 @@ function CartoesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os cartões</SelectItem>
-                  {cards.map((c: any) => (
+                  {cardOptions.map((c: any) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
+
                 </SelectContent>
               </Select>
             </Field>
@@ -691,7 +726,7 @@ function CartoesPage() {
                 <SelectTrigger className={`w-auto min-w-[140px] ${categoryFilter !== "all" ? activeCls : ""}`}><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas categorias</SelectItem>
-                  {cats.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ""}{c.name}</SelectItem>)}
+                  {categoryOptions.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ""}{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>

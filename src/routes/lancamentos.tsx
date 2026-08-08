@@ -158,11 +158,23 @@ function LancamentosPage() {
   };
 
   const personOptions = useMemo(() => {
-    // Retorna as pessoas cadastradas + Familia
-    const names = new Set(people.map((p: any) => p.name));
-    names.add("Familia");
-    return Array.from(names).sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [people]);
+    const dFilter = (t: any) => {
+      const d = new Date(t.due_at + "T00:00:00");
+      return (selY === "all" || d.getFullYear() === selY) && (selM === "all" || d.getMonth() === selM);
+    };
+    const names = new Set(tx.filter(dFilter).map((t: any) => t.person).filter(Boolean));
+    return Array.from(names).sort((a: any, b: any) => String(a).localeCompare(String(b), "pt-BR"));
+  }, [tx, selM, selY]);
+
+  const categoryOptions = useMemo(() => {
+    const dFilter = (t: any) => {
+      const d = new Date(t.due_at + "T00:00:00");
+      return (selY === "all" || d.getFullYear() === selY) && (selM === "all" || d.getMonth() === selM);
+    };
+    const catIds = new Set(tx.filter(dFilter).map((t: any) => t.category_id));
+    return cats.filter(c => catIds.has(c.id)).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }, [tx, selM, selY, cats]);
+
 
   const filtered = tx.filter((t: any) => {
     if (filter !== "all" && t.kind !== filter) return false;
@@ -379,11 +391,12 @@ function LancamentosPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas categorias</SelectItem>
-              {cats.map((c: any) => (
+              {categoryOptions.map((c: any) => (
                 <SelectItem key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ""}{c.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+
         </Field>
         <Field label="Busca">
           <Input 
