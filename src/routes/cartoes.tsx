@@ -371,6 +371,14 @@ function CartoesPage() {
         // O estorno (amount negativo) gera uma transação 'income' para repor o saldo na conta
         const splits = buildPaymentSplits(accounts, originalPerson, amount, paidByOverride);
         for (const split of splits) {
+          const finalAccountId = split.accountTayaneId 
+            ? (accountsOverride?.accountId || split.accountId)
+            : (accountsOverride?.accountId || split.accountId);
+          
+          const finalAccountTayaneId = split.accountTayaneId
+            ? (accountsOverride?.accountTayaneId || split.accountTayaneId)
+            : null;
+
           const { error: txErr } = await supabase.from("transacoes").insert({
             user_id: user.id,
             description: `${i.cartao_compras?.description || "Pagamento Cartão"} - Parcela ${i.installment_number}${split.descriptionSuffix}${isEstorno ? " (Estorno/Reembolso)" : ""}`,
@@ -379,8 +387,8 @@ function CartoesPage() {
             status: "paid",
             due_at: todayLocalISO(),
             posted_at: todayLocalISO(),
-            account_id: accountsOverride?.accountId || split.accountId,
-            account_tayane_id: accountsOverride?.accountTayaneId || (split.accountTayaneId || null),
+            account_id: finalAccountId,
+            account_tayane_id: finalAccountTayaneId,
             person: split.person,
             card_installment_id: i.id,
             category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", // Categoria Cartão de Crédito
@@ -1815,6 +1823,18 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
   const [selectedAccountTayaneId, setSelectedAccountTayaneId] = useState<string>("");
 
+  const lorranAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "lorran" || normalizeName(a.bank || "").includes("revolut") || normalizeName(a.bank || "").includes("nubank"));
+  const tayaneAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "tayane" || normalizeName(a.bank || "").includes("mercado"));
+
+  useEffect(() => {
+    if (accounts.length > 0) {
+      const lorran = lorranAccs[0];
+      const tayane = tayaneAccs[0];
+      if (lorran) setSelectedAccountId(lorran.id);
+      if (tayane) setSelectedAccountTayaneId(tayane.id);
+    }
+  }, [accounts]);
+
 
   const originalPerson = installment.cartao_compras?.person || "";
   const isFamilia = normalizeName(originalPerson) === "familia";
@@ -1864,6 +1884,14 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
       // 1. Criar transação de débito no banco
       const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null);
       for (const split of splits) {
+        const finalAccountId = split.accountTayaneId 
+          ? (accountsOverride?.accountId || split.accountId)
+          : (accountsOverride?.accountId || split.accountId);
+        
+        const finalAccountTayaneId = split.accountTayaneId
+          ? (accountsOverride?.accountTayaneId || split.accountTayaneId)
+          : null;
+
         const { error: txErr } = await supabase.from("transacoes").insert({
           user_id: user.id,
           description: `${installment.cartao_compras?.description || "Antecipação Cartão"} - Parcela ${installment.installment_number}${split.descriptionSuffix}`,
@@ -1872,8 +1900,8 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           status: "paid",
           due_at: todayLocalISO(),
           posted_at: todayLocalISO(),
-          account_id: accountsOverride?.accountId || split.accountId,
-          account_tayane_id: accountsOverride?.accountTayaneId || (split.accountTayaneId || null),
+          account_id: finalAccountId,
+          account_tayane_id: finalAccountTayaneId,
           person: split.person,
           card_installment_id: installment.id,
           category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", // Categoria Cartão de Crédito (ID correto do banco)
@@ -2051,8 +2079,6 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
     );
   }
 
-  const lorranAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "lorran" || normalizeName(a.bank || "").includes("revolut") || normalizeName(a.bank || "").includes("nubank"));
-  const tayaneAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "tayane" || normalizeName(a.bank || "").includes("mercado"));
 
   if (payMode === "total") {
     return (
@@ -2176,24 +2202,65 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
       </div>
       
       <div className="space-y-3 p-3 rounded-lg bg-muted/30 border border-border/50">
-        <div className="space-y-1.5">
-          <Label className="text-[10px] uppercase font-bold text-muted-foreground">Conta para débito</Label>
-          <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-            <SelectTrigger className="h-10 bg-background">
-              <SelectValue placeholder="Selecione a conta" />
-            </SelectTrigger>
-            <SelectContent>
-              {accounts.map((a: any) => (
-                <SelectItem key={a.id} value={a.id}>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{a.bank} · {a.account_name}</span>
-                    <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {isFamilia && !overrideActive ? (
+          <>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Conta de Lorran (50%)</Label>
+              <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                <SelectTrigger className="h-10 bg-background">
+                  <SelectValue placeholder="Selecione a conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {lorranAccs.map((a: any) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{a.bank}</span>
+                        <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Conta de Tayane (50%)</Label>
+              <Select value={selectedAccountTayaneId} onValueChange={setSelectedAccountTayaneId}>
+                <SelectTrigger className="h-10 bg-background">
+                  <SelectValue placeholder="Selecione a conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tayaneAccs.map((a: any) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{a.bank}</span>
+                        <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        ) : (
+          <div className="space-y-1.5">
+            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Conta para débito</Label>
+            <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+              <SelectTrigger className="h-10 bg-background">
+                <SelectValue placeholder="Selecione a conta" />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.map((a: any) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{a.bank} · {a.account_name}</span>
+                      <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       <div className="space-y-1.5">
