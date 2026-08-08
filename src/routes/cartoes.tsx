@@ -2034,6 +2034,9 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
                       <SelectValue placeholder="Selecione a conta" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none" className="text-amber-500 font-bold">
+                        Sem conta para débito (Apenas visual)
+                      </SelectItem>
                       {accounts.map((a: any) => (
                         <SelectItem key={a.id} value={a.id}>
                           <div className="flex items-center gap-2">
