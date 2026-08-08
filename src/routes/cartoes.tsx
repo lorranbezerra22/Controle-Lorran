@@ -2202,24 +2202,65 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
       </div>
       
       <div className="space-y-3 p-3 rounded-lg bg-muted/30 border border-border/50">
-        <div className="space-y-1.5">
-          <Label className="text-[10px] uppercase font-bold text-muted-foreground">Conta para débito</Label>
-          <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-            <SelectTrigger className="h-10 bg-background">
-              <SelectValue placeholder="Selecione a conta" />
-            </SelectTrigger>
-            <SelectContent>
-              {accounts.map((a: any) => (
-                <SelectItem key={a.id} value={a.id}>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{a.bank} · {a.account_name}</span>
-                    <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {isFamilia && !overrideActive ? (
+          <>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Conta de Lorran (50%)</Label>
+              <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                <SelectTrigger className="h-10 bg-background">
+                  <SelectValue placeholder="Selecione a conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {lorranAccs.map((a: any) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{a.bank}</span>
+                        <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Conta de Tayane (50%)</Label>
+              <Select value={selectedAccountTayaneId} onValueChange={setSelectedAccountTayaneId}>
+                <SelectTrigger className="h-10 bg-background">
+                  <SelectValue placeholder="Selecione a conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tayaneAccs.map((a: any) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{a.bank}</span>
+                        <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        ) : (
+          <div className="space-y-1.5">
+            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Conta para débito</Label>
+            <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+              <SelectTrigger className="h-10 bg-background">
+                <SelectValue placeholder="Selecione a conta" />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.map((a: any) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{a.bank} · {a.account_name}</span>
+                      <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       <div className="space-y-1.5">
