@@ -1822,8 +1822,8 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
   
   const overrideActive = !!paidBy && paidBy.trim() && normalizeName(paidBy) !== normalizeName(originalPerson);
 
-  const handlePay = async (e: React.FormEvent) => {
-    e.preventDefault();
+    const handlePay = async (e: React.FormEvent, accountsOverride?: { accountId: string, accountTayaneId?: string }) => {
+      if (e) e.preventDefault();
     const amountToPay = Number(payAmount);
     const originalAmount = Number(installment.amount);
 
