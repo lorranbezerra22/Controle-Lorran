@@ -312,61 +312,50 @@ function CartoesPage() {
     const isFamilia = (s: string) => (s || "").toLowerCase().trim() === "familia";
 
     monthInst.forEach((i: any) => {
-      const card = cards.find((c: any) => c.id === i.card_id);
       const effectiveCardId = i.card_id;
       const m = (map[effectiveCardId] = map[effectiveCardId] ?? { fatura: 0, restante: 0, brandTotals: {} });
       const payment = getInstallmentPaymentState(i);
-      const v = getStatusFilteredAmount(i, statusFilter);
       
       const person = (i.cartao_compras?.person || "").toLowerCase().trim();
       const filter = personFilter !== "all" ? personFilter.toLowerCase().trim() : "all";
       const filter2 = personFilter2 !== "all" ? personFilter2.toLowerCase().trim() : "all";
 
-      const isFamilia = person === "familia";
+      const isFam = person === "familia";
       
-      // Se tiver filtro ativo, só conta se a pessoa bater com algum dos filtros
-      const matchesFilter = filter === "all" || person === filter || (isFamilia && filter === "lorran") || person === filter2 || (isFamilia && filter2 === "lorran");
+      const matchesFilter = filter === "all" || person === filter || (isFam && filter === "lorran") || person === filter2 || (isFam && filter2 === "lorran") || (isFam && (filter === "tayane" || filter2 === "tayane"));
 
       if (matchesFilter) {
-        let valueForFilter = v;
+        let valueForTotal = payment.total;
+        let valueForRestante = payment.remaining;
         
-        // Lógica de abatimento proporcional para Família
-        if (isFamilia && (filter !== "all" || filter2 !== "all")) {
-          // Se alguém já pagou uma parte, precisamos saber QUEM pagou
-          const partials = i.metadata?.partial_payments || [];
-          const paidByLorran = partials.filter((p: any) => normalizeName(p.person) === "lorran").reduce((s: number, p: any) => s + Number(p.amount), 0);
-          const paidByTayane = partials.filter((p: any) => normalizeName(p.person) === "tayane").reduce((s: number, p: any) => s + Number(p.amount), 0);
+        if (isFam && (filter !== "all" || filter2 !== "all")) {
+          const parts = i.participacoes || [];
+          const paidByLorran = parts.filter((p: any) => normalizeName(p.person) === "lorran").reduce((s: number, p: any) => s + Number(p.amount), 0);
+          const paidByTayane = parts.filter((p: any) => normalizeName(p.person) === "tayane").reduce((s: number, p: any) => s + Number(p.amount), 0);
           
-          const totalOriginal = Number(i.amount) || 0;
-          const quota = totalOriginal / 2;
+          const quota = payment.total / 2;
           
-          // Se o filtro é Lorran
           if (filter === "lorran" || filter2 === "lorran") {
             const myPaid = paidByLorran;
-            const myRemaining = Math.max(0, quota - myPaid);
-            valueForFilter = statusFilter === "paid" ? myPaid : (statusFilter === "pending" ? myRemaining : quota);
+            const myRemaining = i.status === "paid" ? 0 : quota - myPaid;
+            valueForTotal = quota;
+            valueForRestante = myRemaining;
           } else if (filter === "tayane" || filter2 === "tayane") {
             const myPaid = paidByTayane;
-            const myRemaining = Math.max(0, quota - myPaid);
-            valueForFilter = statusFilter === "paid" ? myPaid : (statusFilter === "pending" ? myRemaining : quota);
-          } else {
-            // "Familia" ou "Todos" - mostra o consolidado (já está em 'v')
-            valueForFilter = v;
+            const myRemaining = i.status === "paid" ? 0 : quota - myPaid;
+            valueForTotal = quota;
+            valueForRestante = myRemaining;
           }
         }
         
-        m.fatura += valueForFilter;
+        m.fatura += valueForTotal;
         
         const b = i.cartao_compras?.brand || "Default";
         m.brandTotals[b] = m.brandTotals[b] ?? { fatura: 0, restante: 0 };
-        m.brandTotals[b].fatura += valueForFilter;
+        m.brandTotals[b].fatura += valueForTotal;
 
-        if (statusFilter !== "paid" && payment.hasPending) {
-          m.restante += valueForFilter; // Já calculado acima respeitando o filtro
-          const b = i.cartao_compras?.brand || "Default";
-          m.brandTotals[b] = m.brandTotals[b] ?? { fatura: 0, restante: 0 };
-          m.brandTotals[b].restante += valueForFilter;
-        }
+        m.restante += valueForRestante;
+        m.brandTotals[b].restante += valueForRestante;
       }
     });
     return map;
