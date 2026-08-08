@@ -146,7 +146,7 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
   // Despesa individual (Lorran ou Tayane)
   const payer = paidByOverride ? normalizeName(paidByOverride) : p;
   const target = pickPaymentAccount(accounts, payer, [payer], accountsOverride?.accountId);
-  if (target) return [{ accountId: target.id, amount: absAmount, person: payer, descriptionSuffix: "" }];
+  if (target || accountsOverride?.accountId === "none") return [{ accountId: target ? target.id : null, amount: absAmount, person: payer, descriptionSuffix: "" }];
   return [];
 };
 
