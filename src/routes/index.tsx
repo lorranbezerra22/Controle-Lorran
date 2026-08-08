@@ -694,10 +694,12 @@ function Dashboard() {
                 const cardMonthInst = monthInst.filter((i: any) => i.card_id === c.id);
                 const fat = cardMonthInst.reduce((s: number, i: any) => s + Number(i.amount) * personFactor(costPersonInst(i)), 0);
                 const restante = cardMonthInst
-                  .filter((i: any) => i.status !== "paid")
                   .reduce((s: number, i: any) => {
                     const factor = personFactor(costPersonInst(i));
                     if (factor === 0) return s;
+
+                    if (i.status === "paid") return s;
+
                     const amount = Number(i.amount);
                     const paidAmount = Number(i.paid_amount || 0);
                     // O restante para a pessoa deve ser proporcional à sua cota
