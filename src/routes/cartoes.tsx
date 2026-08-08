@@ -2051,6 +2051,9 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
     );
   }
 
+  const lorranAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "lorran" || normalizeName(a.bank || "").includes("revolut") || normalizeName(a.bank || "").includes("nubank"));
+  const tayaneAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "tayane" || normalizeName(a.bank || "").includes("mercado"));
+
   if (payMode === "total") {
     return (
       <form onSubmit={(e) => { e.preventDefault(); onFullPay(notes, overrideActive ? paidBy : null, { accountId: selectedAccountId, accountTayaneId: selectedAccountTayaneId }); }} className="space-y-4">
@@ -2059,6 +2062,68 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           <div className="text-lg font-bold">{brl(Number(installment.amount || 0))}</div>
         </div>
         
+        <div className="space-y-3 p-3 rounded-lg bg-muted/30 border border-border/50">
+          {isFamilia && !overrideActive ? (
+            <>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Conta de Lorran (50%)</Label>
+                <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                  <SelectTrigger className="h-10 bg-background">
+                    <SelectValue placeholder="Selecione a conta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {lorranAccs.map((a: any) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{a.bank}</span>
+                          <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Conta de Tayane (50%)</Label>
+                <Select value={selectedAccountTayaneId} onValueChange={setSelectedAccountTayaneId}>
+                  <SelectTrigger className="h-10 bg-background">
+                    <SelectValue placeholder="Selecione a conta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tayaneAccs.map((a: any) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{a.bank}</span>
+                          <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Conta para débito</Label>
+              <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                <SelectTrigger className="h-10 bg-background">
+                  <SelectValue placeholder="Selecione a conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((a: any) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{a.bank} · {a.account_name}</span>
+                        <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+
         <div className="space-y-1.5">
           <Label>Quem está pagando?</Label>
           <PersonSelect value={paidBy} onChange={setPaidBy} extras={originalPerson ? [originalPerson] : []} />
