@@ -105,9 +105,23 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
       return [{
         accountId: lorranAcc.id,
         accountTayaneId: tayaneAcc.id,
-        amount: absAmount, // O valor TOTAL; o trigger no banco divide 50/50 entre as contas
+        amount: absAmount, 
         person: "Familia",
         descriptionSuffix: " (Família 50/50)",
+      }];
+    }
+    
+    // Fallback: Se não encontrou as duas contas ideais, tenta buscar qualquer uma de cada pessoa
+    const anyLorran = accounts.find(a => normalizeName(a.account_name || "").includes("lorran"));
+    const anyTayane = accounts.find(a => normalizeName(a.account_name || "").includes("tayane"));
+    
+    if (anyLorran && anyTayane) {
+      return [{
+        accountId: anyLorran.id,
+        accountTayaneId: anyTayane.id,
+        amount: absAmount,
+        person: "Familia",
+        descriptionSuffix: " (Família 50/50 - Fallback)",
       }];
     }
     const only = lorranAcc || tayaneAcc;
