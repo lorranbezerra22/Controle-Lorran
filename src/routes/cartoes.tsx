@@ -405,7 +405,13 @@ function CartoesPage() {
             const finalAccountId = split.accountId;
             const finalAccountTayaneId = split.accountTayaneId;
 
-            const { error: txErr } = await supabase.from("transacoes").insert({
+          if (split.accountId === null && split.accountTayaneId === null) {
+            // Se for "Sem conta" em ambos os campos, não cria transação mas continua o processo
+            console.log("Ignorando criação de transação: Sem conta selecionada");
+            continue;
+          }
+
+          const { error: txErr } = await supabase.from("transacoes").insert({
               user_id: user.id,
               description: `${i.cartao_compras?.description || "Pagamento Cartão"} - Parcela ${i.installment_number}${split.descriptionSuffix}${isEstorno ? " (Estorno/Reembolso)" : ""}`,
               amount: Math.abs(split.amount), 
