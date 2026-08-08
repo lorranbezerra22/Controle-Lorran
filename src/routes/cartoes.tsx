@@ -1872,8 +1872,8 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           status: "paid",
           due_at: todayLocalISO(),
           posted_at: todayLocalISO(),
-          account_id: split.accountId,
-          account_tayane_id: split.accountTayaneId || null,
+          account_id: accountsOverride?.accountId || split.accountId,
+          account_tayane_id: accountsOverride?.accountTayaneId || (split.accountTayaneId || null),
           person: split.person,
           card_installment_id: installment.id,
           category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", // Categoria Cartão de Crédito (ID correto do banco)
