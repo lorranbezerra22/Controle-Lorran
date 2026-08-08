@@ -80,7 +80,7 @@ type PaymentSplit = {
 // Para "Família": retorna 1 registro com ambas as contas e person='Familia'.
 // O trigger update_account_balance divide 50/50 automaticamente se account_id E account_tayane_id estiverem presentes.
 // Se um pagador específico (paidByOverride) for informado, retornamos apenas a conta dele para débito 100%.
-const buildPaymentSplits = (accounts: any[], person: string, amount: number, paidByOverride?: string | null): PaymentSplit[] => {
+const buildPaymentSplits = (accounts: any[], person: string, amount: number, paidByOverride?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }): PaymentSplit[] => {
   const p = normalizeName(person);
   const isEstorno = amount < 0;
   const absAmount = Math.abs(amount);
