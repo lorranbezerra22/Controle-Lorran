@@ -87,8 +87,8 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
   
   // Se for despesa de Família
   if (p === "familia") {
-    const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"]);
-    const tayaneAcc = pickPaymentAccount(accounts, "Tayane", ["mercado pago", "mercado"]);
+    const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"], accountsOverride?.accountId);
+    const tayaneAcc = pickPaymentAccount(accounts, "Tayane", ["mercado pago", "mercado"], accountsOverride?.accountTayaneId);
 
     // Casos de Override para Família: se um pagador individual foi selecionado
     if (paidByOverride && (normalizeName(paidByOverride) === "lorran" || normalizeName(paidByOverride) === "tayane")) {
