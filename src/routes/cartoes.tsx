@@ -404,7 +404,7 @@ function CartoesPage() {
         
         await supabase.from("cartao_parcelas").update({ 
           status: "pending", 
-          paid_amount: 0,
+          paid_amount: 0, 
           paid_by: null,
           metadata: { ...((i.metadata as any) || {}), partial_payments: [] }
         } as any).eq("id", i.id);
