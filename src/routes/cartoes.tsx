@@ -1923,7 +1923,13 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           const finalAccountId = split.accountId;
           const finalAccountTayaneId = split.accountTayaneId;
 
-          const { error: txErr } = await supabase.from("transacoes").insert({
+        if (split.accountId === null && split.accountTayaneId === null) {
+          // Se for "Sem conta" em ambos os campos, não cria transação mas continua o processo
+          console.log("Ignorando criação de transação: Sem conta selecionada");
+          continue;
+        }
+
+        const { error: txErr } = await supabase.from("transacoes").insert({
             user_id: user.id,
             description: `${installment.cartao_compras?.description || "Antecipação Cartão"} - Parcela ${installment.installment_number}${split.descriptionSuffix}`,
             amount: split.amount,
