@@ -2059,8 +2059,6 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
               <Button 
                 className="h-12 text-sm font-bold rounded-xl shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all transform hover:scale-[1.02]"
                 onClick={() => {
-                  if (!selectedAccountId) return toast.error("Selecione a conta de destino");
-                  if (isFamilia && !selectedAccountTayaneId) return toast.error("Selecione a conta da Tayane");
                   onFullPay(notes, null, { accountId: selectedAccountId, accountTayaneId: selectedAccountTayaneId });
                 }}
               >
