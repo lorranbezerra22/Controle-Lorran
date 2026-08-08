@@ -241,7 +241,25 @@ function Dashboard() {
 
   // Cartões — respeita filtros
   const fatura = monthInst.reduce((s: number, i: any) => s + Number(i.amount) * personFactor(costPersonInst(i)), 0);
-  const faturaRest = monthInst.filter((i: any) => i.status !== "paid").reduce((s: number, i: any) => s + (Number(i.amount) - Number(i.paid_amount || 0)) * personFactor(costPersonInst(i)), 0);
+  const faturaRest = monthInst.filter((i: any) => i.status !== "paid").reduce((s: number, i: any) => {
+    const factor = personFactor(costPersonInst(i));
+    if (factor === 0) return s;
+    const amount = Number(i.amount);
+    const paidAmount = Number(i.paid_amount || 0);
+    const personQuota = amount * factor;
+
+    if (factor === 1) return s + Math.max(0, amount - paidAmount);
+
+    const pName = personFilter.toLowerCase() === "lorran" || personFilter2.toLowerCase() === "lorran" ? "Lorran" : 
+                 (personFilter.toLowerCase() === "tayane" || personFilter2.toLowerCase() === "tayane" ? "Tayane" : null);
+    
+    if (pName) {
+      const part = (i.participacoes || []).find((p: any) => p.person === pName);
+      const personPaid = Number(part?.amount || 0);
+      return s + Math.max(0, personQuota - personPaid);
+    }
+    return s + Math.max(0, amount - paidAmount);
+  }, 0);
 
   // Balanço projetado = Saldo da Conta + A receber − (despesas restantes + fatura restante)
   const balanco = personFilter === "all" ? 0 : saldoConta + receitasPend - despesasRestante - faturaRest;
