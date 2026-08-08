@@ -355,28 +355,26 @@ function CartoesPage() {
       if (isPaying) {
         const amount = Number(i.amount);
         
-        // 1. Criar transação de débito no banco se houver split ou conta definida
-        // NÃO criamos transação para estornos, pois eles abatem a fatura automaticamente
-        if (!isEstorno) {
-          const splits = buildPaymentSplits(accounts, originalPerson, amount, paidByOverride);
-          if (splits.length > 0) {
-            const split = splits[0];
-            const { error: txErr } = await supabase.from("transacoes").insert({
-              user_id: user.id,
-              description: `${i.cartao_compras?.description || "Pagamento Cartão"} - Parcela ${i.installment_number}${split.descriptionSuffix}`,
-              amount: split.amount,
-              kind: "expense",
-              status: "paid",
-              due_at: todayLocalISO(),
-              posted_at: todayLocalISO(),
-              account_id: split.accountId,
-              account_tayane_id: split.accountTayaneId || null,
-              person: split.person,
-              card_installment_id: i.id,
-              category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", // Categoria Cartão de Crédito
-            } as any);
-            if (txErr) throw txErr;
-          }
+        // 1. Criar lançamento financeiro (débito para despesa, CRÉDITO para estorno)
+        // O estorno (amount negativo) gera uma transação 'income' para repor o saldo na conta
+        const splits = buildPaymentSplits(accounts, originalPerson, amount, paidByOverride);
+        if (splits.length > 0) {
+          const split = splits[0];
+          const { error: txErr } = await supabase.from("transacoes").insert({
+            user_id: user.id,
+            description: `${i.cartao_compras?.description || "Pagamento Cartão"} - Parcela ${i.installment_number}${split.descriptionSuffix}${isEstorno ? " (Estorno/Reembolso)" : ""}`,
+            amount: Math.abs(split.amount), // Sempre positivo para o banco
+            kind: isEstorno ? "income" : "expense", // 'income' repõe o saldo (estorno)
+            status: "paid",
+            due_at: todayLocalISO(),
+            posted_at: todayLocalISO(),
+            account_id: split.accountId,
+            account_tayane_id: split.accountTayaneId || null,
+            person: split.person,
+            card_installment_id: i.id,
+            category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", // Categoria Cartão de Crédito
+          } as any);
+          if (txErr) throw txErr;
         }
 
         // 2. Registrar participação total na nova tabela
@@ -398,12 +396,11 @@ function CartoesPage() {
         } as any).eq("id", i.id);
 
         if (error) throw error;
-        toast.success(isEstorno ? "Estorno confirmado." : "Parcela marcada como paga.");
+        toast.success(isEstorno ? "Estorno confirmado e saldo estornado para as contas." : "Parcela marcada como paga.");
       } else {
         // Cancelar Pagamento: Remove transações, participações e reseta parcela
-        if (!isEstorno) {
-          await supabase.from("transacoes").delete().eq("card_installment_id", i.id);
-        }
+        await supabase.from("transacoes").delete().eq("card_installment_id", i.id);
+        
         await supabase.from("participacoes_parcelas").delete().eq("installment_id", i.id);
         
         await supabase.from("cartao_parcelas").update({ 
