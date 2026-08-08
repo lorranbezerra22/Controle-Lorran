@@ -353,7 +353,7 @@ function CartoesPage() {
 
   const getPaymentSplits = (person: string, amount: number, paidByOverride?: string | null) => buildPaymentSplits(accounts, person, amount, paidByOverride);
 
-  const togglePaid = async (i: any, notes?: string, paidByOverride?: string | null) => {
+  const togglePaid = async (i: any, notes?: string, paidByOverride?: string | null, accountsOverride?: { accountId: string, accountTayaneId?: string }) => {
     const isEstorno = Number(i.amount) < 0;
     const isPaying = i.status !== "paid";
     try {
