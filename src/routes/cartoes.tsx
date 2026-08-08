@@ -1908,24 +1908,41 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
   };
 
   if (!payMode) {
+    const isEstorno = Number(installment.amount || 0) < 0;
+    
     return (
       <div className="space-y-4">
         <div className="bg-muted/50 p-4 rounded-xl border border-border text-center">
-          <p className="text-sm text-muted-foreground mb-4">O que você deseja fazer com esta parcela de <strong className="text-foreground">{brl(Number(installment.amount || 0))}</strong>?</p>
+          <p className="text-sm text-muted-foreground mb-4">
+            {isEstorno 
+              ? `Deseja confirmar o abatimento deste estorno de ${brl(Math.abs(Number(installment.amount)))} na fatura?`
+              : `O que você deseja fazer com esta parcela de ${brl(Number(installment.amount || 0))}?`}
+          </p>
           <div className="grid grid-cols-1 gap-3">
-            <Button 
-              className="h-12 text-sm font-semibold rounded-xl shadow-md"
-              onClick={() => setPayMode("total")}
-            >
-              Pagar Total
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-12 text-sm font-semibold rounded-xl"
-              onClick={() => setPayMode("anticipate")}
-            >
-              Antecipar Pagamento
-            </Button>
+            {isEstorno ? (
+              <Button 
+                className="h-12 text-sm font-semibold rounded-xl shadow-md bg-emerald-600 hover:bg-emerald-700"
+                onClick={() => onFullPay()}
+              >
+                Confirmar Estorno
+              </Button>
+            ) : (
+              <>
+                <Button 
+                  className="h-12 text-sm font-semibold rounded-xl shadow-md"
+                  onClick={() => setPayMode("total")}
+                >
+                  Pagar Total
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="h-12 text-sm font-semibold rounded-xl"
+                  onClick={() => setPayMode("anticipate")}
+                >
+                  Antecipar Pagamento
+                </Button>
+              </>
+            )}
           </div>
         </div>
         <Button variant="ghost" className="w-full text-xs" onClick={() => onDone()}>Cancelar</Button>
