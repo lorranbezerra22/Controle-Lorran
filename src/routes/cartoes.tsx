@@ -1906,8 +1906,6 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           ? (accountsOverride?.accountTayaneId || split.accountTayaneId)
           : null;
 
-        console.log("Antecipação: Inserindo transação com contas:", { finalAccountId, finalAccountTayaneId });
-
         const { error: txErr } = await supabase.from("transacoes").insert({
           user_id: user.id,
           description: `${installment.cartao_compras?.description || "Antecipação Cartão"} - Parcela ${installment.installment_number}${split.descriptionSuffix}`,
