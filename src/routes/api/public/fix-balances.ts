@@ -13,7 +13,7 @@ export const Route = createFileRoute('/api/public/fix-balances')({
           
           if (fetchError) throw fetchError
 
-          const nrm = (s: string) => (s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+          const nrm = (s: string | null) => (s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
           
           const lorranAcc = accounts?.find(a => 
             nrm(a.account_name).includes('lorran') || 
