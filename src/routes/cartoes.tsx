@@ -2053,7 +2053,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
 
   if (payMode === "total") {
     return (
-      <form onSubmit={(e) => { e.preventDefault(); onFullPay(notes, overrideActive ? paidBy : null); }} className="space-y-4">
+      <form onSubmit={(e) => { e.preventDefault(); onFullPay(notes, overrideActive ? paidBy : null, { accountId: selectedAccountId, accountTayaneId: selectedAccountTayaneId }); }} className="space-y-4">
         <div className="bg-muted/50 p-3 rounded-lg border border-border space-y-1">
           <div className="text-xs text-muted-foreground uppercase">Pagamento Total</div>
           <div className="text-lg font-bold">{brl(Number(installment.amount || 0))}</div>
