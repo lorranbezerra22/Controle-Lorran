@@ -1937,6 +1937,28 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
             </Button>
           </div>
         </div>
+        {!isEstorno && (
+          <div className="bg-muted/50 p-4 rounded-xl border border-border text-center">
+            <p className="text-sm text-muted-foreground mb-4">
+              O que você deseja fazer com esta parcela de {brl(Number(installment.amount || 0))}?
+            </p>
+            <div className="grid grid-cols-1 gap-3">
+              <Button 
+                className="h-12 text-sm font-semibold rounded-xl shadow-md"
+                onClick={() => setPayMode("total")}
+              >
+                Pagar Total
+              </Button>
+              <Button 
+                variant="outline" 
+                className="h-12 text-sm font-semibold rounded-xl"
+                onClick={() => setPayMode("anticipate")}
+              >
+                Antecipar Pagamento
+              </Button>
+            </div>
+          </div>
+        )}
         <Button variant="ghost" className="w-full text-xs" onClick={() => onDone()}>Cancelar</Button>
       </div>
     );
