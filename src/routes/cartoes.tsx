@@ -371,6 +371,14 @@ function CartoesPage() {
         // O estorno (amount negativo) gera uma transação 'income' para repor o saldo na conta
         const splits = buildPaymentSplits(accounts, originalPerson, amount, paidByOverride);
         for (const split of splits) {
+          const finalAccountId = split.accountTayaneId 
+            ? (accountsOverride?.accountId || split.accountId)
+            : (accountsOverride?.accountId || split.accountId);
+          
+          const finalAccountTayaneId = split.accountTayaneId
+            ? (accountsOverride?.accountTayaneId || split.accountTayaneId)
+            : null;
+
           const { error: txErr } = await supabase.from("transacoes").insert({
             user_id: user.id,
             description: `${i.cartao_compras?.description || "Pagamento Cartão"} - Parcela ${i.installment_number}${split.descriptionSuffix}${isEstorno ? " (Estorno/Reembolso)" : ""}`,
@@ -379,8 +387,8 @@ function CartoesPage() {
             status: "paid",
             due_at: todayLocalISO(),
             posted_at: todayLocalISO(),
-            account_id: accountsOverride?.accountId || split.accountId,
-            account_tayane_id: accountsOverride?.accountTayaneId || (split.accountTayaneId || null),
+            account_id: finalAccountId,
+            account_tayane_id: finalAccountTayaneId,
             person: split.person,
             card_installment_id: i.id,
             category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", // Categoria Cartão de Crédito
