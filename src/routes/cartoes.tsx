@@ -884,7 +884,7 @@ function CartoesPage() {
           {partialPayOpen && (
             <AnticipatePayForm 
               installment={partialPayOpen} 
-              onFullPay={(notes, paidBy) => { togglePaid(partialPayOpen, notes, paidBy); setPartialPayOpen(null); }}
+              onFullPay={(notes, paidBy, accountsOverride) => { togglePaid(partialPayOpen, notes, paidBy, accountsOverride); setPartialPayOpen(null); }}
               onDone={() => { setPartialPayOpen(null); invalidate("installments"); invalidate("accounts"); invalidate("transactions"); }} 
             />
           )}
