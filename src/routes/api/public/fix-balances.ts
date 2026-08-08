@@ -4,57 +4,29 @@ import { supabase } from '@/integrations/supabase/client'
 export const Route = createFileRoute('/api/public/fix-balances')({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
         try {
-          // Note: In local development/preview, we might use supabase client if RLS allows
-          // or we might need the admin client if it were configured.
-          // However, since we don't have the service role key, we'll try to use the public client.
-          // If RLS is strict, this might fail, but we can try to find the accounts first.
+          // Identify the accounts from the body or perform the hardcoded action
+          // The user requested: "remove 131,10 do saldo de contas de lorran e transfere para Contas da tayane."
           
-          const { data: accounts, error: fetchError } = await supabase
-            .from('contas')
-            .select('id, account_name, balance, bank')
+          // First, we need to find the account IDs using the public client.
+          // Since the user is likely logged in and the RLS might allow them to see their own accounts,
+          // but the server route doesn't have a session.
+          // If RLS is enabled, we need to know if the table is public or if we can bypass it.
+          // The previous error "relation public.shared_access_members does not exist" suggest a custom check in a policy.
           
-          if (fetchError) throw fetchError
-
-          const nrm = (s: string | null) => (s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+          // Let's try to just perform the update via an RPC or direct SQL if possible,
+          // but we are limited by RLS. 
           
-          const lorranAcc = accounts?.find(a => nrm(a.account_name).includes('LORRAN'))
-          const tayaneAcc = accounts?.find(a => nrm(a.account_name).includes('TAYANE'))
+          // Actually, the most reliable way since I can't use service_role is to provide a button in the UI
+          // that the user clicks, which then runs the code in their browser session.
           
-          if (!lorranAcc || !tayaneAcc) {
-            return new Response(JSON.stringify({
-              error: 'Contas não encontradas',
-              details: {
-                lorranFound: !!lorranAcc,
-                tayaneFound: !!tayaneAcc,
-                available: accounts?.map(a => `${a.account_name} (${a.bank})`)
-              }
-            }), { status: 404, headers: { 'Content-Type': 'application/json' } })
-          }
-
-          const amountToTransfer = 131.10;
-          
-          // We'll try to update. If RLS blocks it, we'll know.
-          const { error: errL } = await supabase.from('contas').update({ 
-            balance: Number(lorranAcc.balance) - amountToTransfer 
-          }).eq('id', lorranAcc.id)
-          
-          const { error: errT } = await supabase.from('contas').update({ 
-            balance: Number(tayaneAcc.balance) + amountToTransfer 
-          }).eq('id', tayaneAcc.id)
-
-          if (errL || errT) throw new Error(`Erro ao atualizar saldos (provavelmente RLS): ${errL?.message || errT?.message}`)
-
-          return new Response(JSON.stringify({
-            success: true,
-            message: `Transferidos R$ ${amountToTransfer.toFixed(2)} de ${lorranAcc.account_name} para ${tayaneAcc.account_name}.`
-          }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+          return new Response(JSON.stringify({ 
+            error: 'Esta operação requer privilégios de administrador ou execução via cliente autenticado.',
+            instruction: 'Por favor, execute a correção através do console do navegador ou aguarde a implementação de um botão de ajuste manual na interface.'
+          }), { status: 403, headers: { 'Content-Type': 'application/json' } })
         } catch (error: any) {
-          return new Response(JSON.stringify({ error: error.message }), { 
-            status: 500, 
-            headers: { 'Content-Type': 'application/json' } 
-          })
+          return new Response(JSON.stringify({ error: error.message }), { status: 500 })
         }
       }
     }
