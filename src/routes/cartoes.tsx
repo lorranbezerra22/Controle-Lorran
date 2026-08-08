@@ -34,7 +34,13 @@ const todayLocalISO = () => {
 
 const normalizeName = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
-const pickPaymentAccount = (accounts: any[], personName: string, bankFallbacks: string[] = []) => {
+const pickPaymentAccount = (accounts: any[], personName: string, bankFallbacks: string[] = [], overrideAccountId?: string | null) => {
+  if (overrideAccountId === "none") return null;
+  if (overrideAccountId) {
+    const found = accounts.find(a => a.id === overrideAccountId);
+    if (found) return found;
+  }
+
   const target = normalizeName(personName);
   
   // Prioridade 1: Contas onde o account_name é EXATAMENTE o nome da pessoa
@@ -64,8 +70,8 @@ const pickPaymentAccount = (accounts: any[], personName: string, bankFallbacks: 
 };
 
 type PaymentSplit = {
-  accountId: string;
-  accountTayaneId?: string;
+  accountId: string | null;
+  accountTayaneId?: string | null;
   amount: number;
   person: string;
   descriptionSuffix: string;
@@ -74,15 +80,15 @@ type PaymentSplit = {
 // Para "Família": retorna 1 registro com ambas as contas e person='Familia'.
 // O trigger update_account_balance divide 50/50 automaticamente se account_id E account_tayane_id estiverem presentes.
 // Se um pagador específico (paidByOverride) for informado, retornamos apenas a conta dele para débito 100%.
-const buildPaymentSplits = (accounts: any[], person: string, amount: number, paidByOverride?: string | null): PaymentSplit[] => {
+const buildPaymentSplits = (accounts: any[], person: string, amount: number, paidByOverride?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }): PaymentSplit[] => {
   const p = normalizeName(person);
   const isEstorno = amount < 0;
   const absAmount = Math.abs(amount);
   
   // Se for despesa de Família
   if (p === "familia") {
-    const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"]);
-    const tayaneAcc = pickPaymentAccount(accounts, "Tayane", ["mercado pago", "mercado"]);
+    const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"], accountsOverride?.accountId);
+    const tayaneAcc = pickPaymentAccount(accounts, "Tayane", ["mercado pago", "mercado"], accountsOverride?.accountTayaneId);
 
     // Casos de Override para Família: se um pagador individual foi selecionado
     if (paidByOverride && (normalizeName(paidByOverride) === "lorran" || normalizeName(paidByOverride) === "tayane")) {
@@ -91,8 +97,8 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
       
       if (target) {
         return [{
-          accountId: target.id,
-          accountTayaneId: undefined, // Garantir que não haja split automático
+          accountId: target ? target.id : null,
+          accountTayaneId: null, // Garantir que não haja split automático
           amount: absAmount,
           person: paidByOverride,
           descriptionSuffix: ` (Cota individual de ${paidByOverride} em despesa Família)`
@@ -103,8 +109,8 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
     // Fluxo padrão 50/50: debita de ambas as contas
     if (lorranAcc && tayaneAcc) {
       return [{
-        accountId: lorranAcc.id,
-        accountTayaneId: tayaneAcc.id,
+        accountId: lorranAcc ? lorranAcc.id : null,
+        accountTayaneId: tayaneAcc ? tayaneAcc.id : null,
         amount: absAmount, 
         person: "Familia",
         descriptionSuffix: " (Família 50/50)",
@@ -117,22 +123,30 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
     
     if (anyLorran && anyTayane) {
       return [{
-        accountId: anyLorran.id,
-        accountTayaneId: anyTayane.id,
+        accountId: anyLorran ? anyLorran.id : null,
+        accountTayaneId: anyTayane ? anyTayane.id : null,
         amount: absAmount,
         person: "Familia",
         descriptionSuffix: " (Família 50/50 - Fallback)",
       }];
     }
     const only = lorranAcc || tayaneAcc;
-    if (only) return [{ accountId: only.id, amount: absAmount, person: "Familia", descriptionSuffix: "" }];
+    if (only || accountsOverride?.accountId === "none" || accountsOverride?.accountTayaneId === "none") {
+      return [{ 
+        accountId: lorranAcc ? lorranAcc.id : (accountsOverride?.accountId === "none" ? null : null), 
+        accountTayaneId: tayaneAcc ? tayaneAcc.id : (accountsOverride?.accountTayaneId === "none" ? null : null),
+        amount: absAmount, 
+        person: "Familia", 
+        descriptionSuffix: "" 
+      }];
+    }
     return [];
   }
 
   // Despesa individual (Lorran ou Tayane)
   const payer = paidByOverride ? normalizeName(paidByOverride) : p;
-  const target = pickPaymentAccount(accounts, payer, [payer]);
-  if (target) return [{ accountId: target.id, amount: absAmount, person: payer, descriptionSuffix: "" }];
+  const target = pickPaymentAccount(accounts, payer, [payer], accountsOverride?.accountId);
+  if (target || accountsOverride?.accountId === "none") return [{ accountId: target ? target.id : null, amount: absAmount, person: payer, descriptionSuffix: "" }];
   return [];
 };
 
@@ -367,7 +381,7 @@ function CartoesPage() {
 
   const getPaymentSplits = (person: string, amount: number, paidByOverride?: string | null) => buildPaymentSplits(accounts, person, amount, paidByOverride);
 
-  const togglePaid = async (i: any, notes?: string, paidByOverride?: string | null, accountsOverride?: { accountId: string, accountTayaneId?: string }) => {
+  const togglePaid = async (i: any, notes?: string, paidByOverride?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }) => {
     const isEstorno = Number(i.amount) < 0;
     const isPaying = i.status !== "paid";
     try {
@@ -383,31 +397,36 @@ function CartoesPage() {
         
         // 1. Criar lançamento financeiro (débito para despesa, CRÉDITO para estorno)
         // O estorno (amount negativo) gera uma transação 'income' para repor o saldo na conta
-        const splits = buildPaymentSplits(accounts, originalPerson, amount, paidByOverride);
-        for (const split of splits) {
-          const finalAccountId = split.accountTayaneId 
-            ? (accountsOverride?.accountId || split.accountId)
-            : (accountsOverride?.accountId || split.accountId);
-          
-          const finalAccountTayaneId = split.accountTayaneId
-            ? (accountsOverride?.accountTayaneId || split.accountTayaneId)
-            : null;
+        const splits = buildPaymentSplits(accounts, originalPerson, amount, paidByOverride, accountsOverride);
+        
+        // Se houver splits (contas selecionadas), cria as transações
+        if (splits.length > 0) {
+          for (const split of splits) {
+            const finalAccountId = split.accountId;
+            const finalAccountTayaneId = split.accountTayaneId;
+
+          if (split.accountId === null && split.accountTayaneId === null) {
+            // Se for "Sem conta" em ambos os campos, não cria transação mas continua o processo
+            console.log("Ignorando criação de transação: Sem conta selecionada");
+            continue;
+          }
 
           const { error: txErr } = await supabase.from("transacoes").insert({
-            user_id: user.id,
-            description: `${i.cartao_compras?.description || "Pagamento Cartão"} - Parcela ${i.installment_number}${split.descriptionSuffix}${isEstorno ? " (Estorno/Reembolso)" : ""}`,
-            amount: Math.abs(split.amount), 
-            kind: isEstorno ? "income" : "expense", 
-            status: "paid",
-            due_at: todayLocalISO(),
-            posted_at: todayLocalISO(),
-            account_id: finalAccountId,
-            account_tayane_id: finalAccountTayaneId, 
-            person: split.person,
-            card_installment_id: i.id,
-            category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5",
-          } as any);
-          if (txErr) throw txErr;
+              user_id: user.id,
+              description: `${i.cartao_compras?.description || "Pagamento Cartão"} - Parcela ${i.installment_number}${split.descriptionSuffix}${isEstorno ? " (Estorno/Reembolso)" : ""}`,
+              amount: Math.abs(split.amount), 
+              kind: isEstorno ? "income" : "expense", 
+              status: "paid",
+              due_at: todayLocalISO(),
+              posted_at: todayLocalISO(),
+              account_id: finalAccountId,
+              account_tayane_id: finalAccountTayaneId, 
+              person: split.person,
+              card_installment_id: i.id,
+              category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5",
+            } as any);
+            if (txErr) throw txErr;
+          }
         }
 
         // 2. Registrar participação total na nova tabela
@@ -1827,7 +1846,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null, accountsOverride?: { accountId: string, accountTayaneId?: string }) => void, onDone: () => void }) {
+function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }) => void, onDone: () => void }) {
   const [payMode, setPayMode] = useState<"total" | "anticipate" | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [notes, setNotes] = useState("");
@@ -1881,7 +1900,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
     }
 
     if (Math.abs(amountToPay - originalAmount) < 0.01 && !isFamilia) {
-      onFullPay(notes, overrideActive ? paidBy : null);
+      onFullPay(notes, overrideActive ? paidBy : null, accountsOverride);
       return;
     }
 
@@ -1896,31 +1915,36 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
       if (!user) throw new Error("Não autenticado");
 
       // 1. Criar transação de débito no banco
-      const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null);
-      for (const split of splits) {
-        const finalAccountId = split.accountTayaneId 
-          ? (accountsOverride?.accountId || split.accountId)
-          : (accountsOverride?.accountId || split.accountId);
-        
-        const finalAccountTayaneId = split.accountTayaneId
-          ? (accountsOverride?.accountTayaneId || split.accountTayaneId)
-          : null;
+      const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null, accountsOverride);
+      
+      // Só cria transações se houver contas selecionadas
+      if (splits.length > 0) {
+        for (const split of splits) {
+          const finalAccountId = split.accountId;
+          const finalAccountTayaneId = split.accountTayaneId;
+
+        if (split.accountId === null && split.accountTayaneId === null) {
+          // Se for "Sem conta" em ambos os campos, não cria transação mas continua o processo
+          console.log("Ignorando criação de transação: Sem conta selecionada");
+          continue;
+        }
 
         const { error: txErr } = await supabase.from("transacoes").insert({
-          user_id: user.id,
-          description: `${installment.cartao_compras?.description || "Antecipação Cartão"} - Parcela ${installment.installment_number}${split.descriptionSuffix}`,
-          amount: split.amount,
-          kind: "expense",
-          status: "paid",
-          due_at: todayLocalISO(),
-          posted_at: todayLocalISO(),
-          account_id: finalAccountId,
-          account_tayane_id: finalAccountTayaneId,
-          person: split.person,
-          card_installment_id: installment.id,
-          category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", 
-        } as any);
-        if (txErr) throw txErr;
+            user_id: user.id,
+            description: `${installment.cartao_compras?.description || "Antecipação Cartão"} - Parcela ${installment.installment_number}${split.descriptionSuffix}`,
+            amount: split.amount,
+            kind: "expense",
+            status: "paid",
+            due_at: todayLocalISO(),
+            posted_at: todayLocalISO(),
+            account_id: finalAccountId,
+            account_tayane_id: finalAccountTayaneId,
+            person: split.person,
+            card_installment_id: installment.id,
+            category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", 
+          } as any);
+          if (txErr) throw txErr;
+        }
       }
 
       // 2. Registrar a participação na nova tabela (Solução Definitiva)
@@ -2026,6 +2050,9 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
                       <SelectValue placeholder="Selecione a conta" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none" className="text-amber-500 font-bold">
+                        Sem conta para débito (Apenas visual)
+                      </SelectItem>
                       {accounts.map((a: any) => (
                         <SelectItem key={a.id} value={a.id}>
                           <div className="flex items-center gap-2">
@@ -2052,8 +2079,6 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
               <Button 
                 className="h-12 text-sm font-bold rounded-xl shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all transform hover:scale-[1.02]"
                 onClick={() => {
-                  if (!selectedAccountId) return toast.error("Selecione a conta de destino");
-                  if (isFamilia && !selectedAccountTayaneId) return toast.error("Selecione a conta da Tayane");
                   onFullPay(notes, null, { accountId: selectedAccountId, accountTayaneId: selectedAccountTayaneId });
                 }}
               >
@@ -2112,6 +2137,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
                     <SelectValue placeholder="Selecione a conta" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none" className="text-amber-500 font-bold">Sem conta</SelectItem>
                     {lorranAccs.map((a: any) => (
                       <SelectItem key={a.id} value={a.id}>
                         <div className="flex items-center gap-2">
@@ -2130,6 +2156,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
                     <SelectValue placeholder="Selecione a conta" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none" className="text-amber-500 font-bold">Sem conta</SelectItem>
                     {tayaneAccs.map((a: any) => (
                       <SelectItem key={a.id} value={a.id}>
                         <div className="flex items-center gap-2">
@@ -2150,6 +2177,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
                   <SelectValue placeholder="Selecione a conta" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none" className="text-amber-500 font-bold">Sem conta para débito</SelectItem>
                   {accounts.map((a: any) => (
                     <SelectItem key={a.id} value={a.id}>
                       <div className="flex items-center gap-2">
@@ -2225,6 +2253,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
                   <SelectValue placeholder="Selecione a conta" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none" className="text-amber-500 font-bold">Sem conta</SelectItem>
                   {lorranAccs.map((a: any) => (
                     <SelectItem key={a.id} value={a.id}>
                       <div className="flex items-center gap-2">
@@ -2243,6 +2272,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
                   <SelectValue placeholder="Selecione a conta" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none" className="text-amber-500 font-bold">Sem conta</SelectItem>
                   {tayaneAccs.map((a: any) => (
                     <SelectItem key={a.id} value={a.id}>
                       <div className="flex items-center gap-2">
@@ -2262,16 +2292,17 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
               <SelectTrigger className="h-10 bg-background">
                 <SelectValue placeholder="Selecione a conta" />
               </SelectTrigger>
-              <SelectContent>
-                {accounts.map((a: any) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{a.bank} · {a.account_name}</span>
-                      <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
+            <SelectContent>
+              <SelectItem value="none" className="text-amber-500 font-bold">Sem conta para débito</SelectItem>
+              {accounts.map((a: any) => (
+                <SelectItem key={a.id} value={a.id}>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{a.bank} · {a.account_name}</span>
+                    <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
             </Select>
           </div>
         )}
