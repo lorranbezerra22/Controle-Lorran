@@ -1832,7 +1832,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null, accountsOverride?: { accountId: string, accountTayaneId?: string }) => void, onDone: () => void }) {
+function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }) => void, onDone: () => void }) {
   const [payMode, setPayMode] = useState<"total" | "anticipate" | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [notes, setNotes] = useState("");
