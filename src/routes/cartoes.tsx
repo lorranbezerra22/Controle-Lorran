@@ -2079,8 +2079,6 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
     );
   }
 
-  const lorranAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "lorran" || normalizeName(a.bank || "").includes("revolut") || normalizeName(a.bank || "").includes("nubank"));
-  const tayaneAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "tayane" || normalizeName(a.bank || "").includes("mercado"));
 
   if (payMode === "total") {
     return (
