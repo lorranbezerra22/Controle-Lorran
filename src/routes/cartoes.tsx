@@ -66,6 +66,8 @@ type PaymentSplit = {
 // Se um pagador específico (paidByOverride) for informado, retornamos apenas a conta dele para débito 100%.
 const buildPaymentSplits = (accounts: any[], person: string, amount: number, paidByOverride?: string | null): PaymentSplit[] => {
   const p = normalizeName(person);
+  const isEstorno = amount < 0;
+  const absAmount = Math.abs(amount);
   
   // Se for despesa de Família
   if (p === "familia") {
@@ -81,7 +83,7 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
         return [{
           accountId: target.id,
           accountTayaneId: undefined, // Garantir que não haja split automático
-          amount,
+          amount: absAmount,
           person: paidByOverride,
           descriptionSuffix: ` (Cota individual de ${paidByOverride} em despesa Família)`
         }];
@@ -93,20 +95,20 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
       return [{
         accountId: lorranAcc.id,
         accountTayaneId: tayaneAcc.id,
-        amount, // O valor TOTAL; o trigger no banco divide 50/50 entre as contas
+        amount: absAmount, // O valor TOTAL; o trigger no banco divide 50/50 entre as contas
         person: "Familia",
         descriptionSuffix: " (Família 50/50)",
       }];
     }
     const only = lorranAcc || tayaneAcc;
-    if (only) return [{ accountId: only.id, amount, person: "Familia", descriptionSuffix: "" }];
+    if (only) return [{ accountId: only.id, amount: absAmount, person: "Familia", descriptionSuffix: "" }];
     return [];
   }
 
   // Despesa individual (Lorran ou Tayane)
   const payer = paidByOverride ? normalizeName(paidByOverride) : p;
   const target = pickPaymentAccount(accounts, payer, [payer]);
-  if (target) return [{ accountId: target.id, amount, person: payer, descriptionSuffix: "" }];
+  if (target) return [{ accountId: target.id, amount: absAmount, person: payer, descriptionSuffix: "" }];
   return [];
 };
 
