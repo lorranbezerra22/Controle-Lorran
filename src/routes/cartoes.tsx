@@ -1895,6 +1895,8 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           ? (accountsOverride?.accountTayaneId || split.accountTayaneId)
           : null;
 
+        console.log("Antecipação: Inserindo transação com contas:", { finalAccountId, finalAccountTayaneId });
+
         const { error: txErr } = await supabase.from("transacoes").insert({
           user_id: user.id,
           description: `${installment.cartao_compras?.description || "Antecipação Cartão"} - Parcela ${installment.installment_number}${split.descriptionSuffix}`,
@@ -1907,7 +1909,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           account_tayane_id: finalAccountTayaneId,
           person: split.person,
           card_installment_id: installment.id,
-          category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", // Categoria Cartão de Crédito (ID correto do banco)
+          category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", 
         } as any);
         if (txErr) throw txErr;
       }
