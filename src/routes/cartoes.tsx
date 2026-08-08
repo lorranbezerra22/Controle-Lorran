@@ -393,9 +393,6 @@ function CartoesPage() {
             ? (accountsOverride?.accountTayaneId || split.accountTayaneId)
             : null;
 
-          // DEBUG: Logando o que será enviado para garantir que ambos os IDs existam
-          console.log("Inserindo transação com contas:", { finalAccountId, finalAccountTayaneId });
-
           const { error: txErr } = await supabase.from("transacoes").insert({
             user_id: user.id,
             description: `${i.cartao_compras?.description || "Pagamento Cartão"} - Parcela ${i.installment_number}${split.descriptionSuffix}${isEstorno ? " (Estorno/Reembolso)" : ""}`,
@@ -405,7 +402,7 @@ function CartoesPage() {
             due_at: todayLocalISO(),
             posted_at: todayLocalISO(),
             account_id: finalAccountId,
-            account_tayane_id: finalAccountTayaneId, // AQUI: Se for Família, PRECISA vir preenchido
+            account_tayane_id: finalAccountTayaneId, 
             person: split.person,
             card_installment_id: i.id,
             category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5",
