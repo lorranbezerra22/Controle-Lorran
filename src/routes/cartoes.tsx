@@ -681,6 +681,7 @@ function CartoesPage() {
                 <SelectContent>
                   <SelectItem value="all">Adicionar pessoa</SelectItem>
                   {personOptions.map((p: string) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+
                 </SelectContent>
               </Select>
             </Field>
@@ -691,9 +692,10 @@ function CartoesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os cartões</SelectItem>
-                  {cards.map((c: any) => (
+                  {cardOptions.map((c: any) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
+
                 </SelectContent>
               </Select>
             </Field>
@@ -724,7 +726,7 @@ function CartoesPage() {
                 <SelectTrigger className={`w-auto min-w-[140px] ${categoryFilter !== "all" ? activeCls : ""}`}><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas categorias</SelectItem>
-                  {cats.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ""}{c.name}</SelectItem>)}
+                  {categoryOptions.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ""}{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
