@@ -389,7 +389,7 @@ function CartoesPage() {
         
         // 1. Criar lançamento financeiro (débito para despesa, CRÉDITO para estorno)
         // O estorno (amount negativo) gera uma transação 'income' para repor o saldo na conta
-        const splits = buildPaymentSplits(accounts, originalPerson, amount, paidByOverride);
+        const splits = buildPaymentSplits(accounts, originalPerson, amount, paidByOverride, accountsOverride);
         
         // Se houver splits (contas selecionadas), cria as transações
         if (splits.length > 0) {
