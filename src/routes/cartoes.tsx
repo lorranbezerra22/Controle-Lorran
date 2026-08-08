@@ -70,8 +70,8 @@ const pickPaymentAccount = (accounts: any[], personName: string, bankFallbacks: 
 };
 
 type PaymentSplit = {
-  accountId: string;
-  accountTayaneId?: string;
+  accountId: string | null;
+  accountTayaneId?: string | null;
   amount: number;
   person: string;
   descriptionSuffix: string;
