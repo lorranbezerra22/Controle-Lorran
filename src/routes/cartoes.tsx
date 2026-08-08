@@ -34,7 +34,13 @@ const todayLocalISO = () => {
 
 const normalizeName = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
-const pickPaymentAccount = (accounts: any[], personName: string, bankFallbacks: string[] = []) => {
+const pickPaymentAccount = (accounts: any[], personName: string, bankFallbacks: string[] = [], overrideAccountId?: string | null) => {
+  if (overrideAccountId === "none") return null;
+  if (overrideAccountId) {
+    const found = accounts.find(a => a.id === overrideAccountId);
+    if (found) return found;
+  }
+
   const target = normalizeName(personName);
   
   // Prioridade 1: Contas onde o account_name é EXATAMENTE o nome da pessoa
