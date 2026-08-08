@@ -109,8 +109,8 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
     // Fluxo padrão 50/50: debita de ambas as contas
     if (lorranAcc && tayaneAcc) {
       return [{
-        accountId: lorranAcc.id,
-        accountTayaneId: tayaneAcc.id,
+        accountId: lorranAcc ? lorranAcc.id : null,
+        accountTayaneId: tayaneAcc ? tayaneAcc.id : null,
         amount: absAmount, 
         person: "Familia",
         descriptionSuffix: " (Família 50/50)",
