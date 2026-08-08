@@ -159,32 +159,27 @@ export const Route = createFileRoute("/cartoes")({
 const getInstallmentPaymentState = (installment: any) => {
   const total = Number(installment.amount || 0);
   const rawPaid = Number(installment.paid_amount || 0);
+  const isPaid = installment.status === "paid";
 
-  // Estorno / crédito (valor negativo): reduz a fatura em vez de somar.
-  // O abatimento permanece mesmo após marcar como pago — pagar um estorno
-  // não deve aumentar o restante a pagar.
+  // Se for estorno (valor negativo)
   if (total < 0) {
-    const isPaid = installment.status === "paid";
     return {
       total,
       paid: isPaid ? total : 0,
-      remaining: total, // sempre negativo -> sempre abate do restante
+      remaining: isPaid ? 0 : total, // Se pago, restante é 0. Se pendente, é o valor negativo (crédito).
       hasPaid: isPaid,
-      hasPending: true, // sempre incluir nos totais de restante
+      hasPending: !isPaid,
     };
   }
 
-  const paid = installment.status === "paid" && rawPaid <= 0 ? total : Math.min(total, Math.max(0, rawPaid));
-  const remaining = installment.status === "paid" ? 0 : Math.max(0, Number((total - paid).toFixed(2)));
-
-  // Se for Família, o total e o restante são divididos por 2 para exibição individual se houver filtros.
-  // Porém, aqui retornamos o estado absoluto. A divisão acontece no useMemo(totals).
+  const paid = isPaid && rawPaid <= 0 ? total : Math.min(total, Math.max(0, rawPaid));
+  const remaining = isPaid ? 0 : Math.max(0, Number((total - paid).toFixed(2)));
 
   return {
     total,
     paid,
     remaining,
-    hasPaid: installment.status === "paid" || paid > 0,
+    hasPaid: isPaid || paid > 0,
     hasPending: remaining > 0.01,
   };
 };
