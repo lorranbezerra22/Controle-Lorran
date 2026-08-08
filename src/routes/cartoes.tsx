@@ -860,7 +860,7 @@ function CartoesPage() {
                       </button>
                       <button 
                         onClick={() => {
-                          if (i.status === "paid" || isPartial || Number(i.amount) < 0) {
+                          if (i.status === "paid" || isPartial) {
                             setRemovePaymentOpen(i);
                           } else {
                             setPartialPayOpen(i);
