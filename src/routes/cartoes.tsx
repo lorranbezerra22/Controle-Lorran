@@ -1849,8 +1849,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
 
       // 1. Criar transação de débito no banco
       const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null);
-      if (splits.length > 0) {
-        const split = splits[0];
+      for (const split of splits) {
         const { error: txErr } = await supabase.from("transacoes").insert({
           user_id: user.id,
           description: `${installment.cartao_compras?.description || "Antecipação Cartão"} - Parcela ${installment.installment_number}${split.descriptionSuffix}`,
