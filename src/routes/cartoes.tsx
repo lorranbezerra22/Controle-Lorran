@@ -2278,16 +2278,17 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
               <SelectTrigger className="h-10 bg-background">
                 <SelectValue placeholder="Selecione a conta" />
               </SelectTrigger>
-              <SelectContent>
-                {accounts.map((a: any) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{a.bank} · {a.account_name}</span>
-                      <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
+            <SelectContent>
+              <SelectItem value="none" className="text-amber-500 font-bold">Sem conta para débito</SelectItem>
+              {accounts.map((a: any) => (
+                <SelectItem key={a.id} value={a.id}>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{a.bank} · {a.account_name}</span>
+                    <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
             </Select>
           </div>
         )}
