@@ -1,45 +1,63 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { supabase } from '@/integrations/supabase/client'
 
 export const Route = createFileRoute('/api/public/fix-balances')({
   server: {
     handlers: {
       POST: async () => {
         try {
-          const { data: accounts } = await supabase.from('contas').select('id, account_name, balance, bank')
-          console.log('Contas encontradas:', accounts)
+          const { supabaseAdmin } = await import('@/integrations/supabase/client.server')
           
-          // Tentar encontrar as contas principais de cada um
+          const { data: accounts, error: fetchError } = await supabaseAdmin
+            .from('contas')
+            .select('id, account_name, balance, bank')
+          
+          if (fetchError) throw fetchError
+
+          const nrm = (s: string) => (s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+          
           const lorranAcc = accounts?.find(a => 
-            (a.account_name || '').toLowerCase().includes('lorran') || 
-            (a.bank || '').toLowerCase().includes('nubank') ||
-            (a.bank || '').toLowerCase().includes('revolut')
+            nrm(a.account_name).includes('lorran') || 
+            nrm(a.bank).includes('nubank') ||
+            nrm(a.bank).includes('revolut')
           )
           
           const tayaneAcc = accounts?.find(a => 
-            (a.account_name || '').toLowerCase().includes('tayane') || 
-            (a.bank || '').toLowerCase().includes('mercado')
+            nrm(a.account_name).includes('tayane') || 
+            nrm(a.bank).includes('mercado')
           )
           
           if (!lorranAcc || !tayaneAcc) {
-            return new Response(`Contas não encontradas. IDs: Lorran=${lorranAcc?.id}, Tayane=${tayaneAcc?.id}. Disponíveis: ${accounts?.map(a => a.account_name + ' (' + a.bank + ')').join(', ')}`, { status: 404 })
+            return new Response(JSON.stringify({
+              error: 'Contas não encontradas',
+              details: {
+                lorranFound: !!lorranAcc,
+                tayaneFound: !!tayaneAcc,
+                available: accounts?.map(a => `${a.account_name} (${a.bank})`)
+              }
+            }), { status: 404, headers: { 'Content-Type': 'application/json' } })
           }
 
-          const amountToTransfer = 131.10 / 2; // 65.55
+          const amountToTransfer = 131.10; // User asked to remove 131.10 from Lorran and transfer to Tayane
           
-          const { error: errL } = await supabase.from('contas').update({ 
+          const { error: errL } = await supabaseAdmin.from('contas').update({ 
             balance: Number(lorranAcc.balance) - amountToTransfer 
           }).eq('id', lorranAcc.id)
           
-          const { error: errT } = await supabase.from('contas').update({ 
+          const { error: errT } = await supabaseAdmin.from('contas').update({ 
             balance: Number(tayaneAcc.balance) + amountToTransfer 
           }).eq('id', tayaneAcc.id)
 
           if (errL || errT) throw new Error(`Erro ao atualizar saldos: ${errL?.message || errT?.message}`)
 
-          return new Response(`Sucesso: R$ ${amountToTransfer.toFixed(2)} transferidos de ${lorranAcc.account_name} (${lorranAcc.bank}) para ${tayaneAcc.account_name} (${tayaneAcc.bank}).`)
+          return new Response(JSON.stringify({
+            success: true,
+            message: `Transferidos R$ ${amountToTransfer.toFixed(2)} de ${lorranAcc.account_name} para ${tayaneAcc.account_name}.`
+          }), { status: 200, headers: { 'Content-Type': 'application/json' } })
         } catch (error: any) {
-          return new Response(error.message, { status: 500 })
+          return new Response(JSON.stringify({ error: error.message }), { 
+            status: 500, 
+            headers: { 'Content-Type': 'application/json' } 
+          })
         }
       }
     }
