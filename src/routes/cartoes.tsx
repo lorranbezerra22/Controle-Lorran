@@ -123,8 +123,8 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
     
     if (anyLorran && anyTayane) {
       return [{
-        accountId: anyLorran.id,
-        accountTayaneId: anyTayane.id,
+        accountId: anyLorran ? anyLorran.id : null,
+        accountTayaneId: anyTayane ? anyTayane.id : null,
         amount: absAmount,
         person: "Familia",
         descriptionSuffix: " (Família 50/50 - Fallback)",
