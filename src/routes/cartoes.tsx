@@ -1906,7 +1906,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
       if (!user) throw new Error("Não autenticado");
 
       // 1. Criar transação de débito no banco
-      const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null);
+      const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null, accountsOverride);
       
       // Só cria transações se houver contas selecionadas
       if (splits.length > 0) {
