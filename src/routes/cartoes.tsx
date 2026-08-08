@@ -342,10 +342,7 @@ function CartoesPage() {
   const getPaymentSplits = (person: string, amount: number, paidByOverride?: string | null) => buildPaymentSplits(accounts, person, amount, paidByOverride);
 
   const togglePaid = async (i: any, notes?: string, paidByOverride?: string | null) => {
-    if (Number(i.amount) < 0) {
-      toast.info("Estorno já abate a fatura automaticamente.");
-      return;
-    }
+    const isEstorno = Number(i.amount) < 0;
     const isPaying = i.status !== "paid";
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -359,24 +356,27 @@ function CartoesPage() {
         const amount = Number(i.amount);
         
         // 1. Criar transação de débito no banco se houver split ou conta definida
-        const splits = buildPaymentSplits(accounts, originalPerson, amount, paidByOverride);
-        if (splits.length > 0) {
-          const split = splits[0];
-          const { error: txErr } = await supabase.from("transacoes").insert({
-            user_id: user.id,
-            description: `${i.cartao_compras?.description || "Pagamento Cartão"} - Parcela ${i.installment_number}${split.descriptionSuffix}`,
-            amount: split.amount,
-            kind: "expense",
-            status: "paid",
-            due_at: todayLocalISO(),
-            posted_at: todayLocalISO(),
-            account_id: split.accountId,
-            account_tayane_id: split.accountTayaneId || null,
-            person: split.person,
-            card_installment_id: i.id,
-            category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", // Categoria Cartão de Crédito (ID correto do banco)
-          } as any);
-          if (txErr) throw txErr;
+        // NÃO criamos transação para estornos, pois eles abatem a fatura automaticamente
+        if (!isEstorno) {
+          const splits = buildPaymentSplits(accounts, originalPerson, amount, paidByOverride);
+          if (splits.length > 0) {
+            const split = splits[0];
+            const { error: txErr } = await supabase.from("transacoes").insert({
+              user_id: user.id,
+              description: `${i.cartao_compras?.description || "Pagamento Cartão"} - Parcela ${i.installment_number}${split.descriptionSuffix}`,
+              amount: split.amount,
+              kind: "expense",
+              status: "paid",
+              due_at: todayLocalISO(),
+              posted_at: todayLocalISO(),
+              account_id: split.accountId,
+              account_tayane_id: split.accountTayaneId || null,
+              person: split.person,
+              card_installment_id: i.id,
+              category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", // Categoria Cartão de Crédito
+            } as any);
+            if (txErr) throw txErr;
+          }
         }
 
         // 2. Registrar participação total na nova tabela
@@ -398,10 +398,12 @@ function CartoesPage() {
         } as any).eq("id", i.id);
 
         if (error) throw error;
-        toast.success("Parcela marcada como paga.");
+        toast.success(isEstorno ? "Estorno confirmado." : "Parcela marcada como paga.");
       } else {
         // Cancelar Pagamento: Remove transações, participações e reseta parcela
-        await supabase.from("transacoes").delete().eq("card_installment_id", i.id);
+        if (!isEstorno) {
+          await supabase.from("transacoes").delete().eq("card_installment_id", i.id);
+        }
         await supabase.from("participacoes_parcelas").delete().eq("installment_id", i.id);
         
         await supabase.from("cartao_parcelas").update({ 
@@ -807,32 +809,25 @@ function CartoesPage() {
                       <button onClick={() => setEditingPurchase({ id: i.purchase_id, ...i.cartao_compras, card_id: i.card_id, _installment: i, cards })} title="Editar compra" className="w-7 h-7 rounded-md flex items-center justify-center bg-muted text-muted-foreground hover:bg-primary/20 hover:text-primary">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
-                      {Number(i.amount) < 0 ? (
-                        <div
-                          className="w-7 h-7 rounded-md flex items-center justify-center bg-emerald-500/15 text-emerald-500 cursor-default"
-                          title="Estorno / crédito — abate a fatura automaticamente. Não precisa marcar como pago."
-                        >
-                          <Undo2 className="w-3.5 h-3.5" />
-                        </div>
-                      ) : (
-                        <button 
-                          onClick={() => {
-                            if (i.status === "paid" || isPartial) {
-                              setRemovePaymentOpen(i);
-                            } else {
-                              setPartialPayOpen(i);
-                            }
-                          }} 
-                          onContextMenu={(e) => {
-                            e.preventDefault();
-                            if (isPartial || i.status === "paid") setEditPaidOpen(i);
-                          }}
-                          className={`w-7 h-7 rounded-md flex items-center justify-center ${i.status === "paid" ? "bg-success/20 text-success" : "bg-muted text-muted-foreground hover:bg-warning/20 hover:text-warning"}`}
-                          title={i.status === "paid" ? "Remover/Editar pagamento" : (isPartial ? "Antecipar pagamento / Clique direito: ajuste manual" : "Antecipar pagamento")}
-                        >
-                          {i.status === "paid" ? <Check className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
-                        </button>
-                      )}
+                      <button 
+                        onClick={() => {
+                          if (i.status === "paid" || isPartial || Number(i.amount) < 0) {
+                            setRemovePaymentOpen(i);
+                          } else {
+                            setPartialPayOpen(i);
+                          }
+                        }} 
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          if (isPartial || i.status === "paid") setEditPaidOpen(i);
+                        }}
+                        className={`w-7 h-7 rounded-md flex items-center justify-center ${i.status === "paid" ? "bg-success/20 text-success" : (Number(i.amount) < 0 ? "bg-emerald-500/15 text-emerald-500" : "bg-muted text-muted-foreground hover:bg-warning/20 hover:text-warning")}`}
+                        title={Number(i.amount) < 0 
+                          ? (i.status === "paid" ? "Estorno confirmado (Clique para remover)" : "Estorno pendente (Clique para confirmar)")
+                          : (i.status === "paid" ? "Remover/Editar pagamento" : (isPartial ? "Antecipar pagamento / Clique direito: ajuste manual" : "Antecipar pagamento"))}
+                      >
+                        {i.status === "paid" ? <Check className="w-3.5 h-3.5" /> : (Number(i.amount) < 0 ? <Undo2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />)}
+                      </button>
                       <button onClick={() => setDeleting(i)} className="w-7 h-7 rounded-md flex items-center justify-center bg-muted text-muted-foreground hover:bg-destructive/20 hover:text-destructive">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -1913,24 +1908,41 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
   };
 
   if (!payMode) {
+    const isEstorno = Number(installment.amount || 0) < 0;
+    
     return (
       <div className="space-y-4">
         <div className="bg-muted/50 p-4 rounded-xl border border-border text-center">
-          <p className="text-sm text-muted-foreground mb-4">O que você deseja fazer com esta parcela de <strong className="text-foreground">{brl(Number(installment.amount || 0))}</strong>?</p>
+          <p className="text-sm text-muted-foreground mb-4">
+            {isEstorno 
+              ? `Deseja confirmar o abatimento deste estorno de ${brl(Math.abs(Number(installment.amount)))} na fatura?`
+              : `O que você deseja fazer com esta parcela de ${brl(Number(installment.amount || 0))}?`}
+          </p>
           <div className="grid grid-cols-1 gap-3">
-            <Button 
-              className="h-12 text-sm font-semibold rounded-xl shadow-md"
-              onClick={() => setPayMode("total")}
-            >
-              Pagar Total
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-12 text-sm font-semibold rounded-xl"
-              onClick={() => setPayMode("anticipate")}
-            >
-              Antecipar Pagamento
-            </Button>
+            {isEstorno ? (
+              <Button 
+                className="h-12 text-sm font-semibold rounded-xl shadow-md bg-emerald-600 hover:bg-emerald-700"
+                onClick={() => onFullPay()}
+              >
+                Confirmar Estorno
+              </Button>
+            ) : (
+              <>
+                <Button 
+                  className="h-12 text-sm font-semibold rounded-xl shadow-md"
+                  onClick={() => setPayMode("total")}
+                >
+                  Pagar Total
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="h-12 text-sm font-semibold rounded-xl"
+                  onClick={() => setPayMode("anticipate")}
+                >
+                  Antecipar Pagamento
+                </Button>
+              </>
+            )}
           </div>
         </div>
         <Button variant="ghost" className="w-full text-xs" onClick={() => onDone()}>Cancelar</Button>
