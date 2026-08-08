@@ -172,8 +172,8 @@ const getInstallmentPaymentState = (installment: any) => {
     };
   }
 
-  const paid = isPaid && rawPaid <= 0 ? total : Math.min(total, Math.max(0, rawPaid));
-  const remaining = isPaid ? 0 : Math.max(0, Number((total - paid).toFixed(2)));
+  const paid = isPaid && rawPaid <= 0 ? total : (total < 0 ? Math.max(total, rawPaid) : Math.min(total, Math.max(0, rawPaid)));
+  const remaining = isPaid ? 0 : Number((total - paid).toFixed(2));
 
   return {
     total,
