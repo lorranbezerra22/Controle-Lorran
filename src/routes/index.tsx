@@ -246,10 +246,9 @@ function Dashboard() {
     if (factor === 0) return s;
     const amount = Number(i.amount);
     
+    // CORREÇÃO CRÍTICA: Se a parcela está marcada como paga, o restante é 0.
+    // Isso deve valer para valores positivos E negativos (estornos).
     if (i.status === "paid") {
-      // Se a parcela está marcada como paga, mas é um estorno (valor negativo),
-      // ela deve ser ignorada no cálculo de "Restante" para não negativar o saldo.
-      // Se for positiva e paga, o restante é 0.
       return s;
     }
 
