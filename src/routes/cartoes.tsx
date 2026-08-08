@@ -66,6 +66,8 @@ type PaymentSplit = {
 // Se um pagador específico (paidByOverride) for informado, retornamos apenas a conta dele para débito 100%.
 const buildPaymentSplits = (accounts: any[], person: string, amount: number, paidByOverride?: string | null): PaymentSplit[] => {
   const p = normalizeName(person);
+  const isEstorno = amount < 0;
+  const absAmount = Math.abs(amount);
   
   // Se for despesa de Família
   if (p === "familia") {
@@ -81,7 +83,7 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
         return [{
           accountId: target.id,
           accountTayaneId: undefined, // Garantir que não haja split automático
-          amount,
+          amount: absAmount,
           person: paidByOverride,
           descriptionSuffix: ` (Cota individual de ${paidByOverride} em despesa Família)`
         }];
@@ -93,20 +95,20 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
       return [{
         accountId: lorranAcc.id,
         accountTayaneId: tayaneAcc.id,
-        amount, // O valor TOTAL; o trigger no banco divide 50/50 entre as contas
+        amount: absAmount, // O valor TOTAL; o trigger no banco divide 50/50 entre as contas
         person: "Familia",
         descriptionSuffix: " (Família 50/50)",
       }];
     }
     const only = lorranAcc || tayaneAcc;
-    if (only) return [{ accountId: only.id, amount, person: "Familia", descriptionSuffix: "" }];
+    if (only) return [{ accountId: only.id, amount: absAmount, person: "Familia", descriptionSuffix: "" }];
     return [];
   }
 
   // Despesa individual (Lorran ou Tayane)
   const payer = paidByOverride ? normalizeName(paidByOverride) : p;
   const target = pickPaymentAccount(accounts, payer, [payer]);
-  if (target) return [{ accountId: target.id, amount, person: payer, descriptionSuffix: "" }];
+  if (target) return [{ accountId: target.id, amount: absAmount, person: payer, descriptionSuffix: "" }];
   return [];
 };
 
@@ -1905,60 +1907,66 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
   if (!payMode) {
     const isEstorno = Number(installment.amount || 0) < 0;
     
-    return (
-      <div className="space-y-4">
-        <div className="bg-emerald-500/10 p-5 rounded-2xl border border-emerald-500/30 text-center space-y-4">
-          <div className="w-12 h-12 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-2 text-emerald-500">
-            <Undo2 className="w-6 h-6" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="font-bold text-lg text-foreground">Confirmar Estorno</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Deseja confirmar o recebimento deste estorno de <span className="font-bold text-emerald-500">{brl(Math.abs(Number(installment.amount)))}</span>?
-            </p>
-          </div>
-          <div className="p-3 bg-background/50 rounded-lg text-[11px] text-left border border-border/50 text-muted-foreground">
-            <p className="font-semibold text-foreground mb-1">Impacto financeiro:</p>
-            <ul className="list-disc pl-4 space-y-1">
-              <li>Abate o saldo da fatura do cartão.</li>
-              {isFamilia ? (
-                <li>O valor será estornado <span className="text-foreground">50/50</span> para as contas de <span className="text-foreground">Lorran e Tayane</span>.</li>
-              ) : (
-                <li>O valor será creditado na conta de <span className="text-foreground">{originalPerson}</span>.</li>
-              )}
-            </ul>
-          </div>
-          <div className="grid grid-cols-1 gap-3 pt-2">
-            <Button 
-              className="h-12 text-sm font-bold rounded-xl shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all transform hover:scale-[1.02]"
-              onClick={() => onFullPay()}
-            >
-              Confirmar e Estornar Saldo
-            </Button>
-          </div>
-        </div>
-        {!isEstorno && (
-          <div className="bg-muted/50 p-4 rounded-xl border border-border text-center">
-            <p className="text-sm text-muted-foreground mb-4">
-              O que você deseja fazer com esta parcela de {brl(Number(installment.amount || 0))}?
-            </p>
-            <div className="grid grid-cols-1 gap-3">
+    if (isEstorno) {
+      return (
+        <div className="space-y-4">
+          <div className="bg-emerald-500/10 p-5 rounded-2xl border border-emerald-500/30 text-center space-y-4">
+            <div className="w-12 h-12 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-2 text-emerald-500">
+              <Undo2 className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-bold text-lg text-foreground">Confirmar Estorno</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Deseja confirmar o recebimento deste estorno de <span className="font-bold text-emerald-500">{brl(Math.abs(Number(installment.amount)))}</span>?
+              </p>
+            </div>
+            <div className="p-3 bg-background/50 rounded-lg text-[11px] text-left border border-border/50 text-muted-foreground">
+              <p className="font-semibold text-foreground mb-1">Impacto financeiro:</p>
+              <ul className="list-disc pl-4 space-y-1">
+                <li>Abate o saldo da fatura do cartão.</li>
+                {isFamilia ? (
+                  <li>O valor será estornado <span className="text-foreground">50/50</span> para as contas de <span className="text-foreground">Lorran e Tayane</span>.</li>
+                ) : (
+                  <li>O valor será creditado na conta de <span className="text-foreground">{originalPerson}</span>.</li>
+                )}
+              </ul>
+            </div>
+            <div className="grid grid-cols-1 gap-3 pt-2">
               <Button 
-                className="h-12 text-sm font-semibold rounded-xl shadow-md"
-                onClick={() => setPayMode("total")}
+                className="h-12 text-sm font-bold rounded-xl shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all transform hover:scale-[1.02]"
+                onClick={() => onFullPay()}
               >
-                Pagar Total
-              </Button>
-              <Button 
-                variant="outline" 
-                className="h-12 text-sm font-semibold rounded-xl"
-                onClick={() => setPayMode("anticipate")}
-              >
-                Antecipar Pagamento
+                Confirmar e Estornar Saldo
               </Button>
             </div>
           </div>
-        )}
+          <Button variant="ghost" className="w-full text-xs" onClick={() => onDone()}>Cancelar</Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        <div className="bg-muted/50 p-4 rounded-xl border border-border text-center">
+          <p className="text-sm text-muted-foreground mb-4">
+            O que você deseja fazer com esta parcela de {brl(Number(installment.amount || 0))}?
+          </p>
+          <div className="grid grid-cols-1 gap-3">
+            <Button 
+              className="h-12 text-sm font-semibold rounded-xl shadow-md"
+              onClick={() => setPayMode("total")}
+            >
+              Pagar Total
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-12 text-sm font-semibold rounded-xl"
+              onClick={() => setPayMode("anticipate")}
+            >
+              Antecipar Pagamento
+            </Button>
+          </div>
+        </div>
         <Button variant="ghost" className="w-full text-xs" onClick={() => onDone()}>Cancelar</Button>
       </div>
     );
