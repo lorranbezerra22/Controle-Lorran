@@ -131,7 +131,15 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
       }];
     }
     const only = lorranAcc || tayaneAcc;
-    if (only) return [{ accountId: only.id, amount: absAmount, person: "Familia", descriptionSuffix: "" }];
+    if (only || accountsOverride?.accountId === "none" || accountsOverride?.accountTayaneId === "none") {
+      return [{ 
+        accountId: lorranAcc ? lorranAcc.id : (accountsOverride?.accountId === "none" ? null : null), 
+        accountTayaneId: tayaneAcc ? tayaneAcc.id : (accountsOverride?.accountTayaneId === "none" ? null : null),
+        amount: absAmount, 
+        person: "Familia", 
+        descriptionSuffix: "" 
+      }];
+    }
     return [];
   }
 
