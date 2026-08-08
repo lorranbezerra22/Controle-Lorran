@@ -6,38 +6,38 @@ export const Route = createFileRoute('/api/public/fix-balances')({
     handlers: {
       POST: async () => {
         try {
-          // 1. Buscar transações de "Família" ou estornos recentes com problema de saldo
-          // Como o usuário já confirmou, vamos focar em ajustar o saldo das contas Mercado Pago e Nubank/Revolut
+          const { data: accounts } = await supabase.from('contas').select('id, account_name, balance, bank')
+          console.log('Contas encontradas:', accounts)
           
-          // ID da conta Mercado Pago (Tayane) e Nubank/Revolut (Lorran)
-          // Vamos buscar as contas dinamicamente para garantir precisão
-          const { data: accounts } = await supabase.from('contas').select('id, account_name, balance')
+          // Tentar encontrar as contas principais de cada um
+          const lorranAcc = accounts?.find(a => 
+            (a.account_name || '').toLowerCase().includes('lorran') || 
+            (a.bank || '').toLowerCase().includes('nubank') ||
+            (a.bank || '').toLowerCase().includes('revolut')
+          )
           
-          const lorranAcc = accounts?.find(a => (a.account_name || '').toLowerCase().includes('lorran'))
-          const tayaneAcc = accounts?.find(a => (a.account_name || '').toLowerCase().includes('tayane'))
+          const tayaneAcc = accounts?.find(a => 
+            (a.account_name || '').toLowerCase().includes('tayane') || 
+            (a.bank || '').toLowerCase().includes('mercado')
+          )
           
           if (!lorranAcc || !tayaneAcc) {
-            return new Response('Contas não encontradas', { status: 404 })
+            return new Response(`Contas não encontradas. IDs: Lorran=${lorranAcc?.id}, Tayane=${tayaneAcc?.id}. Disponíveis: ${accounts?.map(a => a.account_name + ' (' + a.bank + ')').join(', ')}`, { status: 404 })
           }
 
-          // Ajuste manual: R$ 131,10 (o valor do reembolso mencionado anteriormente)
-          const amount = 131.10
-          
-          // O usuário disse que foi 100% para Lorran (precisamos tirar metade de Lorran e dar para Tayane)
-          // Saldo Lorran: -65.55
-          // Saldo Tayane: +65.55
+          const amountToTransfer = 131.10 / 2; // 65.55
           
           const { error: errL } = await supabase.from('contas').update({ 
-            balance: Number(lorranAcc.balance) - (amount / 2) 
+            balance: Number(lorranAcc.balance) - amountToTransfer 
           }).eq('id', lorranAcc.id)
           
           const { error: errT } = await supabase.from('contas').update({ 
-            balance: Number(tayaneAcc.balance) + (amount / 2) 
+            balance: Number(tayaneAcc.balance) + amountToTransfer 
           }).eq('id', tayaneAcc.id)
 
-          if (errL || errT) throw new Error('Erro ao atualizar saldos')
+          if (errL || errT) throw new Error(`Erro ao atualizar saldos: ${errL?.message || errT?.message}`)
 
-          return new Response('Saldos corrigidos: R$ 65,55 movidos de Lorran para Tayane.')
+          return new Response(`Sucesso: R$ ${amountToTransfer.toFixed(2)} transferidos de ${lorranAcc.account_name} (${lorranAcc.bank}) para ${tayaneAcc.account_name} (${tayaneAcc.bank}).`)
         } catch (error: any) {
           return new Response(error.message, { status: 500 })
         }
