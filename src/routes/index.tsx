@@ -669,7 +669,33 @@ function Dashboard() {
                 const fat = cardMonthInst.reduce((s: number, i: any) => s + Number(i.amount) * personFactor(costPersonInst(i)), 0);
                 const restante = cardMonthInst
                   .filter((i: any) => i.status !== "paid")
-                  .reduce((s: number, i: any) => s + (Number(i.amount) - Number(i.paid_amount || 0)) * personFactor(costPersonInst(i)), 0);
+                  .reduce((s: number, i: any) => {
+                    const factor = personFactor(costPersonInst(i));
+                    if (factor === 0) return s;
+                    const amount = Number(i.amount);
+                    const paidAmount = Number(i.paid_amount || 0);
+                    // O restante para a pessoa deve ser proporcional à sua cota
+                    const personQuota = amount * factor;
+                    
+                    // Descobrir quanto esta pessoa especificamente já pagou
+                    // Se personFactor for 1, ela é a única responsável
+                    if (factor === 1) {
+                      return s + Math.max(0, amount - paidAmount);
+                    }
+                    
+                    // Se for Família (factor 0.5), precisamos ver a participação individual
+                    const pName = personFilter.toLowerCase() === "lorran" || personFilter2.toLowerCase() === "lorran" ? "Lorran" : 
+                                 (personFilter.toLowerCase() === "tayane" || personFilter2.toLowerCase() === "tayane" ? "Tayane" : null);
+                    
+                    if (pName) {
+                      const part = (i.participacoes || []).find((p: any) => p.person === pName);
+                      const personPaid = Number(part?.amount || 0);
+                      return s + Math.max(0, personQuota - personPaid);
+                    }
+
+                    // Se não houver filtro de pessoa (ou filtro "Familia"), usa o total restante da parcela
+                    return s + Math.max(0, amount - paidAmount);
+                  }, 0);
                 const pago = Math.max(0, fat - restante);
                 const pctPago = fat > 0 ? (pago / fat) * 100 : 0;
                 const isPaid = restante === 0 && fat > 0;
