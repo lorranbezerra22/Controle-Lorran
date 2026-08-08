@@ -1901,30 +1901,34 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
 
       // 1. Criar transação de débito no banco
       const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null);
-      for (const split of splits) {
-        const finalAccountId = split.accountTayaneId 
-          ? (accountsOverride?.accountId || split.accountId)
-          : (accountsOverride?.accountId || split.accountId);
-        
-        const finalAccountTayaneId = split.accountTayaneId
-          ? (accountsOverride?.accountTayaneId || split.accountTayaneId)
-          : null;
+      
+      // Só cria transações se houver contas selecionadas
+      if (splits.length > 0) {
+        for (const split of splits) {
+          const finalAccountId = split.accountTayaneId 
+            ? (accountsOverride?.accountId || split.accountId)
+            : (accountsOverride?.accountId || split.accountId);
+          
+          const finalAccountTayaneId = split.accountTayaneId
+            ? (accountsOverride?.accountTayaneId || split.accountTayaneId)
+            : null;
 
-        const { error: txErr } = await supabase.from("transacoes").insert({
-          user_id: user.id,
-          description: `${installment.cartao_compras?.description || "Antecipação Cartão"} - Parcela ${installment.installment_number}${split.descriptionSuffix}`,
-          amount: split.amount,
-          kind: "expense",
-          status: "paid",
-          due_at: todayLocalISO(),
-          posted_at: todayLocalISO(),
-          account_id: finalAccountId,
-          account_tayane_id: finalAccountTayaneId,
-          person: split.person,
-          card_installment_id: installment.id,
-          category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", 
-        } as any);
-        if (txErr) throw txErr;
+          const { error: txErr } = await supabase.from("transacoes").insert({
+            user_id: user.id,
+            description: `${installment.cartao_compras?.description || "Antecipação Cartão"} - Parcela ${installment.installment_number}${split.descriptionSuffix}`,
+            amount: split.amount,
+            kind: "expense",
+            status: "paid",
+            due_at: todayLocalISO(),
+            posted_at: todayLocalISO(),
+            account_id: finalAccountId,
+            account_tayane_id: finalAccountTayaneId,
+            person: split.person,
+            card_installment_id: installment.id,
+            category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", 
+          } as any);
+          if (txErr) throw txErr;
+        }
       }
 
       // 2. Registrar a participação na nova tabela (Solução Definitiva)
