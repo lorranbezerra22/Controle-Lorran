@@ -860,7 +860,7 @@ function CartoesPage() {
                       </button>
                       <button 
                         onClick={() => {
-                          if (i.status === "paid" || isPartial || Number(i.amount) < 0) {
+                          if (i.status === "paid" || isPartial) {
                             setRemovePaymentOpen(i);
                           } else {
                             setPartialPayOpen(i);
@@ -870,7 +870,7 @@ function CartoesPage() {
                           e.preventDefault();
                           if (isPartial || i.status === "paid") setEditPaidOpen(i);
                         }}
-                        className={`w-7 h-7 rounded-md flex items-center justify-center ${i.status === "paid" ? "bg-success/20 text-success" : (Number(i.amount) < 0 ? "bg-emerald-500/15 text-emerald-500" : "bg-muted text-muted-foreground hover:bg-warning/20 hover:text-warning")}`}
+                        className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${i.status === "paid" ? "bg-success/20 text-success shadow-sm" : (Number(i.amount) < 0 ? "bg-warning/20 text-warning border border-warning/30 animate-pulse hover:bg-warning/30" : "bg-muted text-muted-foreground hover:bg-warning/20 hover:text-warning")}`}
                         title={Number(i.amount) < 0 
                           ? (i.status === "paid" ? "Estorno confirmado (Clique para remover)" : "Estorno pendente (Clique para confirmar)")
                           : (i.status === "paid" ? "Remover/Editar pagamento" : (isPartial ? "Antecipar pagamento / Clique direito: ajuste manual" : "Antecipar pagamento"))}
