@@ -36,12 +36,22 @@ const normalizeName = (s: string) => (s || "").normalize("NFD").replace(/[\u0300
 
 const pickPaymentAccount = (accounts: any[], personName: string, bankFallbacks: string[] = []) => {
   const target = normalizeName(personName);
+  
+  // Prioridade 1: Contas onde o account_name é EXATAMENTE o nome da pessoa
   const ownAccounts = accounts
-    .filter((a: any) => normalizeName(a.account_name || "").includes(target))
+    .filter((a: any) => normalizeName(a.account_name || "") === target)
     .sort((a: any, b: any) => Number(b.balance ?? 0) - Number(a.balance ?? 0));
 
   if (ownAccounts.length > 0) return ownAccounts[0];
 
+  // Prioridade 2: Contas onde o account_name CONTÉM o nome da pessoa
+  const partialMatch = accounts
+    .filter((a: any) => normalizeName(a.account_name || "").includes(target))
+    .sort((a: any, b: any) => Number(b.balance ?? 0) - Number(a.balance ?? 0));
+    
+  if (partialMatch.length > 0) return partialMatch[0];
+
+  // Prioridade 3: Fallbacks de banco
   for (const bank of bankFallbacks) {
     const bankTarget = normalizeName(bank);
     const fallback = accounts.find((a: any) =>
