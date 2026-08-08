@@ -358,8 +358,7 @@ function CartoesPage() {
         // 1. Criar lançamento financeiro (débito para despesa, CRÉDITO para estorno)
         // O estorno (amount negativo) gera uma transação 'income' para repor o saldo na conta
         const splits = buildPaymentSplits(accounts, originalPerson, amount, paidByOverride);
-        if (splits.length > 0) {
-          const split = splits[0];
+        for (const split of splits) {
           const { error: txErr } = await supabase.from("transacoes").insert({
             user_id: user.id,
             description: `${i.cartao_compras?.description || "Pagamento Cartão"} - Parcela ${i.installment_number}${split.descriptionSuffix}${isEstorno ? " (Estorno/Reembolso)" : ""}`,
