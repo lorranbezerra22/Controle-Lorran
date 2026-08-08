@@ -1920,6 +1920,9 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
     const isEstorno = Number(installment.amount || 0) < 0;
     
     if (isEstorno) {
+      const lorranAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "lorran" || normalizeName(a.bank || "").includes("revolut") || normalizeName(a.bank || "").includes("nubank"));
+      const tayaneAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "tayane" || normalizeName(a.bank || "").includes("mercado"));
+
       return (
         <div className="space-y-4">
           <div className="bg-emerald-500/10 p-5 rounded-2xl border border-emerald-500/30 text-center space-y-4">
@@ -1932,21 +1935,85 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
                 Deseja confirmar o recebimento deste estorno de <span className="font-bold text-emerald-500">{brl(Math.abs(Number(installment.amount)))}</span>?
               </p>
             </div>
-            <div className="p-3 bg-background/50 rounded-lg text-[11px] text-left border border-border/50 text-muted-foreground">
-              <p className="font-semibold text-foreground mb-1">Impacto financeiro:</p>
+
+            <div className="space-y-3 text-left">
+              {isFamilia ? (
+                <>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-bold text-emerald-600">Conta de Lorran (50%)</Label>
+                    <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                      <SelectTrigger className="h-10 bg-background border-emerald-500/20">
+                        <SelectValue placeholder="Selecione a conta" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {lorranAccs.map((a: any) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{a.bank}</span>
+                              <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-bold text-emerald-600">Conta de Tayane (50%)</Label>
+                    <Select value={selectedAccountTayaneId} onValueChange={setSelectedAccountTayaneId}>
+                      <SelectTrigger className="h-10 bg-background border-emerald-500/20">
+                        <SelectValue placeholder="Selecione a conta" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tayaneAccs.map((a: any) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{a.bank}</span>
+                              <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase font-bold text-emerald-600">Conta de Destino</Label>
+                  <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                    <SelectTrigger className="h-10 bg-background border-emerald-500/20">
+                      <SelectValue placeholder="Selecione a conta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accounts.map((a: any) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{a.bank} · {a.account_name}</span>
+                            <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <div className="p-3 bg-background/50 rounded-lg text-[11px] text-left border border-emerald-500/20 text-muted-foreground">
+              <p className="font-semibold text-emerald-600 mb-1">Impacto financeiro:</p>
               <ul className="list-disc pl-4 space-y-1">
                 <li>Abate o saldo da fatura do cartão.</li>
-                {isFamilia ? (
-                  <li>O valor será estornado <span className="text-foreground">50/50</span> para as contas de <span className="text-foreground">Lorran e Tayane</span>.</li>
-                ) : (
-                  <li>O valor será creditado na conta de <span className="text-foreground">{originalPerson}</span>.</li>
-                )}
+                <li>O valor será creditado nas contas selecionadas.</li>
               </ul>
             </div>
+            
             <div className="grid grid-cols-1 gap-3 pt-2">
               <Button 
                 className="h-12 text-sm font-bold rounded-xl shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all transform hover:scale-[1.02]"
-                onClick={() => onFullPay()}
+                onClick={() => {
+                  if (!selectedAccountId) return toast.error("Selecione a conta de destino");
+                  if (isFamilia && !selectedAccountTayaneId) return toast.error("Selecione a conta da Tayane");
+                  onFullPay(notes, null, { accountId: selectedAccountId, accountTayaneId: selectedAccountTayaneId });
+                }}
               >
                 Confirmar e Estornar Saldo
               </Button>
