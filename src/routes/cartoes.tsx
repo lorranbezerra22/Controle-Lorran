@@ -105,9 +105,23 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
       return [{
         accountId: lorranAcc.id,
         accountTayaneId: tayaneAcc.id,
-        amount: absAmount, // O valor TOTAL; o trigger no banco divide 50/50 entre as contas
+        amount: absAmount, 
         person: "Familia",
         descriptionSuffix: " (Família 50/50)",
+      }];
+    }
+    
+    // Fallback: Se não encontrou as duas contas ideais, tenta buscar qualquer uma de cada pessoa
+    const anyLorran = accounts.find(a => normalizeName(a.account_name || "").includes("lorran"));
+    const anyTayane = accounts.find(a => normalizeName(a.account_name || "").includes("tayane"));
+    
+    if (anyLorran && anyTayane) {
+      return [{
+        accountId: anyLorran.id,
+        accountTayaneId: anyTayane.id,
+        amount: absAmount,
+        person: "Familia",
+        descriptionSuffix: " (Família 50/50 - Fallback)",
       }];
     }
     const only = lorranAcc || tayaneAcc;
@@ -382,16 +396,16 @@ function CartoesPage() {
           const { error: txErr } = await supabase.from("transacoes").insert({
             user_id: user.id,
             description: `${i.cartao_compras?.description || "Pagamento Cartão"} - Parcela ${i.installment_number}${split.descriptionSuffix}${isEstorno ? " (Estorno/Reembolso)" : ""}`,
-            amount: Math.abs(split.amount), // Sempre positivo para o banco
-            kind: isEstorno ? "income" : "expense", // 'income' repõe o saldo (estorno)
+            amount: Math.abs(split.amount), 
+            kind: isEstorno ? "income" : "expense", 
             status: "paid",
             due_at: todayLocalISO(),
             posted_at: todayLocalISO(),
             account_id: finalAccountId,
-            account_tayane_id: finalAccountTayaneId,
+            account_tayane_id: finalAccountTayaneId, 
             person: split.person,
             card_installment_id: i.id,
-            category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", // Categoria Cartão de Crédito
+            category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5",
           } as any);
           if (txErr) throw txErr;
         }
@@ -1904,7 +1918,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           account_tayane_id: finalAccountTayaneId,
           person: split.person,
           card_installment_id: installment.id,
-          category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", // Categoria Cartão de Crédito (ID correto do banco)
+          category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", 
         } as any);
         if (txErr) throw txErr;
       }
