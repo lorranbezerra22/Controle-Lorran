@@ -28,7 +28,6 @@ import { Route as MilhasPlanejamentoRouteImport } from './routes/milhas.planejam
 import { Route as MilhasGanhosRouteImport } from './routes/milhas.ganhos'
 import { Route as MilhasConfigRouteImport } from './routes/milhas.config'
 import { Route as MilhasComparacaoRouteImport } from './routes/milhas.comparacao'
-import { Route as ApiPublicFixBalancesRouteImport } from './routes/api/public/fix-balances'
 
 const SolucaoFinanceiraRoute = SolucaoFinanceiraRouteImport.update({
   id: '/solucao-financeira',
@@ -125,11 +124,6 @@ const MilhasComparacaoRoute = MilhasComparacaoRouteImport.update({
   path: '/comparacao',
   getParentRoute: () => MilhasRoute,
 } as any)
-const ApiPublicFixBalancesRoute = ApiPublicFixBalancesRouteImport.update({
-  id: '/api/public/fix-balances',
-  path: '/api/public/fix-balances',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -151,7 +145,6 @@ export interface FileRoutesByFullPath {
   '/milhas/registros': typeof MilhasRegistrosRoute
   '/milhas/resgates': typeof MilhasResgatesRoute
   '/milhas/': typeof MilhasIndexRoute
-  '/api/public/fix-balances': typeof ApiPublicFixBalancesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -172,7 +165,6 @@ export interface FileRoutesByTo {
   '/milhas/registros': typeof MilhasRegistrosRoute
   '/milhas/resgates': typeof MilhasResgatesRoute
   '/milhas': typeof MilhasIndexRoute
-  '/api/public/fix-balances': typeof ApiPublicFixBalancesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -195,7 +187,6 @@ export interface FileRoutesById {
   '/milhas/registros': typeof MilhasRegistrosRoute
   '/milhas/resgates': typeof MilhasResgatesRoute
   '/milhas/': typeof MilhasIndexRoute
-  '/api/public/fix-balances': typeof ApiPublicFixBalancesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -219,7 +210,6 @@ export interface FileRouteTypes {
     | '/milhas/registros'
     | '/milhas/resgates'
     | '/milhas/'
-    | '/api/public/fix-balances'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -240,7 +230,6 @@ export interface FileRouteTypes {
     | '/milhas/registros'
     | '/milhas/resgates'
     | '/milhas'
-    | '/api/public/fix-balances'
   id:
     | '__root__'
     | '/'
@@ -262,7 +251,6 @@ export interface FileRouteTypes {
     | '/milhas/registros'
     | '/milhas/resgates'
     | '/milhas/'
-    | '/api/public/fix-balances'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -277,7 +265,6 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MilhasRoute: typeof MilhasRouteWithChildren
   SolucaoFinanceiraRoute: typeof SolucaoFinanceiraRoute
-  ApiPublicFixBalancesRoute: typeof ApiPublicFixBalancesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -415,13 +402,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MilhasComparacaoRouteImport
       parentRoute: typeof MilhasRoute
     }
-    '/api/public/fix-balances': {
-      id: '/api/public/fix-balances'
-      path: '/api/public/fix-balances'
-      fullPath: '/api/public/fix-balances'
-      preLoaderRoute: typeof ApiPublicFixBalancesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -462,7 +442,6 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MilhasRoute: MilhasRouteWithChildren,
   SolucaoFinanceiraRoute: SolucaoFinanceiraRoute,
-  ApiPublicFixBalancesRoute: ApiPublicFixBalancesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
