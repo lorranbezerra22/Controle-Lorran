@@ -353,7 +353,7 @@ function CartoesPage() {
 
   const getPaymentSplits = (person: string, amount: number, paidByOverride?: string | null) => buildPaymentSplits(accounts, person, amount, paidByOverride);
 
-  const togglePaid = async (i: any, notes?: string, paidByOverride?: string | null) => {
+  const togglePaid = async (i: any, notes?: string, paidByOverride?: string | null, accountsOverride?: { accountId: string, accountTayaneId?: string }) => {
     const isEstorno = Number(i.amount) < 0;
     const isPaying = i.status !== "paid";
     try {
@@ -379,8 +379,8 @@ function CartoesPage() {
             status: "paid",
             due_at: todayLocalISO(),
             posted_at: todayLocalISO(),
-            account_id: split.accountId,
-            account_tayane_id: split.accountTayaneId || null,
+            account_id: accountsOverride?.accountId || split.accountId,
+            account_tayane_id: accountsOverride?.accountTayaneId || (split.accountTayaneId || null),
             person: split.person,
             card_installment_id: i.id,
             category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", // Categoria Cartão de Crédito
@@ -884,7 +884,7 @@ function CartoesPage() {
           {partialPayOpen && (
             <AnticipatePayForm 
               installment={partialPayOpen} 
-              onFullPay={(notes, paidBy) => { togglePaid(partialPayOpen, notes, paidBy); setPartialPayOpen(null); }}
+              onFullPay={(notes, paidBy, accountsOverride) => { togglePaid(partialPayOpen, notes, paidBy, accountsOverride); setPartialPayOpen(null); }}
               onDone={() => { setPartialPayOpen(null); invalidate("installments"); invalidate("accounts"); invalidate("transactions"); }} 
             />
           )}
@@ -1805,13 +1805,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null) => void, onDone: () => void }) {
+function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null, accountsOverride?: { accountId: string, accountTayaneId?: string }) => void, onDone: () => void }) {
   const [payMode, setPayMode] = useState<"total" | "anticipate" | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [paidBy, setPaidBy] = useState<string>(installment.cartao_compras?.person || "");
   const [saving, setSaving] = useState(false);
   const { data: accounts = [] } = useAccounts();
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+  const [selectedAccountTayaneId, setSelectedAccountTayaneId] = useState<string>("");
 
 
   const originalPerson = installment.cartao_compras?.person || "";
@@ -1820,8 +1822,8 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
   
   const overrideActive = !!paidBy && paidBy.trim() && normalizeName(paidBy) !== normalizeName(originalPerson);
 
-  const handlePay = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePay = async (e?: React.FormEvent, accountsOverride?: { accountId: string, accountTayaneId?: string }) => {
+    if (e) e.preventDefault();
     const amountToPay = Number(payAmount);
     const originalAmount = Number(installment.amount);
 
@@ -1870,8 +1872,8 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           status: "paid",
           due_at: todayLocalISO(),
           posted_at: todayLocalISO(),
-          account_id: split.accountId,
-          account_tayane_id: split.accountTayaneId || null,
+          account_id: accountsOverride?.accountId || split.accountId,
+          account_tayane_id: accountsOverride?.accountTayaneId || (split.accountTayaneId || null),
           person: split.person,
           card_installment_id: installment.id,
           category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", // Categoria Cartão de Crédito (ID correto do banco)
@@ -1918,6 +1920,9 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
     const isEstorno = Number(installment.amount || 0) < 0;
     
     if (isEstorno) {
+      const lorranAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "lorran" || normalizeName(a.bank || "").includes("revolut") || normalizeName(a.bank || "").includes("nubank"));
+      const tayaneAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "tayane" || normalizeName(a.bank || "").includes("mercado"));
+
       return (
         <div className="space-y-4">
           <div className="bg-emerald-500/10 p-5 rounded-2xl border border-emerald-500/30 text-center space-y-4">
@@ -1930,21 +1935,85 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
                 Deseja confirmar o recebimento deste estorno de <span className="font-bold text-emerald-500">{brl(Math.abs(Number(installment.amount)))}</span>?
               </p>
             </div>
-            <div className="p-3 bg-background/50 rounded-lg text-[11px] text-left border border-border/50 text-muted-foreground">
-              <p className="font-semibold text-foreground mb-1">Impacto financeiro:</p>
+
+            <div className="space-y-3 text-left">
+              {isFamilia ? (
+                <>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-bold text-emerald-600">Conta de Lorran (50%)</Label>
+                    <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                      <SelectTrigger className="h-10 bg-background border-emerald-500/20">
+                        <SelectValue placeholder="Selecione a conta" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {lorranAccs.map((a: any) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{a.bank}</span>
+                              <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-bold text-emerald-600">Conta de Tayane (50%)</Label>
+                    <Select value={selectedAccountTayaneId} onValueChange={setSelectedAccountTayaneId}>
+                      <SelectTrigger className="h-10 bg-background border-emerald-500/20">
+                        <SelectValue placeholder="Selecione a conta" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tayaneAccs.map((a: any) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{a.bank}</span>
+                              <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase font-bold text-emerald-600">Conta de Destino</Label>
+                  <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                    <SelectTrigger className="h-10 bg-background border-emerald-500/20">
+                      <SelectValue placeholder="Selecione a conta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accounts.map((a: any) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{a.bank} · {a.account_name}</span>
+                            <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <div className="p-3 bg-background/50 rounded-lg text-[11px] text-left border border-emerald-500/20 text-muted-foreground">
+              <p className="font-semibold text-emerald-600 mb-1">Impacto financeiro:</p>
               <ul className="list-disc pl-4 space-y-1">
                 <li>Abate o saldo da fatura do cartão.</li>
-                {isFamilia ? (
-                  <li>O valor será estornado <span className="text-foreground">50/50</span> para as contas de <span className="text-foreground">Lorran e Tayane</span>.</li>
-                ) : (
-                  <li>O valor será creditado na conta de <span className="text-foreground">{originalPerson}</span>.</li>
-                )}
+                <li>O valor será creditado nas contas selecionadas.</li>
               </ul>
             </div>
+            
             <div className="grid grid-cols-1 gap-3 pt-2">
               <Button 
                 className="h-12 text-sm font-bold rounded-xl shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all transform hover:scale-[1.02]"
-                onClick={() => onFullPay()}
+                onClick={() => {
+                  if (!selectedAccountId) return toast.error("Selecione a conta de destino");
+                  if (isFamilia && !selectedAccountTayaneId) return toast.error("Selecione a conta da Tayane");
+                  onFullPay(notes, null, { accountId: selectedAccountId, accountTayaneId: selectedAccountTayaneId });
+                }}
               >
                 Confirmar e Estornar Saldo
               </Button>
@@ -1982,14 +2051,79 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
     );
   }
 
+  const lorranAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "lorran" || normalizeName(a.bank || "").includes("revolut") || normalizeName(a.bank || "").includes("nubank"));
+  const tayaneAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "tayane" || normalizeName(a.bank || "").includes("mercado"));
+
   if (payMode === "total") {
     return (
-      <form onSubmit={(e) => { e.preventDefault(); onFullPay(notes, overrideActive ? paidBy : null); }} className="space-y-4">
+      <form onSubmit={(e) => { e.preventDefault(); onFullPay(notes, overrideActive ? paidBy : null, { accountId: selectedAccountId, accountTayaneId: selectedAccountTayaneId }); }} className="space-y-4">
         <div className="bg-muted/50 p-3 rounded-lg border border-border space-y-1">
           <div className="text-xs text-muted-foreground uppercase">Pagamento Total</div>
           <div className="text-lg font-bold">{brl(Number(installment.amount || 0))}</div>
         </div>
         
+        <div className="space-y-3 p-3 rounded-lg bg-muted/30 border border-border/50">
+          {isFamilia && !overrideActive ? (
+            <>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Conta de Lorran (50%)</Label>
+                <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                  <SelectTrigger className="h-10 bg-background">
+                    <SelectValue placeholder="Selecione a conta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {lorranAccs.map((a: any) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{a.bank}</span>
+                          <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Conta de Tayane (50%)</Label>
+                <Select value={selectedAccountTayaneId} onValueChange={setSelectedAccountTayaneId}>
+                  <SelectTrigger className="h-10 bg-background">
+                    <SelectValue placeholder="Selecione a conta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tayaneAccs.map((a: any) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{a.bank}</span>
+                          <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Conta para débito</Label>
+              <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                <SelectTrigger className="h-10 bg-background">
+                  <SelectValue placeholder="Selecione a conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((a: any) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{a.bank} · {a.account_name}</span>
+                        <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+
         <div className="space-y-1.5">
           <Label>Quem está pagando?</Label>
           <PersonSelect value={paidBy} onChange={setPaidBy} extras={originalPerson ? [originalPerson] : []} />
@@ -2018,7 +2152,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
   }
 
   return (
-    <form onSubmit={handlePay} className="space-y-4">
+    <form onSubmit={(e) => handlePay(e, { accountId: selectedAccountId, accountTayaneId: selectedAccountTayaneId })} className="space-y-4">
       <div className="bg-muted/50 p-3 rounded-lg border border-border space-y-1">
         <div className="text-xs text-muted-foreground uppercase">Antecipação Parcial</div>
         <div className="text-lg font-bold">{brl(Number(installment.amount || 0))}</div>
@@ -2039,6 +2173,27 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
             O limite para esta antecipação individual é <strong>{brl(quota)}</strong>.
           </p>
         )}
+      </div>
+      
+      <div className="space-y-3 p-3 rounded-lg bg-muted/30 border border-border/50">
+        <div className="space-y-1.5">
+          <Label className="text-[10px] uppercase font-bold text-muted-foreground">Conta para débito</Label>
+          <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+            <SelectTrigger className="h-10 bg-background">
+              <SelectValue placeholder="Selecione a conta" />
+            </SelectTrigger>
+            <SelectContent>
+              {accounts.map((a: any) => (
+                <SelectItem key={a.id} value={a.id}>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{a.bank} · {a.account_name}</span>
+                    <span className="text-[10px] text-muted-foreground">{brl(a.balance)}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="space-y-1.5">
