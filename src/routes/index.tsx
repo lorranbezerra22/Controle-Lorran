@@ -1480,17 +1480,4 @@ function DeltaBadge({ current, previous, kind }: { current: number; previous: nu
   );
 }
 
-// @ts-ignore
-if (typeof window !== 'undefined') window.__fixBalances = async () => {
-  const { supabase } = await import('@/integrations/supabase/client');
-  const { data: accounts } = await supabase.from('contas').select('*');
-  const nrm = (s: string | null) => (s || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
-  const lorranAcc = accounts?.find(a => nrm(a.account_name).includes('LORRAN'));
-  const tayaneAcc = accounts?.find(a => nrm(a.account_name).includes('TAYANE'));
-  if (!lorranAcc || !tayaneAcc) return { error: "Accounts not found" };
-  const amount = 131.10;
-  await supabase.from('contas').update({ balance: Number(lorranAcc.balance) - amount }).eq('id', lorranAcc.id);
-  await supabase.from('contas').update({ balance: Number(tayaneAcc.balance) + amount }).eq('id', tayaneAcc.id);
-  return { success: true };
-};
 
