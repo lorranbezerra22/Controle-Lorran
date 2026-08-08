@@ -1886,7 +1886,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
     }
 
     if (Math.abs(amountToPay - originalAmount) < 0.01 && !isFamilia) {
-      onFullPay(notes, overrideActive ? paidBy : null);
+      onFullPay(notes, overrideActive ? paidBy : null, accountsOverride);
       return;
     }
 
