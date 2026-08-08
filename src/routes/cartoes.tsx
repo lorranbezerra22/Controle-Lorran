@@ -1823,6 +1823,18 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
   const [selectedAccountTayaneId, setSelectedAccountTayaneId] = useState<string>("");
 
+  const lorranAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "lorran" || normalizeName(a.bank || "").includes("revolut") || normalizeName(a.bank || "").includes("nubank"));
+  const tayaneAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "tayane" || normalizeName(a.bank || "").includes("mercado"));
+
+  useEffect(() => {
+    if (accounts.length > 0) {
+      const lorran = lorranAccs[0];
+      const tayane = tayaneAccs[0];
+      if (lorran) setSelectedAccountId(lorran.id);
+      if (tayane) setSelectedAccountTayaneId(tayane.id);
+    }
+  }, [accounts]);
+
 
   const originalPerson = installment.cartao_compras?.person || "";
   const isFamilia = normalizeName(originalPerson) === "familia";
