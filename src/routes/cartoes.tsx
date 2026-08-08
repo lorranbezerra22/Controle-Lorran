@@ -1822,8 +1822,8 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
   
   const overrideActive = !!paidBy && paidBy.trim() && normalizeName(paidBy) !== normalizeName(originalPerson);
 
-    const handlePay = async (e: React.FormEvent, accountsOverride?: { accountId: string, accountTayaneId?: string }) => {
-      if (e) e.preventDefault();
+  const handlePay = async (e?: React.FormEvent, accountsOverride?: { accountId: string, accountTayaneId?: string }) => {
+    if (e) e.preventDefault();
     const amountToPay = Number(payAmount);
     const originalAmount = Number(installment.amount);
 
@@ -2087,7 +2087,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
   }
 
   return (
-    <form onSubmit={handlePay} className="space-y-4">
+    <form onSubmit={(e) => handlePay(e, { accountId: selectedAccountId, accountTayaneId: selectedAccountTayaneId })} className="space-y-4">
       <div className="bg-muted/50 p-3 rounded-lg border border-border space-y-1">
         <div className="text-xs text-muted-foreground uppercase">Antecipação Parcial</div>
         <div className="text-lg font-bold">{brl(Number(installment.amount || 0))}</div>
