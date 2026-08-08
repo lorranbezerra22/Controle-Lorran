@@ -394,13 +394,8 @@ function CartoesPage() {
         // Se houver splits (contas selecionadas), cria as transações
         if (splits.length > 0) {
           for (const split of splits) {
-            const finalAccountId = split.accountTayaneId 
-              ? (accountsOverride?.accountId || split.accountId)
-              : (accountsOverride?.accountId || split.accountId);
-            
-            const finalAccountTayaneId = split.accountTayaneId
-              ? (accountsOverride?.accountTayaneId || split.accountTayaneId)
-              : null;
+            const finalAccountId = split.accountId;
+            const finalAccountTayaneId = split.accountTayaneId;
 
             const { error: txErr } = await supabase.from("transacoes").insert({
               user_id: user.id,
