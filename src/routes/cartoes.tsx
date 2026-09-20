@@ -42,7 +42,7 @@ const pickPaymentAccount = (accounts: any[], personName: string, bankFallbacks: 
   }
 
   const target = normalizeName(personName);
-  
+
   // Prioridade 1: Contas onde o account_name é EXATAMENTE o nome da pessoa
   const ownAccounts = accounts
     .filter((a: any) => normalizeName(a.account_name || "") === target)
@@ -54,7 +54,7 @@ const pickPaymentAccount = (accounts: any[], personName: string, bankFallbacks: 
   const partialMatch = accounts
     .filter((a: any) => normalizeName(a.account_name || "").includes(target))
     .sort((a: any, b: any) => Number(b.balance ?? 0) - Number(a.balance ?? 0));
-    
+
   if (partialMatch.length > 0) return partialMatch[0];
 
   // Prioridade 3: Fallbacks de banco
@@ -84,7 +84,7 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
   const p = normalizeName(person);
   const isEstorno = amount < 0;
   const absAmount = Math.abs(amount);
-  
+
   // Se for despesa de Família
   if (p === "familia") {
     const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"], accountsOverride?.accountId);
@@ -94,7 +94,7 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
     if (paidByOverride && (normalizeName(paidByOverride) === "lorran" || normalizeName(paidByOverride) === "tayane")) {
       const isLorran = normalizeName(paidByOverride) === "lorran";
       const target = isLorran ? lorranAcc : tayaneAcc;
-      
+
       if (target) {
         return [{
           accountId: target ? target.id : null,
@@ -111,16 +111,16 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
       return [{
         accountId: lorranAcc ? lorranAcc.id : null,
         accountTayaneId: tayaneAcc ? tayaneAcc.id : null,
-        amount: absAmount, 
+        amount: absAmount,
         person: "Familia",
         descriptionSuffix: " (Família 50/50)",
       }];
     }
-    
+
     // Fallback: Se não encontrou as duas contas ideais, tenta buscar qualquer uma de cada pessoa
     const anyLorran = accounts.find(a => normalizeName(a.account_name || "").includes("lorran"));
     const anyTayane = accounts.find(a => normalizeName(a.account_name || "").includes("tayane"));
-    
+
     if (anyLorran && anyTayane) {
       return [{
         accountId: anyLorran ? anyLorran.id : null,
@@ -132,12 +132,12 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
     }
     const only = lorranAcc || tayaneAcc;
     if (only || accountsOverride?.accountId === "none" || accountsOverride?.accountTayaneId === "none") {
-      return [{ 
-        accountId: lorranAcc ? lorranAcc.id : (accountsOverride?.accountId === "none" ? null : null), 
+      return [{
+        accountId: lorranAcc ? lorranAcc.id : (accountsOverride?.accountId === "none" ? null : null),
         accountTayaneId: tayaneAcc ? tayaneAcc.id : (accountsOverride?.accountTayaneId === "none" ? null : null),
-        amount: absAmount, 
-        person: "Familia", 
-        descriptionSuffix: "" 
+        amount: absAmount,
+        person: "Familia",
+        descriptionSuffix: ""
       }];
     }
     return [];
@@ -209,7 +209,7 @@ function CartoesPage() {
   const [editingCard, setEditingCard] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null);
   const [showProgressInfo, setShowProgressInfo] = useState<any>(null);
-  
+
   const lsGet = (k: string, d: string) => {
     if (typeof window === "undefined") return d;
     return window.localStorage.getItem(`cartoes:${k}`) ?? d;
@@ -348,26 +348,26 @@ function CartoesPage() {
       const effectiveCardId = i.card_id;
       const m = (map[effectiveCardId] = map[effectiveCardId] ?? { fatura: 0, restante: 0, brandTotals: {} });
       const payment = getInstallmentPaymentState(i);
-      
+
       const person = (i.cartao_compras?.person || "").toLowerCase().trim();
       const filter = personFilter !== "all" ? personFilter.toLowerCase().trim() : "all";
       const filter2 = personFilter2 !== "all" ? personFilter2.toLowerCase().trim() : "all";
 
       const isFam = person === "familia";
-      
+
       const matchesFilter = filter === "all" || person === filter || (isFam && filter === "lorran") || person === filter2 || (isFam && filter2 === "lorran") || (isFam && (filter === "tayane" || filter2 === "tayane"));
 
       if (matchesFilter) {
         let valueForTotal = payment.total;
         let valueForRestante = payment.remaining;
-        
+
         if (isFam && (filter !== "all" || filter2 !== "all")) {
           const parts = i.participacoes || [];
           const paidByLorran = parts.filter((p: any) => normalizeName(p.person) === "lorran").reduce((s: number, p: any) => s + Number(p.amount), 0);
           const paidByTayane = parts.filter((p: any) => normalizeName(p.person) === "tayane").reduce((s: number, p: any) => s + Number(p.amount), 0);
-          
+
           const quota = payment.total / 2;
-          
+
           if (filter === "lorran" || filter2 === "lorran") {
             const myPaid = paidByLorran;
             const myRemaining = i.status === "paid" ? 0 : quota - myPaid;
@@ -380,9 +380,9 @@ function CartoesPage() {
             valueForRestante = myRemaining;
           }
         }
-        
+
         m.fatura += valueForTotal;
-        
+
         const b = i.cartao_compras?.brand || "Default";
         m.brandTotals[b] = m.brandTotals[b] ?? { fatura: 0, restante: 0 };
         m.brandTotals[b].fatura += valueForTotal;
@@ -404,18 +404,18 @@ function CartoesPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
-      
+
       const originalPerson = i.cartao_compras?.person || "";
       const useOverride = !!(paidByOverride && paidByOverride.trim() && normalizeName(paidByOverride) !== normalizeName(originalPerson));
       const costPerson = useOverride ? paidByOverride!.trim() : originalPerson;
 
       if (isPaying) {
         const amount = Number(i.amount);
-        
+
         // 1. Criar lançamento financeiro (débito para despesa, CRÉDITO para estorno)
         // O estorno (amount negativo) gera uma transação 'income' para repor o saldo na conta
         const splits = buildPaymentSplits(accounts, originalPerson, amount, paidByOverride, accountsOverride);
-        
+
         // Se houver splits (contas selecionadas), cria as transações
         if (splits.length > 0) {
           for (const split of splits) {
@@ -431,13 +431,13 @@ function CartoesPage() {
           const { error: txErr } = await supabase.from("transacoes").insert({
               user_id: user.id,
               description: `${i.cartao_compras?.description || "Pagamento Cartão"} - Parcela ${i.installment_number}${split.descriptionSuffix}${isEstorno ? " (Estorno/Reembolso)" : ""}`,
-              amount: Math.abs(split.amount), 
-              kind: isEstorno ? "income" : "expense", 
+              amount: Math.abs(split.amount),
+              kind: isEstorno ? "income" : "expense",
               status: "paid",
               due_at: todayLocalISO(),
               posted_at: todayLocalISO(),
               account_id: finalAccountId,
-              account_tayane_id: finalAccountTayaneId, 
+              account_tayane_id: finalAccountTayaneId,
               person: split.person,
               card_installment_id: i.id,
               category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5",
@@ -469,16 +469,16 @@ function CartoesPage() {
       } else {
         // Cancelar Pagamento: Remove transações, participações e reseta parcela
         await supabase.from("transacoes").delete().eq("card_installment_id", i.id);
-        
+
         await supabase.from("participacoes_parcelas").delete().eq("installment_id", i.id);
-        
-        await supabase.from("cartao_parcelas").update({ 
-          status: "pending", 
-          paid_amount: 0, 
+
+        await supabase.from("cartao_parcelas").update({
+          status: "pending",
+          paid_amount: 0,
           paid_by: null,
           metadata: { ...((i.metadata as any) || {}), partial_payments: [] }
         } as any).eq("id", i.id);
-        
+
         toast.success("Pagamento removido");
       }
       invalidate("installments");
@@ -512,7 +512,7 @@ function CartoesPage() {
                 <CardForm onDone={() => { setNewCardOpen(false); invalidate("cards"); }} />
               </DialogContent>
             </Dialog>
-            
+
             <Dialog open={newPurchaseOpen} onOpenChange={setNewPurchaseOpen}>
               <DialogTrigger asChild><Button size="sm" className="rounded-full shadow-md" disabled={cards.length === 0}><Plus className="w-4 h-4 mr-1" /> Nova compra</Button></DialogTrigger>
               <DialogContent className="max-h-[85vh] overflow-y-auto">
@@ -542,14 +542,14 @@ function CartoesPage() {
           const usado = inst.filter((i: any) => allRelevantIds.includes(i.card_id) && i.status === "pending").reduce((s: number, i: any) => s + Number(i.amount), 0);
           const pct = c.credit_limit > 0 ? Math.min(100, (usado / Number(c.credit_limit)) * 100) : 0;
           return (
-            <motion.div 
-              key={c.id} 
-              initial={{ opacity: 0, y: 16 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              transition={{ duration: 0.4, delay: idx * 0.06, ease: [0.22, 1, 0.36, 1] }} 
-              whileHover={{ y: -3, transition: { duration: 0.2 } }} 
-              className="rounded-xl p-5 border border-border cursor-pointer hover:border-primary/50 transition-colors group relative overflow-hidden" 
-              style={{ background: "var(--gradient-card)", boxShadow: "var(--shadow-elegant)" }} 
+            <motion.div
+              key={c.id}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: idx * 0.06, ease: [0.22, 1, 0.36, 1] }}
+              whileHover={{ y: -3, transition: { duration: 0.2 } }}
+              className="rounded-xl p-5 border border-border cursor-pointer hover:border-primary/50 transition-colors group relative overflow-hidden"
+              style={{ background: "var(--gradient-card)", boxShadow: "var(--shadow-elegant)" }}
               onClick={() => setEditingCard(c)}
             >
               <div className="flex items-start justify-between mb-4">
@@ -770,9 +770,9 @@ function CartoesPage() {
               onClick={async () => {
                 const pending = monthInst.filter((i: any) => i.status !== "paid");
                 if (pending.length === 0) return;
-                
+
                 if (!confirm(`Pagar todas as ${pending.length} parcelas deste mês? Isso irá abater o saldo total das suas contas.`)) return;
-                
+
                 let successCount = 0;
                 for (const i of pending) {
                   try {
@@ -782,7 +782,7 @@ function CartoesPage() {
                     console.error(e);
                   }
                 }
-                
+
                 if (successCount > 0) {
                   toast.success(`${successCount} parcelas pagas com sucesso.`);
                   invalidate("installments");
@@ -816,7 +816,7 @@ function CartoesPage() {
                 const paidValue = Number(i.paid_amount || 0);
                 const displayedValue = getStatusFilteredAmount(i, statusFilter);
                 const pct = total > 0 ? Math.min(100, (paidValue / total) * 100) : 0;
-                
+
                 return (
                 <tr key={i.id} className="border-t border-border hover:bg-muted/30">
                   <td className="p-3 whitespace-nowrap text-muted-foreground">{fmtDate(i.due_at)}</td>
@@ -839,7 +839,7 @@ function CartoesPage() {
                     <div className="flex flex-col">
                       <span>{i.cartao_compras?.description}</span>
                       {isPartial && i.status !== "paid" && (
-                        <div 
+                        <div
                           className="mt-1 w-24 cursor-help"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -877,20 +877,20 @@ function CartoesPage() {
                       <button onClick={() => setEditingPurchase({ id: i.purchase_id, ...i.cartao_compras, card_id: i.card_id, _installment: i, cards })} title="Editar compra" className="w-7 h-7 rounded-md flex items-center justify-center bg-muted text-muted-foreground hover:bg-primary/20 hover:text-primary">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
-                      <button 
+                      <button
                         onClick={() => {
                           if (i.status === "paid" || isPartial) {
                             setRemovePaymentOpen(i);
                           } else {
                             setPartialPayOpen(i);
                           }
-                        }} 
+                        }}
                         onContextMenu={(e) => {
                           e.preventDefault();
                           if (isPartial || i.status === "paid") setEditPaidOpen(i);
                         }}
                         className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${i.status === "paid" ? "bg-success/20 text-success shadow-sm" : (Number(i.amount) < 0 ? "bg-warning/20 text-warning border border-warning/30 animate-pulse hover:bg-warning/30" : "bg-muted text-muted-foreground hover:bg-warning/20 hover:text-warning")}`}
-                        title={Number(i.amount) < 0 
+                        title={Number(i.amount) < 0
                           ? (i.status === "paid" ? "Estorno confirmado (Clique para remover)" : "Estorno pendente (Clique para confirmar)")
                           : (i.status === "paid" ? "Remover/Editar pagamento" : (isPartial ? "Antecipar pagamento / Clique direito: ajuste manual" : "Antecipar pagamento"))}
                       >
@@ -942,10 +942,10 @@ function CartoesPage() {
             <DialogTitle>Antecipar Pagamento</DialogTitle>
           </DialogHeader>
           {partialPayOpen && (
-            <AnticipatePayForm 
-              installment={partialPayOpen} 
+            <AnticipatePayForm
+              installment={partialPayOpen}
               onFullPay={(notes, paidBy, accountsOverride) => { togglePaid(partialPayOpen, notes, paidBy, accountsOverride); setPartialPayOpen(null); }}
-              onDone={() => { setPartialPayOpen(null); invalidate("installments"); invalidate("accounts"); invalidate("transactions"); }} 
+              onDone={() => { setPartialPayOpen(null); invalidate("installments"); invalidate("accounts"); invalidate("transactions"); }}
             />
           )}
         </DialogContent>
@@ -957,12 +957,12 @@ function CartoesPage() {
             <DialogTitle>{(removePaymentOpen as any)?._mode === "edit" ? "Editar Pagamento" : "Remover pagamento"}</DialogTitle>
           </DialogHeader>
           {removePaymentOpen && (
-            <RemovePaymentForm 
-              installment={removePaymentOpen} 
+            <RemovePaymentForm
+              installment={removePaymentOpen}
               allTransactions={allTransactions}
               transactionIdToEdit={editingTransactionId || undefined}
               mode={(removePaymentOpen as any)?._mode}
-              onDone={() => { setRemovePaymentOpen(null); setEditingTransactionId(null); invalidate("installments"); invalidate("accounts"); invalidate("transactions"); }} 
+              onDone={() => { setRemovePaymentOpen(null); setEditingTransactionId(null); invalidate("installments"); invalidate("accounts"); invalidate("transactions"); }}
             />
           )}
         </DialogContent>
@@ -974,9 +974,9 @@ function CartoesPage() {
             <DialogTitle>Editar valor já pago</DialogTitle>
           </DialogHeader>
           {editPaidOpen && (
-            <EditPaidForm 
-              installment={editPaidOpen} 
-              onDone={() => { setEditPaidOpen(null); invalidate("installments"); invalidate("accounts"); }} 
+            <EditPaidForm
+              installment={editPaidOpen}
+              onDone={() => { setEditPaidOpen(null); invalidate("installments"); invalidate("accounts"); }}
             />
           )}
         </DialogContent>
@@ -1029,7 +1029,7 @@ function CartoesPage() {
                     <div className="font-bold text-success">{brl(Number(showProgressInfo.paid_amount || 0))}</div>
                   </div>
                 </div>
-                
+
                 <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
                   <div className="text-[10px] uppercase text-warning/70 mb-1">Falta Pagar</div>
                   <div className="font-bold text-warning">{brl(Number(showProgressInfo.amount) - Number(showProgressInfo.paid_amount || 0))}</div>
@@ -1049,9 +1049,9 @@ function CartoesPage() {
                             <span className="font-semibold text-success">{brl(t.amount)}</span>
                             <div className="flex items-center gap-1">
                               <span className="text-[10px] text-muted-foreground">{fmtDate(t.posted_at || t.created_at)}</span>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 className="w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
                                 onClick={() => {
                                   setShowProgressInfo(null);
@@ -1061,9 +1061,9 @@ function CartoesPage() {
                               >
                                 <Pencil className="w-3 h-3" />
                               </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 className="w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
                                 onClick={() => {
                                   setShowProgressInfo(null);
@@ -1085,7 +1085,7 @@ function CartoesPage() {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="flex justify-end pt-2">
                   <Button variant="outline" onClick={() => setShowProgressInfo(null)}>Fechar</Button>
                 </div>
@@ -1296,11 +1296,11 @@ function PurchaseForm({ cards, cats, onDone }: any) {
       if (purDate.getDate() >= closing) firstMonth += 1;
       if (due < closing) firstMonth += 1;
 
-      
+
 
       for (const s of splits) {
         let finalPerson = s.person === "Família" ? "Familia" : s.person;
-        
+
         // CORREÇÃO: Forçar 'Familia' para descrições específicas se estiver vindo como 'Tayane'
         const lowerDesc = (form.description || "").toLowerCase();
         const specificPhantoms = ['mercado guanabara', 'racao do cookie', 'viagem paris', 'almoco galeto', 'bacio di latte cinema'];
@@ -1345,10 +1345,10 @@ function PurchaseForm({ cards, cats, onDone }: any) {
         <Select value={form.card_id} onValueChange={v => {
           const c = cards.find((x: any) => x.id === v);
           const firstBrand = c?.metadata?.brands?.[0];
-          setForm({ 
-            ...form, 
-            card_id: v, 
-            brand: firstBrand ? `${firstBrand.brand.charAt(0).toUpperCase()}${firstBrand.brand.slice(1)} ${firstBrand.last_digits}` : "" 
+          setForm({
+            ...form,
+            card_id: v,
+            brand: firstBrand ? `${firstBrand.brand.charAt(0).toUpperCase()}${firstBrand.brand.slice(1)} ${firstBrand.last_digits}` : ""
           });
         }}>
           <SelectTrigger><SelectValue placeholder="Selecione o cartão" /></SelectTrigger>
@@ -1400,10 +1400,10 @@ function PurchaseForm({ cards, cats, onDone }: any) {
       </div>
       {splitMode && (
         <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="space-y-2 rounded-xl border border-border bg-gradient-to-br from-muted/30 to-transparent p-2.5">
-          <PersonSelect 
-            multiSelect 
+          <PersonSelect
+            multiSelect
             value=""
-            selectedValues={splitPeople} 
+            selectedValues={splitPeople}
             onChange={(v) => setSplitPeople(v ? v.split(",") : [])}
             includeFamilia={true}
           />
@@ -1536,7 +1536,7 @@ function EditPurchaseForm({ purchase, cards, cats, onDone }: any) {
       }
 
       let finalPerson = form.person || null;
-      
+
       // CORREÇÃO: Forçar 'Familia' para descrições específicas se estiver vindo como 'Tayane'
       const lowerDesc = (form.description || "").toLowerCase();
       const specificPhantoms = ['mercado guanabara', 'racao do cookie', 'viagem paris', 'almoco galeto', 'bacio di latte cinema'];
@@ -1660,11 +1660,15 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
     credit_limit: String(initialData?.credit_limit ?? ""),
     last_digits: initialData?.last_digits ?? "",
     brand: initialData?.metadata?.brand ?? "visa",
-    brands: initialData?.metadata?.brands || [],
+    cardType: initialData?.metadata?.cardType ?? "physical",
+    brands: (initialData?.metadata?.brands || []).map((brand: any) => ({
+      ...brand,
+      type: brand.type ?? "physical",
+    })),
     mode: (initialData?.metadata?.brands?.length > 0) ? "multi" : "standard",
   });
   const [saving, setSaving] = useState(false);
-  
+
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); if (!__tryLock()) return; setSaving(true);
@@ -1673,6 +1677,7 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
       const metadata = {
         ...(initialData?.metadata || {}),
         brand: form.mode === "standard" ? form.brand : null,
+        cardType: form.mode === "standard" ? form.cardType : null,
         brands: form.mode === "multi" ? form.brands : null
       };
 
@@ -1685,7 +1690,7 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
         color: bInfo.color,
         last_digits: form.mode === "standard" ? (form.last_digits || null) : null,
         metadata,
-        
+
       };
 
       if (initialData?.id) {
@@ -1716,13 +1721,13 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
       <div className="space-y-1.5"><Label>Nome</Label><SmartInput value={form.name} onChange={(v) => setForm({ ...form, name: v })} required /></div>
       <div className="space-y-1.5">
         <Label>Banco</Label>
-        <Select 
-          value={form.bank || undefined} 
-          onValueChange={(v) => { 
-            const b = findBank(v); 
+        <Select
+          value={form.bank || undefined}
+          onValueChange={(v) => {
+            const b = findBank(v);
             let newName = form.name;
             if (b.id === "santander" && !form.name) newName = "Santander";
-            setForm({ ...form, bank: b.name, name: newName }); 
+            setForm({ ...form, bank: b.name, name: newName });
           }}
         >
           <SelectTrigger><SelectValue placeholder="Selecione o banco" /></SelectTrigger>
@@ -1750,7 +1755,17 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
       </div>
 
       {form.mode === "standard" ? (
-        <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+        <div className="grid grid-cols-3 gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="space-y-1.5">
+            <Label>Tipo</Label>
+            <Select value={form.cardType} onValueChange={(v) => setForm({ ...form, cardType: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="physical">Físico</SelectItem>
+                <SelectItem value="online">Online</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-1.5">
             <Label>Bandeira</Label>
             <Select value={form.brand} onValueChange={(v) => setForm({ ...form, brand: v })}>
@@ -1772,24 +1787,42 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
         <div className="space-y-2.5 p-2.5 border rounded-lg bg-muted/20 border-border/40 animate-in fade-in slide-in-from-top-1 duration-200">
           <div className="flex items-center justify-between">
             <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Bandeiras do Combo</Label>
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm" 
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               className="h-6 text-[9px] font-bold border-primary/20 hover:bg-primary hover:text-white px-2"
-              onClick={() => setForm({ ...form, brands: [...form.brands, { brand: "visa", last_digits: "" }] })}
+              onClick={() => setForm({ ...form, brands: [...form.brands, { type: "physical", brand: "visa", last_digits: "" }] })}
             >
               <Plus className="w-3 h-3 mr-1" /> Add Bandeira
             </Button>
           </div>
-          
+
           <div className="grid grid-cols-1 gap-2">
-            {form.brands.map((b: any, idx: number) => (
-              <div key={idx} className="relative p-2 border border-border/50 rounded-lg bg-background/50 flex items-center gap-3 group/brand">
-                <div className="flex-1 space-y-1">
-                  <Label className="text-[9px] uppercase font-bold text-muted-foreground/70">Bandeira</Label>
-                  <Select 
-                    value={b.brand} 
+        {form.brands.map((b: any, idx: number) => (
+          <div key={idx} className="relative p-2 border border-border/50 rounded-lg bg-background/50 flex items-center gap-3 group/brand">
+            <div className="w-28 space-y-1">
+              <Label className="text-[9px] uppercase font-bold text-muted-foreground/70">Tipo</Label>
+              <Select
+                value={b.type ?? "physical"}
+                onValueChange={(v) => {
+                  const next = [...form.brands];
+                  next[idx] = { ...next[idx], type: v };
+                  setForm({ ...form, brands: next });
+                }}
+              >
+                <SelectTrigger className="h-7 text-[10px] bg-background px-2"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="physical">Físico</SelectItem>
+                  <SelectItem value="online">Online</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex-1 space-y-1">
+              <Label className="text-[9px] uppercase font-bold text-muted-foreground/70">Bandeira</Label>
+                  <Select
+                    value={b.brand}
                     onValueChange={(v) => {
                       const next = [...form.brands];
                       next[idx].brand = v;
@@ -1808,8 +1841,8 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
 
                 <div className="w-20 space-y-1">
                   <Label className="text-[9px] uppercase font-bold text-muted-foreground/70">Dígitos</Label>
-                  <Input 
-                    className="h-7 text-[10px] bg-background px-2" 
+                  <Input
+                    className="h-7 text-[10px] bg-background px-2"
                     maxLength={4}
                     placeholder="1234"
                     value={b.last_digits}
@@ -1821,10 +1854,10 @@ function CardForm({ onDone, initialData }: { onDone: () => void; initialData?: a
                   />
                 </div>
 
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
                   className="h-7 w-7 text-muted-foreground hover:text-destructive self-end mb-0.5"
                   onClick={() => setForm({ ...form, brands: form.brands.filter((_: any, i: number) => i !== idx) })}
                 >
@@ -1891,7 +1924,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
   const originalPerson = installment.cartao_compras?.person || "";
   const isFamilia = normalizeName(originalPerson) === "familia";
   const quota = Number(installment.amount || 0) / 2;
-  
+
   const overrideActive = !!paidBy && paidBy.trim() && normalizeName(paidBy) !== normalizeName(originalPerson);
 
   const handlePay = async (e?: React.FormEvent, accountsOverride?: { accountId: string, accountTayaneId?: string }) => {
@@ -1900,7 +1933,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
     const originalAmount = Number(installment.amount);
 
     if (amountToPay <= 0) return toast.error("Valor inválido");
-    
+
     if (isFamilia && overrideActive) {
       if (amountToPay > quota + 0.01) {
         return toast.error(`Para antecipação individual de Família, o valor máximo é a sua parte (${brl(quota)})`);
@@ -1929,13 +1962,13 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
       const newPersonPaid = Number((alreadyPaid + amountToPay).toFixed(2));
       const newPaidAmount = Number((Number(installment.paid_amount || 0) + amountToPay).toFixed(2));
       const isFull = Math.abs(newPaidAmount - originalAmount) < 0.01;
-      
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
 
       // 1. Criar transação de débito no banco
       const splits = buildPaymentSplits(accounts, originalPerson, amountToPay, overrideActive ? paidBy : null, accountsOverride);
-      
+
       // Só cria transações se houver contas selecionadas
       if (splits.length > 0) {
         for (const split of splits) {
@@ -1960,7 +1993,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
             account_tayane_id: finalAccountTayaneId,
             person: split.person,
             card_installment_id: installment.id,
-            category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5", 
+            category_id: "2db053ad-a0e4-4beb-8f31-3be8328559b5",
           } as any);
           if (txErr) throw txErr;
         }
@@ -1979,7 +2012,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
       if (partError) throw partError;
 
       // 3. Atualizar a parcela (apenas status e valor total pago)
-      const { error } = await supabase.from("cartao_parcelas").update({ 
+      const { error } = await supabase.from("cartao_parcelas").update({
         paid_amount: newPaidAmount,
         status: isFull ? "paid" : "pending",
         paid_by: isFull ? (overrideActive ? paidBy : (isFamilia ? null : originalPerson)) : (installment.paid_by || null),
@@ -2003,7 +2036,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
 
   if (!payMode) {
     const isEstorno = Number(installment.amount || 0) < 0;
-    
+
     if (isEstorno) {
       const lorranAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "lorran" || normalizeName(a.bank || "").includes("revolut") || normalizeName(a.bank || "").includes("nubank"));
       const tayaneAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "tayane" || normalizeName(a.bank || "").includes("mercado"));
@@ -2093,9 +2126,9 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
                 <li>O valor será creditado nas contas selecionadas.</li>
               </ul>
             </div>
-            
+
             <div className="grid grid-cols-1 gap-3 pt-2">
-              <Button 
+              <Button
                 className="h-12 text-sm font-bold rounded-xl shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all transform hover:scale-[1.02]"
                 onClick={() => {
                   onFullPay(notes, null, { accountId: selectedAccountId, accountTayaneId: selectedAccountTayaneId });
@@ -2117,14 +2150,14 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
             O que você deseja fazer com esta parcela de {brl(Number(installment.amount || 0))}?
           </p>
           <div className="grid grid-cols-1 gap-3">
-            <Button 
+            <Button
               className="h-12 text-sm font-semibold rounded-xl shadow-md"
               onClick={() => setPayMode("total")}
             >
               Pagar Total
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="h-12 text-sm font-semibold rounded-xl"
               onClick={() => setPayMode("anticipate")}
             >
@@ -2145,7 +2178,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           <div className="text-xs text-muted-foreground uppercase">Pagamento Total</div>
           <div className="text-lg font-bold">{brl(Number(installment.amount || 0))}</div>
         </div>
-        
+
         <div className="space-y-3 p-3 rounded-lg bg-muted/30 border border-border/50">
           {isFamilia && !overrideActive ? (
             <>
@@ -2223,9 +2256,9 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
 
         <div className="space-y-1.5">
           <Label>Observação</Label>
-          <Input 
-            value={notes} 
-            onChange={e => setNotes(e.target.value)} 
+          <Input
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
             placeholder="Ex: Pagamento total da parcela"
           />
         </div>
@@ -2250,18 +2283,18 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
           </div>
         )}
       </div>
-      
+
       <div className="space-y-1.5">
         <Label>Quem está antecipando?</Label>
         <PersonSelect value={paidBy} onChange={setPaidBy} extras={originalPerson ? [originalPerson] : []} />
         {isFamilia && overrideActive && (
           <p className="text-[10px] text-amber-500">
-            Aviso: Você está pagando como <strong>{paidBy}</strong>. 
+            Aviso: Você está pagando como <strong>{paidBy}</strong>.
             O limite para esta antecipação individual é <strong>{brl(quota)}</strong>.
           </p>
         )}
       </div>
-      
+
       <div className="space-y-3 p-3 rounded-lg bg-muted/30 border border-border/50">
         {isFamilia && !overrideActive ? (
           <>
@@ -2331,11 +2364,11 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
         <Label>Valor para antecipar</Label>
         <div className="relative">
           <Banknote className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            type="number" 
-            step="0.01" 
-            value={payAmount} 
-            onChange={e => setPayAmount(e.target.value)} 
+          <Input
+            type="number"
+            step="0.01"
+            value={payAmount}
+            onChange={e => setPayAmount(e.target.value)}
             className="pl-9"
             placeholder="0,00"
             required
@@ -2345,24 +2378,24 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
 
       <div className="space-y-1.5">
         <Label>Observação</Label>
-        <Input 
-          value={notes} 
-          onChange={e => setNotes(e.target.value)} 
+        <Input
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
           placeholder="Ex: Antecipação parcial"
         />
       </div>
 
       <div className="flex gap-2">
         <Button type="button" variant="outline" className="flex-1" onClick={() => setPayMode(null)}>Voltar</Button>
-        <Button 
-          type="submit" 
-          className="flex-1" 
+        <Button
+          type="submit"
+          className="flex-1"
           disabled={saving || Number(payAmount) <= 0}
         >
           {saving ? "Processando..." : "Confirmar Antecipação"}
         </Button>
       </div>
-      
+
       <p className="text-[10px] text-muted-foreground text-center">
         O saldo restante continuará pendente no mesmo mês.
       </p>
@@ -2386,23 +2419,23 @@ function RemovePaymentForm({ installment, allTransactions, onDone, transactionId
     const fromDb = allTransactions
       .filter((t: any) => t.card_installment_id === installment.id)
       .sort((a: any, b: any) => new Date(b.posted_at || b.created_at).getTime() - new Date(a.posted_at || a.created_at).getTime());
-    
+
     // 2. Se não houver vínculos diretos, tentar buscar pelo texto da descrição no histórico antigo
     if (fromDb.length === 0) {
       const installmentMonth = new Date(installment.due_at).getMonth();
       const installmentYear = new Date(installment.due_at).getFullYear();
       const purchaseDesc = (installment.cartao_compras?.description || "").toLowerCase();
-      
+
       const legacyTrans = allTransactions.filter((t: any) => {
         if (t.card_installment_id) return false; // Já tem vínculo novo
         const tDate = new Date(t.posted_at || t.created_at);
         const tMonth = tDate.getMonth();
         const tYear = tDate.getFullYear();
         const tDesc = (t.description || "").toLowerCase();
-        
+
         // Critérios de busca legada: mesmo mês/ano e descrição similar ou que mencione cartões
-        return tMonth === installmentMonth && 
-               tYear === installmentYear && 
+        return tMonth === installmentMonth &&
+               tYear === installmentYear &&
                (tDesc.includes(purchaseDesc) || tDesc.includes("pagamento") || tDesc.includes("cartão"));
       });
 
@@ -2443,7 +2476,7 @@ function RemovePaymentForm({ installment, allTransactions, onDone, transactionId
   const handleAction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTransactionId) return toast.error("Selecione um lançamento");
-    
+
     const transaction = relatedTrans.find(t => t.id === selectedTransactionId);
     if (!transaction) return;
 
@@ -2456,7 +2489,7 @@ function RemovePaymentForm({ installment, allTransactions, onDone, transactionId
           const newAmt = Number(editAmount);
           const diff = newAmt - Number(transaction.amount);
           const newPaidAmount = Number((Number(installment.paid_amount || 0) + diff).toFixed(2));
-          await supabase.from("cartao_parcelas").update({ 
+          await supabase.from("cartao_parcelas").update({
             paid_amount: newPaidAmount,
             status: Math.abs(newPaidAmount - Number(installment.amount)) < 0.01 ? "paid" : "pending"
           }).eq("id", installment.id);
@@ -2471,7 +2504,7 @@ function RemovePaymentForm({ installment, allTransactions, onDone, transactionId
           const diff = newAmt - Number(transaction.amount);
           await supabase.from("transacoes").update({ amount: newAmt, notes: editNotes || null }).eq("id", transaction.id);
           const newPaidAmount = Number((Number(installment.paid_amount || 0) + diff).toFixed(2));
-          await supabase.from("cartao_parcelas").update({ 
+          await supabase.from("cartao_parcelas").update({
             paid_amount: newPaidAmount,
             status: Math.abs(newPaidAmount - Number(installment.amount)) < 0.01 ? "paid" : "pending"
           }).eq("id", installment.id);
@@ -2480,7 +2513,7 @@ function RemovePaymentForm({ installment, allTransactions, onDone, transactionId
           await supabase.from("transacoes").delete().eq("id", transaction.id);
           const newPaidAmount = Math.max(0, Number((Number(installment.paid_amount || 0) - Number(transaction.amount)).toFixed(2)));
           const remainingTrans = relatedTrans.filter(t => t.id !== selectedTransactionId);
-          await supabase.from("cartao_parcelas").update({ 
+          await supabase.from("cartao_parcelas").update({
             paid_amount: newPaidAmount,
             status: "pending",
             notes: remainingTrans.length > 0 ? remainingTrans[0].notes : null
@@ -2501,11 +2534,11 @@ function RemovePaymentForm({ installment, allTransactions, onDone, transactionId
       <div className="flex justify-between items-center mb-2">
         <Label>Histórico de lançamentos</Label>
         {!transactionIdToEdit && (
-          <Button 
-            type="button" 
-            variant="outline" 
-            size="sm" 
-            className="h-7 text-[10px]" 
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 text-[10px]"
             onClick={() => {
               onDone();
               setTimeout(() => {
@@ -2550,20 +2583,20 @@ function RemovePaymentForm({ installment, allTransactions, onDone, transactionId
       {selectedTransactionId && (
         <div className="flex items-center gap-4 py-2 border-y border-border/50">
           <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input 
-              type="radio" 
-              name={`action-${installment.id}`} 
-              checked={isRemoving} 
-              onChange={() => { setIsRemoving(true); setIsEditing(false); }} 
+            <input
+              type="radio"
+              name={`action-${installment.id}`}
+              checked={isRemoving}
+              onChange={() => { setIsRemoving(true); setIsEditing(false); }}
             />
             Remover
           </label>
           <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input 
-              type="radio" 
-              name={`action-${installment.id}`} 
-              checked={isEditing} 
-              onChange={() => { setIsEditing(true); setIsRemoving(false); }} 
+            <input
+              type="radio"
+              name={`action-${installment.id}`}
+              checked={isEditing}
+              onChange={() => { setIsEditing(true); setIsRemoving(false); }}
             />
             Editar
           </label>
@@ -2603,19 +2636,19 @@ function EditPaidForm({ installment, onDone }: { installment: any, onDone: () =>
     const total = Number(installment.amount);
 
     if (val < 0 || val > total) return toast.error("Valor inválido");
-    
+
     if (!__tryLock()) return;
-    
+
     setSaving(true);
     try {
       const diff = val - oldVal;
-      
+
       // Ao ajustar o valor manualmente via botão direito, limpamos o histórico de transações específicas
       // para manter o controle manual conforme solicitado
       await supabase.from("transacoes").delete().eq("card_installment_id", installment.id);
 
       // Atualizar a parcela
-      const { error: instErr } = await supabase.from("cartao_parcelas").update({ 
+      const { error: instErr } = await supabase.from("cartao_parcelas").update({
         paid_amount: val,
         status: Math.abs(val - total) < 0.01 ? "paid" : "pending",
         notes: null
@@ -2637,16 +2670,16 @@ function EditPaidForm({ installment, onDone }: { installment: any, onDone: () =>
         <div className="text-xs text-muted-foreground uppercase">Valor total da parcela</div>
         <div className="text-lg font-bold">{brl(Number(installment.amount))}</div>
       </div>
-      
+
       <div className="space-y-1.5">
         <Label>Valor já pago (total acumulado)</Label>
         <div className="relative">
           <Receipt className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            type="number" 
-            step="0.01" 
-            value={newPaidAmount} 
-            onChange={e => setNewPaidAmount(e.target.value)} 
+          <Input
+            type="number"
+            step="0.01"
+            value={newPaidAmount}
+            onChange={e => setNewPaidAmount(e.target.value)}
             className="pl-9"
             required
           />
