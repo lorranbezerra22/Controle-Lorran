@@ -581,40 +581,51 @@ function CartoesPage() {
               <div className="h-2 bg-muted rounded-full overflow-hidden mb-3">
                 <div className="h-full" style={{ width: `${pct}%`, background: pct > 80 ? "oklch(0.65 0.24 22)" : "var(--gradient-primary)" }} />
               </div>
-              <div className="pt-3 border-t border-border space-y-2">
-                <div className="flex items-end justify-between gap-4">
+              <div className="pt-3 border-t border-border space-y-3">
+                <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">Fatura {monthLabel(monthN-1)}{personFilter !== "all" && ` • ${personFilter}`}</div>
+                    <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground font-semibold">
+                      Fatura {monthLabel(monthN - 1)}{personFilter !== "all" && ` • ${personFilter}`}
+                    </div>
                     <div className="text-xl font-bold text-foreground tabular-nums mt-1.5">
                       <CountUp value={totals[c.id]?.fatura ?? 0} format={brl} />
                     </div>
                   </div>
-                  {totals[c.id]?.brandTotals && Object.keys(totals[c.id].brandTotals).length > 1 && (
-                    <div className="flex flex-col gap-3 pr-3 border-r border-border/50">
-                      {Object.entries(totals[c.id].brandTotals).map(([brand, data], bi) => (
-                        <div key={bi} className="flex flex-col gap-1.5">
-                          <span className="text-[9px] uppercase text-muted-foreground font-bold leading-none">{brand}</span>
-                          <div className="flex flex-col leading-tight">
-                            <span className="text-[11px] font-bold">{brl(data.fatura)}</span>
-                            {data.restante > 0.01 && (
-                              <span className="text-[9px] text-destructive font-semibold mt-1">Rest. {brl(data.restante)}</span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                   {(() => {
                     const rest = totals[c.id]?.restante ?? 0;
                     const paid = rest === 0;
                     return (
                       <div className={`flex flex-col items-end px-2.5 py-1.5 rounded-lg border gap-0.5 ${paid ? "border-success/30 bg-success/10" : "border-destructive/25 bg-destructive/10"}`}>
-                        <span className={`text-[10px] uppercase tracking-[0.18em] font-bold ${paid ? "text-success" : "text-destructive"}`}>{paid ? "Liquidada" : "Restante"}</span>
-                        <span className={`text-sm font-bold tabular-nums ${paid ? "text-success" : "text-destructive"}`}>{brl(rest)}</span>
+                        <span className={`text-[10px] uppercase tracking-[0.18em] font-bold ${paid ? "text-success" : "text-destructive"}`}>
+                          {paid ? "Liquidada" : "Restante"}
+                        </span>
+                        <span className={`text-sm font-bold tabular-nums ${paid ? "text-success" : "text-destructive"}`}>
+                          {brl(rest)}
+                        </span>
                       </div>
                     );
                   })()}
                 </div>
+
+                {totals[c.id]?.brandTotals && Object.keys(totals[c.id].brandTotals).length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 border-t border-border/50 pt-3">
+                    {Object.entries(totals[c.id].brandTotals).map(([brand, data], bi) => (
+                      <div key={bi} className="min-w-0 rounded-lg border border-border/60 bg-muted/20 p-2.5">
+                        <span className="block truncate text-[9px] uppercase text-muted-foreground font-bold leading-none">
+                          {brand}
+                        </span>
+                        <div className="mt-1.5 flex flex-col leading-tight">
+                          <span className="text-[11px] font-bold">{brl(data.fatura)}</span>
+                          {data.restante > 0.01 && (
+                            <span className="text-[9px] text-destructive font-semibold mt-1">
+                              Rest. {brl(data.restante)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
 
