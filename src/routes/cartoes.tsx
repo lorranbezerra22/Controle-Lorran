@@ -536,25 +536,7 @@ function CartoesPage() {
 
 
 
-      <div className="rounded-xl border border-border p-5 mb-4" style={{ background: "var(--gradient-card)", boxShadow: "var(--shadow-elegant)" }}>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground font-semibold">
-              Fatura de {monthLabel(monthN - 1)}
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Total das parcelas do mês selecionado
-            </p>
-          </div>
-          <CountUp
-            value={monthInst.reduce((s: number, i: any) => s + getStatusFilteredAmount(i, statusFilter), 0)}
-            format={brl}
-            className="text-2xl font-bold text-foreground tabular-nums"
-          />
-        </div>
-      </div>
-
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {cards.map((c: any, idx: number) => {
           const allRelevantIds = [c.id];
           const usado = inst.filter((i: any) => allRelevantIds.includes(i.card_id) && i.status === "pending").reduce((s: number, i: any) => s + Number(i.amount), 0);
