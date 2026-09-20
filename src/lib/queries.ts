@@ -64,7 +64,7 @@ export const useInstallments = () =>
             description, person, total_amount, installments_count, purchase_date, category_id, brand,
             categorias:category_id(name, icon)
           ),
-          cartoes:card_id(name, color, bank),
+          cartoes:card_id(name, color, bank, last_digits, metadata),
           participacoes:participacoes_parcelas(*)
         `)
         .order("due_at", { ascending: false })

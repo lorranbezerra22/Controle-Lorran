@@ -383,7 +383,26 @@ function CartoesPage() {
 
         m.fatura += valueForTotal;
 
-        const b = i.cartao_compras?.brand || "Default";
+        const cardMetadata = i.cartoes?.metadata as {
+          brand?: string;
+          brands?: Array<{ brand?: string; last_digits?: string }>;
+        } | undefined;
+
+        const formatBrand = (brand?: string, lastDigits?: string) => {
+          if (!brand) return "";
+          const formatted = brand.charAt(0).toUpperCase() + brand.slice(1).toLowerCase();
+          return lastDigits ? `${formatted} •••• ${lastDigits}` : formatted;
+        };
+
+        const configuredBrands = (cardMetadata?.brands ?? [])
+          .map((brand) => formatBrand(brand.brand, brand.last_digits))
+          .filter(Boolean);
+
+        const fallbackBrand =
+          formatBrand(cardMetadata?.brand, i.cartoes?.last_digits) ||
+          (configuredBrands.length > 0 ? configuredBrands.join(" / ") : "Cartão");
+
+        const b = i.cartao_compras?.brand || fallbackBrand;
         m.brandTotals[b] = m.brandTotals[b] ?? { fatura: 0, restante: 0 };
         m.brandTotals[b].fatura += valueForTotal;
 
