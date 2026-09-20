@@ -391,7 +391,7 @@ function CartoesPage() {
         const formatBrand = (brand?: string, lastDigits?: string) => {
           if (!brand) return "";
           const formatted = brand.charAt(0).toUpperCase() + brand.slice(1).toLowerCase();
-          return lastDigits ? `${formatted} •••• ${lastDigits}` : formatted;
+          return lastDigits ? `${formatted} ${lastDigits}` : formatted;
         };
 
         const configuredBrands = (cardMetadata?.brands ?? [])
