@@ -25,6 +25,7 @@ import { cardPurchaseSchema, firstZodError } from "@/lib/schemas";
 import { motion } from "framer-motion";
 import { CountUp } from "@/components/CountUp";
 import { PageHeader } from "@/components/PageHeader";
+import { RecurringCardBox } from "@/components/RecurringCardBox";
 
 
 const todayLocalISO = () => {
@@ -524,6 +525,14 @@ function CartoesPage() {
         subtitle="Limites, faturas e compras parceladas"
         actions={
           <>
+            <RecurringCardBox
+              cards={cards}
+              cats={cats}
+              onCreated={() => {
+                invalidate("installments");
+              }}
+            />
+
             <Dialog open={newCardOpen} onOpenChange={setNewCardOpen}>
               <DialogTrigger asChild><Button variant="outline" size="sm" className="rounded-full"><Plus className="w-4 h-4 mr-1" /> Novo cartão</Button></DialogTrigger>
               <DialogContent>
