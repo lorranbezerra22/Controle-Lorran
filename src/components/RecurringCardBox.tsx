@@ -21,6 +21,7 @@ type RecurringTemplate = {
   splitCustom?: boolean;
   splitAmounts?: Record<string, number>;
   splitCategoryIds?: Record<string, string>;
+  brand?: string;
   amount: number;
   installments: number;
   purchaseDay: number;
@@ -74,10 +75,12 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
     cardId: cards[0]?.id ?? "",
     categoryId: "",
     person: "",
+    splitMode: false,
     splitPeople: [] as string[],
     splitCustom: false,
     splitAmounts: {} as Record<string, string>,
     splitCategoryIds: {} as Record<string, string>,
+    brand: "",
     amount: "",
     installments: 1,
     purchaseDay: new Date().getDate(),
@@ -99,7 +102,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
   );
 
   const selectedCard = cards.find((card) => card.id === form.cardId);
-  const isSplit = form.splitPeople.length >= 2;
+  const isSplit = form.splitMode && form.splitPeople.length >= 2;
 
   const toggleSplitPerson = (person: string) => {
     setForm((current) => {
@@ -148,6 +151,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
       splitCustom: isSplit ? form.splitCustom : false,
       splitAmounts: isSplit ? splitAmounts : {},
       splitCategoryIds: isSplit ? form.splitCategoryIds : {},
+      brand: form.brand || "",
       amount,
       installments: Number(form.installments),
       purchaseDay: Number(form.purchaseDay),
@@ -165,10 +169,12 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
       amount: "",
       categoryId: "",
       person: "",
+      splitMode: false,
       splitPeople: [],
       splitCustom: false,
       splitAmounts: {},
       splitCategoryIds: {},
+      brand: "",
       installments: 1,
     }));
     toast.success("Lançamento recorrente salvo como rascunho.");
@@ -245,6 +251,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
               template.categoryId ||
               null,
             person: split.person,
+            brand: template.brand || null,
           } as any)
           .select()
           .single();
@@ -336,7 +343,20 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
 
               <div className="space-y-1.5">
                 <Label>Cartão</Label>
-                <Select value={form.cardId} onValueChange={(value) => setForm({ ...form, cardId: value })}>
+                <Select
+                  value={form.cardId}
+                  onValueChange={(value) => {
+                    const card = cards.find((item) => item.id === value);
+                    const firstBrand = card?.metadata?.brands?.[0];
+                    setForm({
+                      ...form,
+                      cardId: value,
+                      brand: firstBrand
+                        ? `${firstBrand.brand.charAt(0).toUpperCase()}${firstBrand.brand.slice(1)} ${firstBrand.last_digits}`
+                        : "",
+                    });
+                  }}
+                >
                   <SelectTrigger><SelectValue placeholder="Selecione o cartão" /></SelectTrigger>
                   <SelectContent>
                     {cards.map((card) => (
@@ -394,16 +414,50 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                 </div>
               )}
 
+              {(() => {
+                const brands = selectedCard?.metadata?.brands || [];
+                if (brands.length <= 1) return null;
+
+                return (
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label>Bandeira da compra</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {brands.map((brand: any, index: number) => {
+                        const label = `${brand.brand.charAt(0).toUpperCase()}${brand.brand.slice(1)} ${brand.last_digits}`;
+                        const active = form.brand === label;
+
+                        return (
+                          <Button
+                            key={index}
+                            type="button"
+                            variant={active ? "default" : "outline"}
+                            size="sm"
+                            className="h-8 text-[10px] font-bold uppercase tracking-wider"
+                            onClick={() => setForm({ ...form, brand: label })}
+                          >
+                            {label}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="space-y-1.5 sm:col-span-2">
                 <Button
                   type="button"
-                  variant={isSplit ? "default" : "outline"}
+                  variant={form.splitMode ? "default" : "outline"}
                   className="w-full justify-between"
                   onClick={() =>
                     setForm((current) => ({
                       ...current,
+                      splitMode: !current.splitMode,
                       person: "",
-                      splitPeople: isSplit ? [] : current.splitPeople,
+                      splitPeople: current.splitMode ? [] : current.splitPeople,
+                      splitCustom: current.splitMode ? false : current.splitCustom,
+                      splitAmounts: current.splitMode ? {} : current.splitAmounts,
+                      splitCategoryIds: current.splitMode ? {} : current.splitCategoryIds,
                     }))
                   }
                 >
@@ -412,12 +466,14 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                     Dividir por pessoas
                   </span>
                   <span className="text-xs opacity-80">
-                    {isSplit ? `${form.splitPeople.length} selecionadas` : "Opcional"}
+                    {form.splitMode
+                      ? `${form.splitPeople.length} selecionadas`
+                      : "Opcional"}
                   </span>
                 </Button>
               </div>
 
-              {isSplit && (
+              {form.splitMode && (
                 <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-3 sm:col-span-2">
                   <PersonSelect
                     multiSelect
