@@ -47,7 +47,7 @@ export function PersonSelect({
 
   if (multiSelect) {
     return (
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex max-h-44 flex-col gap-1.5 overflow-y-auto pr-1">
         {list.map((n) => {
           const active = selectedValues.includes(n);
           return (
@@ -61,7 +61,7 @@ export function PersonSelect({
                   onChange([...selectedValues, n].join(","));
                 }
               }}
-              className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs border transition-all ${
+              className={`flex w-full shrink-0 items-center justify-start gap-1 rounded-md px-2.5 py-1.5 text-left text-xs border transition-all ${
                 active 
                   ? "border-primary bg-primary text-primary-foreground shadow-sm" 
                   : "border-border bg-background hover:border-primary/40"
