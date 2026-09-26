@@ -26,9 +26,6 @@ import { motion } from "framer-motion";
 import { CountUp } from "@/components/CountUp";
 import { PageHeader } from "@/components/PageHeader";
 import { RecurringCardBox } from "@/components/RecurringCardBox";
-import { NotificationBell } from "@/components/NotificationBell";
-
-
 const todayLocalISO = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -532,12 +529,6 @@ function CartoesPage() {
               onCreated={() => {
                 invalidate("installments");
               }}
-            />
-
-            <NotificationBell
-              transactions={allTransactions}
-              installments={inst}
-              cards={cards}
             />
 
             <Dialog open={newCardOpen} onOpenChange={setNewCardOpen}>
