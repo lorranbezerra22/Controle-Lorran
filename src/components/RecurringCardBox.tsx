@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, RefreshCw, Trash2, Equal, SlidersHorizontal, Users, Pencil } from "lucide-react";
+import {
+  Plus,
+  RefreshCw,
+  Trash2,
+  Equal,
+  SlidersHorizontal,
+  Users,
+  Pencil,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { brl, fmtDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -367,11 +377,13 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                 className="w-full justify-between rounded-xl border-border"
               >
                 <span className="inline-flex items-center gap-2 font-semibold">
+                  {formExpanded ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  )}
                   <Plus className="h-4 w-4 text-primary" />
                   {editingId ? "Editar lançamento recorrente" : "Novo lançamento recorrente"}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {formExpanded ? "Fechar" : "Abrir"}
                 </span>
               </Button>
             </CollapsibleTrigger>
@@ -728,9 +740,13 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                 variant="outline"
                 className="w-full justify-between rounded-xl border-border"
               >
-                <span className="font-semibold">Rascunhos pendentes</span>
-                <span className="text-xs text-muted-foreground">
-                  {draftsExpanded ? "Fechar" : "Abrir"}
+                <span className="inline-flex items-center gap-2 font-semibold">
+                  {draftsExpanded ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  Rascunhos pendentes
                 </span>
               </Button>
             </CollapsibleTrigger>
@@ -795,8 +811,9 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                         </Button>
                         <Button
                           size="icon"
-                          variant="ghost"
+                          variant="outline"
                           title="Editar rascunho"
+                          aria-label="Editar rascunho"
                           onClick={() => editTemplate(template)}
                         >
                           <Pencil className="h-4 w-4" />
@@ -805,6 +822,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                           size="icon"
                           variant="ghost"
                           title="Excluir rascunho"
+                          aria-label="Excluir rascunho"
                           onClick={() => removeTemplate(template.id)}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
