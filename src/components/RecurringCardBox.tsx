@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Plus, RefreshCw, Trash2, Equal, SlidersHorizontal, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { brl, fmtDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,10 @@ type RecurringTemplate = {
   cardId: string;
   categoryId: string;
   person: string;
+  splitPeople?: string[];
+  splitCustom?: boolean;
+  splitAmounts?: Record<string, number>;
+  splitCategoryIds?: Record<string, string>;
   amount: number;
   installments: number;
   purchaseDay: number;
@@ -70,6 +74,10 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
     cardId: cards[0]?.id ?? "",
     categoryId: "",
     person: "",
+    splitPeople: [] as string[],
+    splitCustom: false,
+    splitAmounts: {} as Record<string, string>,
+    splitCategoryIds: {} as Record<string, string>,
     amount: "",
     installments: 1,
     purchaseDay: new Date().getDate(),
@@ -91,6 +99,21 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
   );
 
   const selectedCard = cards.find((card) => card.id === form.cardId);
+  const isSplit = form.splitPeople.length >= 2;
+
+  const toggleSplitPerson = (person: string) => {
+    setForm((current) => {
+      const splitPeople = current.splitPeople.includes(person)
+        ? current.splitPeople.filter((item) => item !== person)
+        : [...current.splitPeople, person];
+
+      return {
+        ...current,
+        splitPeople,
+        person: splitPeople.length === 1 ? splitPeople[0] : "",
+      };
+    });
+  };
 
   const addTemplate = (event: React.FormEvent) => {
     event.preventDefault();
@@ -100,13 +123,31 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
     if (!form.cardId) return toast.error("Selecione um cartão.");
     if (!Number.isFinite(amount) || amount <= 0) return toast.error("Informe um valor válido.");
     if (form.installments < 1) return toast.error("Informe a quantidade de parcelas.");
+    if (isSplit && form.splitPeople.length < 2) {
+      return toast.error("Selecione pelo menos duas pessoas.");
+    }
+
+    const splitAmounts = Object.fromEntries(
+      form.splitPeople.map((person) => [person, Number(form.splitAmounts[person] || 0)]),
+    );
+
+    if (isSplit && form.splitCustom) {
+      const splitTotal = Object.values(splitAmounts).reduce((sum, value) => sum + value, 0);
+      if (Math.abs(splitTotal - amount) > 0.01) {
+        return toast.error(`A soma das divisões precisa ser igual a ${brl(amount)}.`);
+      }
+    }
 
     const next: RecurringTemplate = {
       id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
       description: form.description.trim(),
       cardId: form.cardId,
       categoryId: form.categoryId,
-      person: form.person,
+      person: isSplit ? "" : form.person,
+      splitPeople: isSplit ? form.splitPeople : [],
+      splitCustom: isSplit ? form.splitCustom : false,
+      splitAmounts: isSplit ? splitAmounts : {},
+      splitCategoryIds: isSplit ? form.splitCategoryIds : {},
       amount,
       installments: Number(form.installments),
       purchaseDay: Number(form.purchaseDay),
@@ -124,6 +165,10 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
       amount: "",
       categoryId: "",
       person: "",
+      splitPeople: [],
+      splitCustom: false,
+      splitAmounts: {},
+      splitCategoryIds: {},
       installments: 1,
     }));
     toast.success("Lançamento recorrente salvo como rascunho.");
@@ -162,50 +207,78 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
       if (purchaseDay >= closing) firstMonth += 1;
       if (due < closing) firstMonth += 1;
 
-      const { data: purchase, error: purchaseError } = await supabase
-        .from("cartao_compras")
-        .insert({
-          user_id: user.id,
-          card_id: card.id,
-          description: template.description,
-          purchase_date: purchaseDate,
-          total_amount: template.amount,
-          installments_count: template.installments,
-          category_id: template.categoryId || null,
-          person: template.person || null,
-        } as any)
-        .select()
-        .single();
+      const splitPeople = template.splitPeople?.length
+        ? template.splitPeople
+        : [template.person || null];
 
-      if (purchaseError) throw purchaseError;
+      const splitValues = splitPeople.map((person, index) => {
+        if (!person) return { person: null, amount: template.amount };
+        if (template.splitCustom) {
+          return {
+            person,
+            amount: Number(template.splitAmounts?.[person] || 0),
+          };
+        }
 
-      const installmentValue = Math.round((template.amount / template.installments) * 100) / 100;
-      const installments = Array.from({ length: template.installments }, (_, index) => {
-        const dueDate = new Date(
-          firstYear,
-          firstMonth + index,
-          clampDay(firstYear, firstMonth + index, due),
-        );
-
+        const value = Math.round((template.amount / splitPeople.length) * 100) / 100;
         return {
-          user_id: user.id,
-          purchase_id: purchase.id,
-          card_id: card.id,
-          installment_number: index + 1,
+          person,
           amount:
-            index === template.installments - 1
-              ? +(template.amount - installmentValue * (template.installments - 1)).toFixed(2)
-              : installmentValue,
-          due_at: localISO(dueDate),
-          status: "pending",
+            index === splitPeople.length - 1
+              ? +(template.amount - value * (splitPeople.length - 1)).toFixed(2)
+              : value,
         };
       });
 
-      const { error: installmentError } = await supabase
-        .from("cartao_parcelas")
-        .insert(installments as any);
+      for (const split of splitValues) {
+        const { data: purchase, error: purchaseError } = await supabase
+          .from("cartao_compras")
+          .insert({
+            user_id: user.id,
+            card_id: card.id,
+            description: template.description,
+            purchase_date: purchaseDate,
+            total_amount: split.amount,
+            installments_count: template.installments,
+            category_id:
+              template.splitCategoryIds?.[split.person || ""] ||
+              template.categoryId ||
+              null,
+            person: split.person,
+          } as any)
+          .select()
+          .single();
 
-      if (installmentError) throw installmentError;
+        if (purchaseError) throw purchaseError;
+
+        const installmentValue = Math.round((split.amount / template.installments) * 100) / 100;
+        const installments = Array.from({ length: template.installments }, (_, index) => {
+          const dueDate = new Date(
+            firstYear,
+            firstMonth + index,
+            clampDay(firstYear, firstMonth + index, due),
+          );
+
+          return {
+            user_id: user.id,
+            purchase_id: purchase.id,
+            card_id: card.id,
+            installment_number: index + 1,
+            amount:
+              index === template.installments - 1
+                ? +(split.amount - installmentValue * (template.installments - 1)).toFixed(2)
+                : installmentValue,
+            due_at: localISO(dueDate),
+            status: "pending",
+          };
+        });
+
+        const { error: installmentError } = await supabase
+          .from("cartao_parcelas")
+          .insert(installments as any);
+
+        if (installmentError) throw installmentError;
+      }
 
       const updated = templates.map((item) =>
         item.id === template.id
@@ -314,30 +387,149 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <Label>Pessoa</Label>
-                <PersonSelect value={form.person} onChange={(value) => setForm({ ...form, person: value })} />
+              {!isSplit && (
+                <div className="space-y-1.5">
+                  <Label>Pessoa</Label>
+                  <PersonSelect value={form.person} onChange={(value) => setForm({ ...form, person: value })} />
+                </div>
+              )}
+
+              <div className="space-y-1.5 sm:col-span-2">
+                <Button
+                  type="button"
+                  variant={isSplit ? "default" : "outline"}
+                  className="w-full justify-between"
+                  onClick={() =>
+                    setForm((current) => ({
+                      ...current,
+                      person: "",
+                      splitPeople: isSplit ? [] : current.splitPeople,
+                    }))
+                  }
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Dividir por pessoas
+                  </span>
+                  <span className="text-xs opacity-80">
+                    {isSplit ? `${form.splitPeople.length} selecionadas` : "Opcional"}
+                  </span>
+                </Button>
               </div>
 
-              <div className="space-y-1.5">
-                <Label>Categoria</Label>
-                <Select
-                  value={form.categoryId || "none"}
-                  onValueChange={(value) => setForm({ ...form, categoryId: value === "none" ? "" : value })}
-                >
-                  <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sem categoria</SelectItem>
-                    {cats
-                      .filter((category) => category.kind === "expense")
-                      .map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.icon ? `${category.icon} ` : ""}{category.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {isSplit && (
+                <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-3 sm:col-span-2">
+                  <PersonSelect
+                    multiSelect
+                    value=""
+                    selectedValues={form.splitPeople}
+                    onChange={(value) => {
+                      const next = value ? value.split(",").filter(Boolean) : [];
+                      setForm((current) => ({ ...current, splitPeople: next }));
+                    }}
+                  />
+
+                  {form.splitPeople.length >= 2 && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={!form.splitCustom ? "secondary" : "ghost"}
+                          onClick={() => setForm({ ...form, splitCustom: false })}
+                        >
+                          <Equal className="h-3.5 w-3.5" />
+                          Igual
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={form.splitCustom ? "secondary" : "ghost"}
+                          onClick={() => setForm({ ...form, splitCustom: true })}
+                        >
+                          <SlidersHorizontal className="h-3.5 w-3.5" />
+                          Personalizado
+                        </Button>
+                      </div>
+
+                      <div className="space-y-2">
+                        {form.splitPeople.map((person) => (
+                          <div key={person} className="grid gap-2 sm:grid-cols-2">
+                            {form.splitCustom && (
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                placeholder={`Valor de ${person}`}
+                                value={form.splitAmounts[person] ?? ""}
+                                onChange={(event) =>
+                                  setForm((current) => ({
+                                    ...current,
+                                    splitAmounts: {
+                                      ...current.splitAmounts,
+                                      [person]: event.target.value,
+                                    },
+                                  }))
+                                }
+                              />
+                            )}
+
+                            <Select
+                              value={form.splitCategoryIds[person] || "none"}
+                              onValueChange={(value) =>
+                                setForm((current) => ({
+                                  ...current,
+                                  splitCategoryIds: {
+                                    ...current.splitCategoryIds,
+                                    [person]: value === "none" ? "" : value,
+                                  },
+                                }))
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder={`Categoria de ${person}`} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Sem categoria · {person}</SelectItem>
+                                {cats
+                                  .filter((category) => category.kind === "expense")
+                                  .map((category) => (
+                                    <SelectItem key={category.id} value={category.id}>
+                                      {category.icon ? `${category.icon} ` : ""}
+                                      {category.name} · {person}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {!isSplit && (
+                <div className="space-y-1.5">
+                  <Label>Categoria</Label>
+                  <Select
+                    value={form.categoryId || "none"}
+                    onValueChange={(value) => setForm({ ...form, categoryId: value === "none" ? "" : value })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem categoria</SelectItem>
+                      {cats
+                        .filter((category) => category.kind === "expense")
+                        .map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.icon ? `${category.icon} ` : ""}{category.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <Button type="submit" disabled={!selectedCard}>
@@ -380,7 +572,11 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                       <div className="min-w-0 flex-1">
                         <div className="truncate font-medium">{template.description}</div>
                         <div className="text-xs text-muted-foreground">
-                          {card?.name || "Cartão removido"} · {template.person || "Sem pessoa"} · dia {template.purchaseDay}
+                          {card?.name || "Cartão removido"} ·{" "}
+                          {template.splitPeople?.length
+                            ? template.splitPeople.join(", ")
+                            : template.person || "Sem pessoa"}{" "}
+                          · dia {template.purchaseDay}
                         </div>
                         <div className="text-sm font-semibold">{brl(template.amount)}</div>
                         {confirmed && (
