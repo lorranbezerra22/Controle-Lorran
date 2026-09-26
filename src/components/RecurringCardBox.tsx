@@ -255,8 +255,17 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
       const closing = Number(card.closing_day) || 1;
       const due = Number(card.due_day) || 10;
 
-      if (purchaseDay >= closing) firstMonth += 1;
-      if (due < closing) firstMonth += 1;
+      // A fatura selecionada é a fatura de destino. Para cartões cujo
+      // vencimento ocorre antes do fechamento, a compra acontece no mês
+      // anterior para cair corretamente nessa fatura.
+      if (due < closing) {
+        const previousMonth = new Date(year, month - 2, 1);
+        firstYear = previousMonth.getFullYear();
+        firstMonth = previousMonth.getMonth();
+      }
+
+      // Compras feitas no fechamento ou depois entram na próxima fatura.
+      if (purchaseDay >= closing && due >= closing) firstMonth += 1;
 
       const splitPeople = template.splitPeople?.length
         ? template.splitPeople
@@ -755,13 +764,12 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
           <div className="space-y-3">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h3 className="font-semibold">Rascunhos pendentes</h3>
                 <p className="text-xs text-muted-foreground">
-                  Confirme os itens que devem entrar na fatura selecionada.
+                  Escolha a fatura de destino e confirme os itens que serão lançados nela.
                 </p>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Fatura de referência</Label>
+                <Label className="text-xs">Fatura que será lançada</Label>
                 <Input
                   type="month"
                   value={targetMonth}
