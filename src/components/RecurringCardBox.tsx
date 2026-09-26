@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, RefreshCw, Trash2, Equal, SlidersHorizontal, Users } from "lucide-react";
+import { Plus, RefreshCw, Trash2, Equal, SlidersHorizontal, Users, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { brl, fmtDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PersonSelect } from "@/components/person-select";
 import { BankIcon } from "@/components/BankIcon";
 import { toast } from "sonner";
@@ -71,7 +72,8 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
   const [templates, setTemplates] = useState<RecurringTemplate[]>([]);
   const [targetMonth, setTargetMonth] = useState(nextMonthISO);
   const [saving, setSaving] = useState(false);
-  const [formExpanded, setFormExpanded] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formExpanded, setFormExpanded] = useState(false);
   const [draftsExpanded, setDraftsExpanded] = useState(true);
   const [form, setForm] = useState({
     description: "",
@@ -145,7 +147,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
     }
 
     const next: RecurringTemplate = {
-      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+      id: editingId || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
       description: form.description.trim(),
       cardId: form.cardId,
       categoryId: form.categoryId,
@@ -159,13 +161,21 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
       installments: Number(form.installments),
       purchaseDay: Number(form.purchaseDay),
       active: true,
-      createdAt: new Date().toISOString(),
-      confirmedMonths: [],
+      createdAt: editingId
+        ? templates.find((template) => template.id === editingId)?.createdAt || new Date().toISOString()
+        : new Date().toISOString(),
+      confirmedMonths: editingId
+        ? templates.find((template) => template.id === editingId)?.confirmedMonths || []
+        : [],
     };
 
-    const updated = [...templates, next];
+    const updated = editingId
+      ? templates.map((template) => (template.id === editingId ? next : template))
+      : [...templates, next];
+
     writeTemplates(updated);
     setTemplates(updated);
+    setEditingId(null);
     setForm((current) => ({
       ...current,
       description: "",
@@ -180,7 +190,29 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
       brand: "",
       installments: 1,
     }));
-    toast.success("Lançamento recorrente salvo como rascunho.");
+    toast.success(editingId ? "Rascunho atualizado." : "Lançamento recorrente salvo como rascunho.");
+  };
+
+  const editTemplate = (template: RecurringTemplate) => {
+    setEditingId(template.id);
+    setForm({
+      description: template.description,
+      cardId: template.cardId,
+      categoryId: template.categoryId,
+      person: template.person || "",
+      splitMode: Boolean(template.splitPeople?.length),
+      splitPeople: template.splitPeople || [],
+      splitCustom: Boolean(template.splitCustom),
+      splitAmounts: Object.fromEntries(
+        Object.entries(template.splitAmounts || {}).map(([person, value]) => [person, String(value)]),
+      ),
+      splitCategoryIds: template.splitCategoryIds || {},
+      brand: template.brand || "",
+      amount: String(template.amount),
+      installments: template.installments,
+      purchaseDay: template.purchaseDay,
+    });
+    setFormExpanded(true);
   };
 
   const removeTemplate = (id: string) => {
@@ -336,7 +368,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
               >
                 <span className="inline-flex items-center gap-2 font-semibold">
                   <Plus className="h-4 w-4 text-primary" />
-                  Novo lançamento recorrente
+                  {editingId ? "Editar lançamento recorrente" : "Novo lançamento recorrente"}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {formExpanded ? "Fechar" : "Abrir"}
@@ -667,10 +699,24 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
               )}
             </div>
 
-            <Button type="submit" disabled={!selectedCard}>
-              <Plus className="h-4 w-4" />
-              Salvar como rascunho
-            </Button>
+            <div className="flex gap-2">
+              <Button type="submit" disabled={!selectedCard}>
+                {editingId ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                {editingId ? "Salvar alterações" : "Salvar como rascunho"}
+              </Button>
+              {editingId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setEditingId(null);
+                    setFormExpanded(false);
+                  }}
+                >
+                  Cancelar
+                </Button>
+              )}
+            </div>
               </form>
             </CollapsibleContent>
           </Collapsible>
@@ -746,6 +792,14 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                           onClick={() => confirmTemplate(template)}
                         >
                           {confirmed ? "Lançado" : "Confirmar"}
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          title="Editar rascunho"
+                          onClick={() => editTemplate(template)}
+                        >
+                          <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           size="icon"
