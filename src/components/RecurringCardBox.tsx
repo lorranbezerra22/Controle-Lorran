@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import { PersonSelect } from "@/components/person-select";
 import { BankIcon } from "@/components/BankIcon";
 import { toast } from "sonner";
@@ -559,6 +560,61 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                             </Select>
                           </div>
                         ))}
+
+                        {form.splitCustom && (() => {
+                          const total = Number(form.amount) || 0;
+                          const assigned = form.splitPeople.reduce(
+                            (sum, person) => sum + Number(form.splitAmounts[person] || 0),
+                            0,
+                          );
+                          const remaining = +(total - assigned).toFixed(2);
+                          const percentage = total > 0
+                            ? Math.min(100, Math.max(0, (assigned / total) * 100))
+                            : 0;
+                          const isComplete = total > 0 && Math.abs(remaining) < 0.01;
+                          const isOver = remaining < -0.01;
+
+                          return (
+                            <div className="space-y-2 rounded-lg border border-border/60 bg-background/60 p-3">
+                              <div className="flex items-center justify-between gap-3 text-xs">
+                                <span className="text-muted-foreground">
+                                  Distribuído: <strong className="text-foreground">{brl(assigned)}</strong>
+                                </span>
+                                <span
+                                  className={
+                                    isComplete
+                                      ? "font-semibold text-success"
+                                      : isOver
+                                        ? "font-semibold text-destructive"
+                                        : "font-semibold text-warning"
+                                  }
+                                >
+                                  {isComplete
+                                    ? "Valor completo"
+                                    : isOver
+                                      ? `Excedente: ${brl(Math.abs(remaining))}`
+                                      : `Restante: ${brl(remaining)}`}
+                                </span>
+                              </div>
+
+                              <Progress
+                                value={percentage}
+                                className={
+                                  isOver
+                                    ? "[&>div]:bg-destructive"
+                                    : isComplete
+                                      ? "[&>div]:bg-success"
+                                      : "[&>div]:bg-primary"
+                                }
+                              />
+
+                              <div className="flex justify-between text-[10px] text-muted-foreground">
+                                <span>{Math.round(percentage)}% distribuído</span>
+                                <span>Total: {brl(total)}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </>
                   )}
