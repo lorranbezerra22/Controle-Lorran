@@ -71,6 +71,8 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
   const [templates, setTemplates] = useState<RecurringTemplate[]>([]);
   const [targetMonth, setTargetMonth] = useState(nextMonthISO);
   const [saving, setSaving] = useState(false);
+  const [formExpanded, setFormExpanded] = useState(true);
+  const [draftsExpanded, setDraftsExpanded] = useState(true);
   const [form, setForm] = useState({
     description: "",
     cardId: cards[0]?.id ?? "",
@@ -325,11 +327,25 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
             escolha o mês e confirme cada item para criá-lo na fatura.
           </div>
 
-          <form onSubmit={addTemplate} className="space-y-3 rounded-xl border border-border p-4">
-            <div className="flex items-center gap-2 font-semibold">
-              <Plus className="h-4 w-4 text-primary" />
-              Novo lançamento recorrente
-            </div>
+          <Collapsible open={formExpanded} onOpenChange={setFormExpanded} className="space-y-3">
+            <CollapsibleTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-between rounded-xl border-border"
+              >
+                <span className="inline-flex items-center gap-2 font-semibold">
+                  <Plus className="h-4 w-4 text-primary" />
+                  Novo lançamento recorrente
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {formExpanded ? "Fechar" : "Abrir"}
+                </span>
+              </Button>
+            </CollapsibleTrigger>
+
+            <CollapsibleContent>
+              <form onSubmit={addTemplate} className="space-y-3 rounded-xl border border-border p-4">
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
@@ -561,12 +577,16 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                           </div>
                         ))}
 
-                        {form.splitCustom && (() => {
+                        {(() => {
                           const total = Number(form.amount) || 0;
-                          const assigned = form.splitPeople.reduce(
-                            (sum, person) => sum + Number(form.splitAmounts[person] || 0),
-                            0,
-                          );
+                          const assigned = form.splitCustom
+                            ? form.splitPeople.reduce(
+                                (sum, person) => sum + Number(form.splitAmounts[person] || 0),
+                                0,
+                              )
+                            : form.splitPeople.length >= 2
+                              ? total
+                              : 0;
                           const remaining = +(total - assigned).toFixed(2);
                           const percentage = total > 0
                             ? Math.min(100, Math.max(0, (assigned / total) * 100))
@@ -579,6 +599,9 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                               <div className="flex items-center justify-between gap-3 text-xs">
                                 <span className="text-muted-foreground">
                                   Distribuído: <strong className="text-foreground">{brl(assigned)}</strong>
+                                </span>
+                                <span className="font-semibold text-warning">
+                                  Valor restante: {brl(Math.max(0, remaining))}
                                 </span>
                                 <span
                                   className={
@@ -648,8 +671,25 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
               <Plus className="h-4 w-4" />
               Salvar como rascunho
             </Button>
-          </form>
+              </form>
+            </CollapsibleContent>
+          </Collapsible>
 
+          <Collapsible open={draftsExpanded} onOpenChange={setDraftsExpanded} className="space-y-3">
+            <CollapsibleTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-between rounded-xl border-border"
+              >
+                <span className="font-semibold">Rascunhos pendentes</span>
+                <span className="text-xs text-muted-foreground">
+                  {draftsExpanded ? "Fechar" : "Abrir"}
+                </span>
+              </Button>
+            </CollapsibleTrigger>
+
+            <CollapsibleContent className="space-y-3">
           <div className="space-y-3">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
@@ -722,6 +762,8 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
               </div>
             )}
           </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       </DialogContent>
     </Dialog>
