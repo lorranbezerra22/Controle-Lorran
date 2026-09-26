@@ -8,7 +8,7 @@ export function ProtectedShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !session) navigate({ to: "/login" });
+    if (!loading && !session) navigate({ to: "/login", search: { next: "" } });
   }, [loading, session, navigate]);
 
   if (loading || !session) {
