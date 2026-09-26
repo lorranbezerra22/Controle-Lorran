@@ -780,55 +780,143 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                 {activeTemplates.map((template) => {
                   const card = cards.find((item) => item.id === template.cardId);
                   const confirmed = template.confirmedMonths.includes(targetMonth);
+                  const people = template.splitPeople?.length
+                    ? template.splitPeople
+                    : [template.person || "Sem pessoa"];
 
                   return (
-                    <div key={template.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium">{template.description}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {card?.name || "Cartão removido"} ·{" "}
-                          {template.splitPeople?.length
-                            ? template.splitPeople.join(", ")
-                            : template.person || "Sem pessoa"}{" "}
-                          · dia {template.purchaseDay}
+                    <Collapsible
+                      key={template.id}
+                      className="rounded-xl border border-border bg-background/40"
+                    >
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="h-auto w-full justify-between gap-3 rounded-xl p-3 text-left hover:bg-muted/40"
+                        >
+                          <span className="flex min-w-0 items-center gap-3">
+                            {template.confirmedMonths.includes(targetMonth) ? (
+                              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            )}
+
+                            <span className="min-w-0">
+                              <span className="block truncate font-medium">
+                                {template.description}
+                              </span>
+                              <span className="block truncate text-xs text-muted-foreground">
+                                {card?.name || "Cartão removido"} · {people.join(", ")} · dia{" "}
+                                {template.purchaseDay}
+                              </span>
+                              <span className="block text-sm font-semibold">
+                                {brl(template.amount)}
+                              </span>
+                            </span>
+                          </span>
+
+                          {confirmed && (
+                            <span className="shrink-0 text-xs font-medium text-success">
+                              Lançado
+                            </span>
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+
+                      <CollapsibleContent className="border-t border-border/60 px-3 pb-3">
+                        <div className="grid gap-2 pt-3 text-xs sm:grid-cols-2">
+                          <div className="rounded-lg border border-border/60 bg-muted/20 p-2.5">
+                            <span className="block text-muted-foreground">Cartão</span>
+                            <span className="font-medium">{card?.name || "Cartão removido"}</span>
+                          </div>
+
+                          <div className="rounded-lg border border-border/60 bg-muted/20 p-2.5">
+                            <span className="block text-muted-foreground">Bandeira</span>
+                            <span className="font-medium">{template.brand || "Não informada"}</span>
+                          </div>
+
+                          <div className="rounded-lg border border-border/60 bg-muted/20 p-2.5">
+                            <span className="block text-muted-foreground">Parcelas</span>
+                            <span className="font-medium">
+                              {template.installments}x de{" "}
+                              {brl(template.amount / template.installments)}
+                            </span>
+                          </div>
+
+                          <div className="rounded-lg border border-border/60 bg-muted/20 p-2.5">
+                            <span className="block text-muted-foreground">Dia da compra</span>
+                            <span className="font-medium">Dia {template.purchaseDay}</span>
+                          </div>
+
+                          <div className="rounded-lg border border-border/60 bg-muted/20 p-2.5 sm:col-span-2">
+                            <span className="block text-muted-foreground">Pessoas e categorias</span>
+                            <div className="mt-1 space-y-1">
+                              {people.map((person) => {
+                                const categoryId =
+                                  template.splitCategoryIds?.[person] || template.categoryId;
+                                const category = cats.find((item) => item.id === categoryId);
+                                const splitAmount = template.splitCustom
+                                  ? template.splitAmounts?.[person]
+                                  : undefined;
+
+                                return (
+                                  <div
+                                    key={person}
+                                    className="flex flex-wrap items-center justify-between gap-2"
+                                  >
+                                    <span className="font-medium">{person}</span>
+                                    <span className="text-muted-foreground">
+                                      {category
+                                        ? `${category.icon ? `${category.icon} ` : ""}${category.name}`
+                                        : "Sem categoria"}
+                                      {splitAmount !== undefined &&
+                                        ` · ${brl(Number(splitAmount))}`}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-sm font-semibold">{brl(template.amount)}</div>
+
                         {confirmed && (
-                          <div className="text-xs text-success">
+                          <div className="pt-3 text-xs text-success">
                             Confirmado para {fmtDate(`${targetMonth}-01`).slice(3)}
                           </div>
                         )}
-                      </div>
 
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant={confirmed ? "secondary" : "default"}
-                          disabled={confirmed || saving || !card}
-                          onClick={() => confirmTemplate(template)}
-                        >
-                          {confirmed ? "Lançado" : "Confirmar"}
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          title="Editar rascunho"
-                          aria-label="Editar rascunho"
-                          onClick={() => editTemplate(template)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          title="Excluir rascunho"
-                          aria-label="Excluir rascunho"
-                          onClick={() => removeTemplate(template.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
+                        <div className="flex flex-wrap items-center justify-end gap-2 pt-3">
+                          <Button
+                            size="sm"
+                            variant={confirmed ? "secondary" : "default"}
+                            disabled={confirmed || saving || !card}
+                            onClick={() => confirmTemplate(template)}
+                          >
+                            {confirmed ? "Lançado" : "Confirmar"}
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => editTemplate(template)}
+                          >
+                            <Pencil className="mr-1.5 h-4 w-4" />
+                            Editar
+                          </Button>
+
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="Excluir rascunho"
+                            aria-label="Excluir rascunho"
+                            onClick={() => removeTemplate(template.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
                   );
                 })}
               </div>
