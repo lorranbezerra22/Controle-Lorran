@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
-import { Bell } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Bell, ExternalLink, RefreshCw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { brl, fmtDate } from "@/lib/format";
+import { getRecurringAlerts } from "@/lib/recurring-alerts";
 
 interface NotificationBellProps {
   transactions: any[];
@@ -18,8 +20,23 @@ function ymd(d: Date) {
 
 export function NotificationBell({ transactions, installments, cards }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
+  const [recurringVersion, setRecurringVersion] = useState(0);
 
-  const { overdueTx, overdueInst, cardAlerts, total } = useMemo(() => {
+  useEffect(() => {
+    const refresh = () => setRecurringVersion((version) => version + 1);
+    window.addEventListener("recurring-templates-changed", refresh);
+    window.addEventListener("storage", refresh);
+
+    const interval = window.setInterval(refresh, 60_000);
+
+    return () => {
+      window.removeEventListener("recurring-templates-changed", refresh);
+      window.removeEventListener("storage", refresh);
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  const { overdueTx, overdueInst, cardAlerts, recurringAlerts, total } = useMemo(() => {
     const now = new Date();
     const today = ymd(now);
     const y = now.getFullYear();
@@ -50,9 +67,15 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
       })
       .filter(Boolean) as { card: any; dueDate: Date; diff: number }[];
 
-    const total = overdueTx.length + overdueInst.length + cardAlerts.length;
-    return { overdueTx, overdueInst, cardAlerts, total };
-  }, [transactions, installments, cards]);
+    const recurringAlerts = getRecurringAlerts();
+    const total =
+      overdueTx.length +
+      overdueInst.length +
+      cardAlerts.length +
+      recurringAlerts.length;
+
+    return { overdueTx, overdueInst, cardAlerts, recurringAlerts, total };
+  }, [transactions, installments, cards, recurringVersion]);
 
   return (
     <>
@@ -80,9 +103,57 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
           </DialogHeader>
 
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+            {recurringAlerts.length > 0 && (
+              <section>
+                <h4 className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2 font-medium">
+                  Lançamentos recorrentes próximos
+                </h4>
+
+                <ul className="space-y-2">
+                  {recurringAlerts.map(({ template, occurrenceDate, daysUntil }) => (
+                    <li
+                      key={template.id}
+                      className="rounded-xl border border-warning/30 bg-warning/5 px-3 py-2.5"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate">
+                            {template.description}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Dia programado: {fmtDate(occurrenceDate)}
+                          </div>
+                        </div>
+
+                        <span className="shrink-0 text-[11px] rounded-full bg-warning/15 px-2 py-1 font-medium text-warning">
+                          {daysUntil === 0
+                            ? "Hoje"
+                            : `Em ${daysUntil}d`}
+                        </span>
+                      </div>
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="mt-2 w-full"
+                        onClick={() => {
+                          setOpen(false);
+                          window.location.assign("/cartoes");
+                        }}
+                      >
+                        <ExternalLink className="mr-1.5 h-4 w-4" />
+                        Abrir recorrentes
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
             {total === 0 && (
               <div className="text-sm text-muted-foreground text-center py-8">
-                Nenhuma pendência vencida no mês. 🎉
+                Nenhuma pendência ou lançamento recorrente próximo. 🎉
               </div>
             )}
 

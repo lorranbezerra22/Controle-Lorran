@@ -26,6 +26,7 @@ import { motion } from "framer-motion";
 import { CountUp } from "@/components/CountUp";
 import { PageHeader } from "@/components/PageHeader";
 import { RecurringCardBox } from "@/components/RecurringCardBox";
+import { NotificationBell } from "@/components/NotificationBell";
 
 
 const todayLocalISO = () => {
@@ -531,6 +532,12 @@ function CartoesPage() {
               onCreated={() => {
                 invalidate("installments");
               }}
+            />
+
+            <NotificationBell
+              transactions={allTransactions}
+              installments={inst}
+              cards={cards}
             />
 
             <Dialog open={newCardOpen} onOpenChange={setNewCardOpen}>

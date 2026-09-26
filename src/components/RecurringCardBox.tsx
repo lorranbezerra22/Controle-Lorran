@@ -22,6 +22,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { PersonSelect } from "@/components/person-select";
 import { BankIcon } from "@/components/BankIcon";
 import { toast } from "sonner";
+import { getRecurringAlerts } from "@/lib/recurring-alerts";
 
 type RecurringTemplate = {
   id: string;
@@ -75,6 +76,7 @@ function readTemplates(): RecurringTemplate[] {
 
 function writeTemplates(templates: RecurringTemplate[]) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
+  window.dispatchEvent(new Event("recurring-templates-changed"));
 }
 
 export function RecurringCardBox({ cards, cats, onCreated }: Props) {
@@ -115,6 +117,8 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
     () => templates.filter((template) => template.active),
     [templates],
   );
+
+  const recurringAlerts = useMemo(() => getRecurringAlerts(templates), [templates]);
 
   const selectedCard = cards.find((card) => card.id === form.cardId);
   const isSplit = form.splitMode && form.splitPeople.length >= 2;
@@ -473,9 +477,26 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
 
         <div className="space-y-5">
           <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
-            Salve aqui os lançamentos mensais como rascunho. Quando a próxima fatura estiver disponível,
-            escolha o mês e confirme cada item para criá-lo na fatura.
+            Salve aqui os lançamentos mensais como rascunho. Quando chegar perto do dia programado,
+            o sino exibirá um lembrete para você confirmar o lançamento na fatura.
           </div>
+
+          {recurringAlerts.length > 0 && (
+            <div className="rounded-xl border border-warning/30 bg-warning/5 p-3 text-sm">
+              <div className="font-semibold text-warning">Próximos lançamentos</div>
+              <div className="mt-1 space-y-1 text-muted-foreground">
+                {recurringAlerts.map(({ template, daysUntil }) => (
+                  <div key={template.id}>
+                    <strong className="text-foreground">{template.description}</strong>{" "}
+                    {daysUntil === 0
+                      ? "deve ser lançado hoje"
+                      : `deve ser lançado em ${daysUntil} dia${daysUntil === 1 ? "" : "s"}`}
+                    .
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <Collapsible open={formExpanded} onOpenChange={setFormExpanded} className="space-y-3">
             <CollapsibleTrigger asChild>
