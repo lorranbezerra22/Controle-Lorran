@@ -231,6 +231,105 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
     setTemplates(updated);
   };
 
+  const removeConfirmedLaunch = async (template: RecurringTemplate) => {
+    if (!template.confirmedMonths.includes(targetMonth)) return;
+
+    const card = cards.find((item) => item.id === template.cardId);
+    if (!card) {
+      toast.error("O cartão deste lançamento não está disponível.");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Remover "${template.description}" da fatura de ${fmtDate(`${targetMonth}-01`).slice(3)}?`,
+      )
+    ) {
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado.");
+
+      const [year, month] = targetMonth.split("-").map(Number);
+      const purchaseDay = clampDay(year, month - 1, template.purchaseDay);
+      const purchaseDate = `${targetMonth}-${String(purchaseDay).padStart(2, "0")}`;
+
+      const { data: purchases, error: purchaseError } = await supabase
+        .from("cartao_compras")
+        .select("id, person, total_amount")
+        .eq("user_id", user.id)
+        .eq("card_id", card.id)
+        .eq("description", template.description)
+        .eq("purchase_date", purchaseDate);
+
+      if (purchaseError) throw purchaseError;
+
+      const expectedPeople = template.splitPeople?.length
+        ? template.splitPeople
+        : [template.person || null];
+
+      const matchingPurchases = (purchases || []).filter((purchase: any) => {
+        const personMatches = expectedPeople.some(
+          (person) => (purchase.person || null) === person,
+        );
+
+        if (!personMatches) return false;
+
+        if (template.splitCustom) {
+          return expectedPeople.some(
+            (person) =>
+              (purchase.person || null) === person &&
+              Math.abs(
+                Number(purchase.total_amount || 0) -
+                  Number(template.splitAmounts?.[person] || 0),
+              ) < 0.01,
+          );
+        }
+
+        return true;
+      });
+
+      if (matchingPurchases.length === 0) {
+        throw new Error(
+          "O lançamento não foi encontrado na fatura. Ele pode já ter sido removido manualmente.",
+        );
+      }
+
+      for (const purchase of matchingPurchases) {
+        const { error } = await supabase
+          .from("cartao_compras")
+          .delete()
+          .eq("id", purchase.id);
+
+        if (error) throw error;
+      }
+
+      const updated = templates.map((item) =>
+        item.id === template.id
+          ? {
+              ...item,
+              confirmedMonths: item.confirmedMonths.filter(
+                (monthValue) => monthValue !== targetMonth,
+              ),
+            }
+          : item,
+      );
+
+      writeTemplates(updated);
+      setTemplates(updated);
+      onCreated();
+      toast.success(`"${template.description}" removido da fatura.`);
+    } catch (error: any) {
+      toast.error(error.message || "Não foi possível remover o lançamento.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const confirmTemplate = async (template: RecurringTemplate) => {
     if (template.confirmedMonths.includes(targetMonth)) {
       toast.error("Esse lançamento já foi confirmado para este mês.");
@@ -895,14 +994,26 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                         )}
 
                         <div className="flex flex-wrap items-center justify-end gap-2 pt-3">
-                          <Button
-                            size="sm"
-                            variant={confirmed ? "secondary" : "default"}
-                            disabled={confirmed || saving || !card}
-                            onClick={() => confirmTemplate(template)}
-                          >
-                            {confirmed ? "Lançado" : "Confirmar"}
-                          </Button>
+                          {!confirmed ? (
+                            <Button
+                              size="sm"
+                              variant="default"
+                              disabled={saving || !card}
+                              onClick={() => confirmTemplate(template)}
+                            >
+                              Confirmar
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={saving || !card}
+                              onClick={() => removeConfirmedLaunch(template)}
+                            >
+                              <Trash2 className="mr-1.5 h-4 w-4" />
+                              Remover lançamento
+                            </Button>
+                          )}
 
                           <Button
                             size="sm"
