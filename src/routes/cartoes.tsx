@@ -2917,96 +2917,235 @@ function RemovePaymentForm({ installment, allTransactions, onDone, transactionId
     }
   };
 
+  const selectedTransaction = relatedTrans.find(
+    (transaction: any) => transaction.id === selectedTransactionId,
+  );
+
   return (
-    <form onSubmit={handleAction} className="space-y-4">
-      <div className="flex justify-between items-center mb-2">
-        <Label>Histórico de lançamentos</Label>
+    <form onSubmit={handleAction} className="space-y-5">
+      <div className="rounded-xl border border-border bg-muted/20 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <Receipt className="h-4 w-4 shrink-0 text-primary" />
+              <h3 className="font-semibold text-foreground">
+                Histórico de pagamentos
+              </h3>
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Selecione um lançamento para ajustar o valor ou removê-lo
+              definitivamente desta antecipação.
+            </p>
+          </div>
+
+          {!transactionIdToEdit && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() => {
+                onDone();
+                setTimeout(() => {
+                  window.dispatchEvent(
+                    new CustomEvent("open-partial-pay", { detail: installment }),
+                  );
+                }, 100);
+              }}
+            >
+              <Plus className="mr-1.5 h-4 w-4" />
+              Novo
+            </Button>
+          )}
+        </div>
+
         {!transactionIdToEdit && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-7 text-[10px]"
-            onClick={() => {
-              onDone();
-              setTimeout(() => {
-                window.dispatchEvent(new CustomEvent('open-partial-pay', { detail: installment }));
-              }, 100);
-            }}
-          >
-            + Novo Pagamento
-          </Button>
+          <div className="mt-4 space-y-2">
+            <Label className="text-xs text-muted-foreground">
+              Pagamento selecionado
+            </Label>
+            <Select
+              value={selectedTransactionId}
+              onValueChange={(value) => {
+                setSelectedTransactionId(value);
+                const transaction = relatedTrans.find(
+                  (item: any) => item.id === value,
+                );
+
+                if (transaction) {
+                  setEditAmount(String(transaction.amount));
+                  setEditNotes(transaction.notes || "");
+                }
+              }}
+            >
+              <SelectTrigger className="h-11">
+                <SelectValue placeholder="Escolha um lançamento" />
+              </SelectTrigger>
+              <SelectContent>
+                {relatedTrans.map((transaction: any) => (
+                  <SelectItem key={transaction.id} value={transaction.id}>
+                    {brl(transaction.amount)} ·{" "}
+                    {fmtDate(transaction.posted_at || transaction.created_at)}
+                    {" · "}
+                    {transaction.notes || "Sem observação"}
+                  </SelectItem>
+                ))}
+                {relatedTrans.length === 0 && (
+                  <div className="p-3 text-center text-xs italic text-muted-foreground">
+                    Nenhum lançamento encontrado. Use “Novo” para registrar um
+                    pagamento.
+                  </div>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
         )}
       </div>
 
-      {!transactionIdToEdit && (
-        <div className="space-y-1.5">
-          <Select value={selectedTransactionId} onValueChange={(v) => {
-            setSelectedTransactionId(v);
-            const t = relatedTrans.find(x => x.id === v);
-            if (t) {
-              setEditAmount(String(t.amount));
-              setEditNotes(t.notes || "");
-            }
-          }}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o pagamento para editar/remover" />
-            </SelectTrigger>
-            <SelectContent>
-              {relatedTrans.map((t: any) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {brl(t.amount)} - {t.notes || "Sem observação"} - {fmtDate(t.posted_at || t.created_at)}
-                </SelectItem>
-              ))}
-              {relatedTrans.length === 0 && (
-                <div className="p-2 text-center text-xs text-muted-foreground italic">
-                  Nenhum lançamento vinculado encontrado. Use "Novo Pagamento".
-                </div>
-              )}
-            </SelectContent>
-          </Select>
-        </div>
+      {selectedTransactionId && selectedTransaction && (
+        <>
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="block text-xs text-muted-foreground">
+                  Valor atual
+                </span>
+                <strong className="mt-1 block text-lg text-success">
+                  {brl(selectedTransaction.amount)}
+                </strong>
+              </div>
+              <div>
+                <span className="block text-xs text-muted-foreground">
+                  Data do lançamento
+                </span>
+                <strong className="mt-1 block">
+                  {fmtDate(
+                    selectedTransaction.posted_at ||
+                      selectedTransaction.created_at,
+                  )}
+                </strong>
+              </div>
+            </div>
+
+            <div className="mt-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+              <span>Pagador: </span>
+              <strong className="text-foreground">
+                {selectedTransaction.person ||
+                  installment.cartao_compras?.person ||
+                  "Não informado"}
+              </strong>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+              O que deseja fazer?
+            </Label>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditing(false);
+                  setIsRemoving(true);
+                }}
+                className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
+                  isRemoving
+                    ? "border-destructive/50 bg-destructive/10 text-destructive"
+                    : "border-border bg-muted/20 text-muted-foreground hover:bg-muted/40"
+                }`}
+              >
+                <Trash2 className="h-4 w-4 shrink-0" />
+                <span>
+                  <strong className="block text-sm">Remover</strong>
+                  <span className="block text-[11px] opacity-80">
+                    Excluir este pagamento
+                  </span>
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRemoving(false);
+                  setIsEditing(true);
+                }}
+                className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
+                  isEditing
+                    ? "border-primary/50 bg-primary/10 text-primary"
+                    : "border-border bg-muted/20 text-muted-foreground hover:bg-muted/40"
+                }`}
+              >
+                <Pencil className="h-4 w-4 shrink-0" />
+                <span>
+                  <strong className="block text-sm">Editar</strong>
+                  <span className="block text-[11px] opacity-80">
+                    Ajustar valor ou observação
+                  </span>
+                </span>
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
-      {selectedTransactionId && (
-        <div className="flex items-center gap-4 py-2 border-y border-border/50">
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="radio"
-              name={`action-${installment.id}`}
-              checked={isRemoving}
-              onChange={() => { setIsRemoving(true); setIsEditing(false); }}
-            />
-            Remover
-          </label>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="radio"
-              name={`action-${installment.id}`}
-              checked={isEditing}
-              onChange={() => { setIsEditing(true); setIsRemoving(false); }}
-            />
-            Editar
-          </label>
+      {isRemoving && selectedTransactionId && (
+        <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+          <p className="text-muted-foreground">
+            O pagamento será excluído do histórico e o valor pago da parcela
+            será recalculado automaticamente.
+          </p>
         </div>
       )}
 
       {isEditing && selectedTransactionId && (
-        <div className="space-y-3 pt-2">
-          <div className="space-y-1.5">
-            <Label>Novo Valor</Label>
-            <Input type="number" step="0.01" value={editAmount} onChange={e => setEditAmount(e.target.value)} required />
+        <div className="space-y-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+            <Pencil className="h-4 w-4" />
+            Editar informações do pagamento
           </div>
+
           <div className="space-y-1.5">
-            <Label>Nova Observação</Label>
-            <Input value={editNotes} onChange={e => setEditNotes(e.target.value)} />
+            <Label>Novo valor</Label>
+            <Input
+              type="number"
+              step="0.01"
+              value={editAmount}
+              onChange={(event) => setEditAmount(event.target.value)}
+              required
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Observação</Label>
+            <Input
+              value={editNotes}
+              onChange={(event) => setEditNotes(event.target.value)}
+              placeholder="Ex.: Pagamento da parcela do mês"
+            />
           </div>
         </div>
       )}
 
-      <Button type="submit" variant={isEditing ? "default" : "destructive"} className="w-full" disabled={saving || !selectedTransactionId || (!isEditing && !isRemoving)}>
-        {saving ? "Processando..." : (isEditing ? "Salvar alterações" : "Confirmar remoção")}
-      </Button>
+      <div className="flex gap-2 pt-1">
+        <Button
+          type="submit"
+          variant={isRemoving ? "destructive" : "default"}
+          className="w-full"
+          disabled={
+            saving ||
+            !selectedTransactionId ||
+            (!isEditing && !isRemoving)
+          }
+        >
+          {saving
+            ? "Processando..."
+            : isRemoving
+              ? "Excluir pagamento"
+              : "Salvar alterações"}
+        </Button>
+      </div>
     </form>
   );
 }
