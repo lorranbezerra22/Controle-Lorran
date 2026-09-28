@@ -918,9 +918,10 @@ function CartoesPage() {
             <Button
               size="sm"
               variant="outline"
-              disabled={monthInst.length === 0 || monthInst.every((i: any) => i.status === "paid")}
+              disabled={monthInst.length === 0 || monthInst.every((i: any) => i.status === "paid" || Number(i.amount) < 0)}
               onClick={async () => {
-                const pending = monthInst.filter((i: any) => i.status !== "paid");
+                // Estornos (valores negativos) abatem a fatura automaticamente — nunca entram no pagamento em lote.
+                const pending = monthInst.filter((i: any) => i.status !== "paid" && Number(i.amount) >= 0);
                 if (pending.length === 0) return;
 
                 if (!confirm(`Pagar todas as ${pending.length} parcelas deste mês? Isso irá abater o saldo total das suas contas.`)) return;
@@ -1219,22 +1220,28 @@ function CartoesPage() {
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          className="flex-1"
-                          disabled={!canPay}
-                          onClick={() => {
-                            setShowProgressInfo(null);
-                            setPartialPayOpen({
-                              ...showProgressInfo,
-                              _anticipateAmount: remaining,
-                            });
-                          }}
-                        >
-                          {isEstornoInfo ? <Undo2 className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
-                          {isEstornoInfo ? "Confirmar estorno" : "Pagamento"}
-                        </Button>
-                      </div>
+                      {isEstornoInfo ? (
+                        <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                          Este estorno abate o valor da fatura automaticamente. Não é necessário confirmar pagamento.
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            className="flex-1"
+                            disabled={!canPay}
+                            onClick={() => {
+                              setShowProgressInfo(null);
+                              setPartialPayOpen({
+                                ...showProgressInfo,
+                                _anticipateAmount: remaining,
+                              });
+                            }}
+                          >
+                            <Clock className="h-4 w-4" />
+                            Pagamento
+                          </Button>
+                        </div>
+                      )}
                     </>
                   );
                 })()}
