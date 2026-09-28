@@ -964,7 +964,7 @@ function CartoesPage() {
       <Dialog open={!!partialPayOpen} onOpenChange={(o) => !o && setPartialPayOpen(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Antecipar Pagamento</DialogTitle>
+            <DialogTitle>Pagamento</DialogTitle>
           </DialogHeader>
           {partialPayOpen && (
             <AnticipatePayForm
@@ -1107,19 +1107,7 @@ function CartoesPage() {
                           }}
                         >
                           <Clock className="h-4 w-4" />
-                          Antecipar restante
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          className="flex-1"
-                          onClick={() => {
-                            setShowProgressInfo(null);
-                            setRemovePaymentOpen(showProgressInfo);
-                          }}
-                        >
-                          <Pencil className="h-4 w-4" />
-                          Editar pagamentos
+                          Pagamento
                         </Button>
                       </div>
                     </>
@@ -1997,7 +1985,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }) => void, onDone: () => void, initialAmount?: number }) {
-  const [payMode, setPayMode] = useState<"total" | "anticipate" | null>(null);
+  const [payMode, setPayMode] = useState<"total" | "anticipate" | null>(
+    initialAmount !== undefined ? "anticipate" : null,
+  );
   const currentRemaining = Math.max(
     0,
     Number(installment.amount || 0) - Number(installment.paid_amount || 0),
@@ -2299,7 +2289,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
               className="h-12 text-sm font-semibold rounded-xl"
               onClick={() => setPayMode("anticipate")}
             >
-              Antecipar Pagamento
+              Pagar restante
             </Button>
           </div>
         </div>
