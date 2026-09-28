@@ -879,7 +879,6 @@ function CartoesPage() {
                         <div className="mt-1 w-24">
                           <div className="flex justify-between text-[10px] mb-0.5 text-muted-foreground">
                             <span>{Math.round(pct)}% pago</span>
-                            <span className="text-[9px]">Use o relógio para alterar</span>
                           </div>
                           <div className="h-1 bg-muted rounded-full overflow-hidden">
                             <div className="h-full bg-success transition-all" style={{ width: `${pct}%` }} />
@@ -910,13 +909,7 @@ function CartoesPage() {
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => {
-                          if (i.status === "paid" || isPartial) {
-                            setRemovePaymentOpen(i);
-                          } else {
-                            setPartialPayOpen(i);
-                          }
-                        }}
+                        onClick={() => setShowProgressInfo(i)}
                         onContextMenu={(e) => {
                           e.preventDefault();
                           if (isPartial || i.status === "paid") setEditPaidOpen(i);
@@ -976,6 +969,7 @@ function CartoesPage() {
           {partialPayOpen && (
             <AnticipatePayForm
               installment={partialPayOpen}
+              initialAmount={partialPayOpen?._anticipateAmount}
               onFullPay={(notes, paidBy, accountsOverride) => { togglePaid(partialPayOpen, notes, paidBy, accountsOverride); setPartialPayOpen(null); }}
               onDone={() => { setPartialPayOpen(null); invalidate("installments"); invalidate("accounts"); invalidate("transactions"); }}
             />
@@ -1051,24 +1045,91 @@ function CartoesPage() {
 
             return (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-lg bg-muted/50 border border-border">
-                    <div className="text-[10px] uppercase text-muted-foreground mb-1">Valor Total</div>
-                    <div className="font-bold">{brl(Number(showProgressInfo.amount))}</div>
-                  </div>
-                  <div className="p-3 rounded-lg bg-success/10 border border-success/20">
-                    <div className="text-[10px] uppercase text-success/70 mb-1">Total Pago</div>
-                    <div className="font-bold text-success">{brl(Number(showProgressInfo.paid_amount || 0))}</div>
-                  </div>
-                </div>
+                {(() => {
+                  const total = Number(showProgressInfo.amount || 0);
+                  const paid = Math.min(total, Math.max(0, Number(showProgressInfo.paid_amount || 0)));
+                  const remaining = Math.max(0, Number((total - paid).toFixed(2)));
+                  const progress = total > 0 ? Math.min(100, (paid / total) * 100) : 0;
 
-                <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
-                  <div className="text-[10px] uppercase text-warning/70 mb-1">Falta Pagar</div>
-                  <div className="font-bold text-warning">{brl(Number(showProgressInfo.amount) - Number(showProgressInfo.paid_amount || 0))}</div>
-                </div>
+                  return (
+                    <>
+                      <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+                        <div>
+                          <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                            Lançamento
+                          </div>
+                          <div className="mt-1 font-semibold">
+                            {showProgressInfo.cartao_compras?.description || "Pagamento do cartão"}
+                          </div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            Parcela {showProgressInfo.installment_number}/
+                            {showProgressInfo.cartao_compras?.installments_count || 1}
+                            {" · "}
+                            {showProgressInfo.cartao_compras?.person || "Sem pessoa"}
+                          </div>
+                        </div>
+
+                        <div className="h-2 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full bg-success transition-all"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div>
+                            <span className="block text-muted-foreground">Valor</span>
+                            <strong>{brl(total)}</strong>
+                          </div>
+                          <div>
+                            <span className="block text-muted-foreground">Já pago</span>
+                            <strong className="text-success">{brl(paid)}</strong>
+                          </div>
+                          <div>
+                            <span className="block text-muted-foreground">Falta</span>
+                            <strong className={remaining > 0.01 ? "text-warning" : "text-success"}>
+                              {brl(remaining)}
+                            </strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          className="flex-1"
+                          disabled={remaining <= 0.01}
+                          onClick={() => {
+                            setShowProgressInfo(null);
+                            setPartialPayOpen({
+                              ...showProgressInfo,
+                              _anticipateAmount: remaining,
+                            });
+                          }}
+                        >
+                          <Clock className="h-4 w-4" />
+                          Antecipar restante
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => {
+                            setShowProgressInfo(null);
+                            setRemovePaymentOpen(showProgressInfo);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                          Editar pagamentos
+                        </Button>
+                      </div>
+                    </>
+                  );
+                })()}
 
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground uppercase">Linha do tempo</Label>
+                  <Label className="text-xs text-muted-foreground uppercase">
+                    Quem pagou o quê
+                  </Label>
                   <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
                     {relatedTrans.length === 0 ? (
                       <div className="text-sm text-muted-foreground italic p-4 text-center bg-muted/30 rounded-lg">
@@ -1076,9 +1137,14 @@ function CartoesPage() {
                       </div>
                     ) : (
                       relatedTrans.map((t: any) => (
-                        <div key={t.id} className="p-3 rounded-lg border border-border bg-card space-y-1 relative group">
-                          <div className="flex justify-between items-start">
-                            <span className="font-semibold text-success">{brl(t.amount)}</span>
+                        <div key={t.id} className="p-3 rounded-lg border border-border bg-card space-y-2 relative group">
+                          <div className="flex justify-between items-start gap-3">
+                            <div>
+                              <span className="font-semibold text-success">{brl(t.amount)}</span>
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                pago por {t.person || showProgressInfo.cartao_compras?.person || "Sem pessoa"}
+                              </span>
+                            </div>
                             <div className="flex items-center gap-1">
                               <span className="text-[10px] text-muted-foreground">{fmtDate(t.posted_at || t.created_at)}</span>
                               <Button
@@ -1930,9 +1996,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }) => void, onDone: () => void }) {
+function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }) => void, onDone: () => void, initialAmount?: number }) {
   const [payMode, setPayMode] = useState<"total" | "anticipate" | null>(null);
-  const [payAmount, setPayAmount] = useState("");
+  const [payAmount, setPayAmount] = useState(
+    initialAmount !== undefined ? String(initialAmount.toFixed(2)) : "",
+  );
   const [notes, setNotes] = useState("");
   const [paidBy, setPaidBy] = useState<string>(installment.cartao_compras?.person || "");
   const [allowAboveQuota, setAllowAboveQuota] = useState(false);
