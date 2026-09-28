@@ -1978,12 +1978,22 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
     const currentPart = (installment.participacoes || []).find((p: any) => normalizeName(p.person) === normalizeName(costPerson));
     const alreadyPaid = Number(currentPart?.amount || 0);
     const totalRemaining = Math.max(0, Number(installment.amount) - Number(installment.paid_amount || 0));
+    // Para Família, cada pessoa começa com uma cota de 50%.
+    // Quando o pagador assume valores acima da própria cota, o limite
+    // passa a ser o saldo global ainda pendente, sem descontar novamente
+    // o que essa pessoa já pagou.
     const personRemaining = isFamilia
-      ? Math.max(0, (allowAboveQuota ? totalRemaining : quota) - alreadyPaid)
+      ? allowAboveQuota
+        ? totalRemaining
+        : Math.max(0, quota - alreadyPaid)
       : totalRemaining;
 
     if (amountToPay > personRemaining + 0.01) {
       return toast.error(`Valor excede o saldo pendente disponível (${brl(personRemaining)})`);
+    }
+
+    if (isFamilia && overrideActive && allowAboveQuota && amountToPay > totalRemaining + 0.01) {
+      return toast.error(`O valor máximo restante da parcela é ${brl(totalRemaining)}.`);
     }
 
     if (Math.abs(amountToPay - originalAmount) < 0.01 && !isFamilia) {
@@ -2307,8 +2317,18 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
   }
 
   const totalRemaining = Math.max(0, Number(installment.amount) - Number(installment.paid_amount || 0));
+  const currentPersonParticipation = (installment.participacoes || []).find(
+    (participation: any) =>
+      normalizeName(participation.person) === normalizeName(paidBy),
+  );
+  const currentPersonPaid = Number(currentPersonParticipation?.amount || 0);
+  const canAssumeRemaining = isFamilia && overrideActive && allowAboveQuota
+    ? totalRemaining
+    : isFamilia
+      ? Math.max(0, quota - currentPersonPaid)
+      : totalRemaining;
 
-  return (
+return (
     <form onSubmit={(e) => handlePay(e, { accountId: selectedAccountId, accountTayaneId: selectedAccountTayaneId })} className="space-y-4">
       <div className="bg-muted/50 p-3 rounded-lg border border-border space-y-1">
         <div className="text-xs text-muted-foreground uppercase">Antecipação Parcial</div>
@@ -2329,7 +2349,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
             <p className="text-[10px] text-amber-500">
               Aviso: Você está pagando como <strong>{paidBy}</strong>.
               {allowAboveQuota
-                ? <> Você assumirá também a parte restante da Família, até <strong>{brl(totalRemaining)}</strong>.</>
+                ? <> Você assumirá também a parte restante da Família, até <strong>{brl(canAssumeRemaining)}</strong>.</>
                 : <> O limite padrão para esta antecipação individual é <strong>{brl(quota)}</strong>.</>}
             </p>
             <label className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/5 p-2.5 cursor-pointer">
@@ -2539,6 +2559,54 @@ function RemovePaymentForm({ installment, allTransactions, onDone, transactionId
 
     setSaving(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      // Mantém a participação da pessoa pagante sincronizada com o histórico
+      // de transações. Sem isso, remover um pagamento deixava a cota antiga
+      // registrada e bloqueava uma nova antecipação.
+      const syncParticipation = async (person: string | null | undefined, delta: number) => {
+        const targetPerson = person || installment.cartao_compras?.person || "Familia";
+        const { data: participation, error: participationError } = await supabase
+          .from("participacoes_parcelas")
+          .select("id, amount")
+          .eq("installment_id", installment.id)
+          .eq("person", targetPerson)
+          .maybeSingle();
+
+        if (participationError) throw participationError;
+
+        const nextAmount = Number((Number(participation?.amount || 0) + delta).toFixed(2));
+
+        if (nextAmount <= 0.01) {
+          if (participation?.id) {
+            const { error } = await supabase
+              .from("participacoes_parcelas")
+              .delete()
+              .eq("id", participation.id);
+            if (error) throw error;
+          }
+          return;
+        }
+
+        const payload = {
+          user_id: user.id,
+          installment_id: installment.id,
+          person: targetPerson,
+          amount: nextAmount,
+          status: Math.abs(nextAmount - Number(installment.amount || 0)) < 0.01
+            ? "paid"
+            : "pending",
+          paid_at: new Date().toISOString(),
+        };
+
+        const { error } = await supabase
+          .from("participacoes_parcelas")
+          .upsert(payload as any, { onConflict: "installment_id,person" });
+
+        if (error) throw error;
+      };
+
       if ((transaction as any).isVirtual) {
         if (isEditing) {
           const newAmt = Number(editAmount);
@@ -2548,9 +2616,14 @@ function RemovePaymentForm({ installment, allTransactions, onDone, transactionId
             paid_amount: newPaidAmount,
             status: Math.abs(newPaidAmount - Number(installment.amount)) < 0.01 ? "paid" : "pending"
           }).eq("id", installment.id);
+          await syncParticipation(installment.cartao_compras?.person, diff);
           toast.success("Valor pago atualizado");
         } else if (isRemoving) {
           await supabase.from("cartao_parcelas").update({ paid_amount: 0, status: "pending", notes: null }).eq("id", installment.id);
+          await supabase
+            .from("participacoes_parcelas")
+            .delete()
+            .eq("installment_id", installment.id);
           toast.success("Pagamento removido");
         }
       } else {
@@ -2563,6 +2636,7 @@ function RemovePaymentForm({ installment, allTransactions, onDone, transactionId
             paid_amount: newPaidAmount,
             status: Math.abs(newPaidAmount - Number(installment.amount)) < 0.01 ? "paid" : "pending"
           }).eq("id", installment.id);
+          await syncParticipation(transaction.person || installment.cartao_compras?.person, diff);
           toast.success("Pagamento atualizado");
         } else if (isRemoving) {
           await supabase.from("transacoes").delete().eq("id", transaction.id);
@@ -2570,9 +2644,13 @@ function RemovePaymentForm({ installment, allTransactions, onDone, transactionId
           const remainingTrans = relatedTrans.filter(t => t.id !== selectedTransactionId);
           await supabase.from("cartao_parcelas").update({
             paid_amount: newPaidAmount,
-            status: "pending",
+            status: newPaidAmount >= Number(installment.amount) - 0.01 ? "paid" : "pending",
             notes: remainingTrans.length > 0 ? remainingTrans[0].notes : null
           }).eq("id", installment.id);
+          await syncParticipation(
+            transaction.person || installment.cartao_compras?.person,
+            -Number(transaction.amount),
+          );
           toast.success("Pagamento removido");
         }
       }
