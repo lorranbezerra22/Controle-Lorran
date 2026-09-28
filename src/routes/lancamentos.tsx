@@ -309,6 +309,12 @@ function LancamentosPage() {
     else { invalidate("transactions"); toast.success("Lançamentos relacionados removidos"); setDeleting(null); }
   };
 
+  const paymentTotal = paying ? Number(paying.total_amount ?? paying.amount ?? 0) : 0;
+  const paymentAdvanced = paying
+    ? Math.min(paymentTotal, Math.max(0, Number(paying.anticipated_amount ?? paying.paid_amount ?? 0)))
+    : 0;
+  const paymentRemaining = Math.max(0, paymentTotal - paymentAdvanced);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -635,9 +641,28 @@ function LancamentosPage() {
                 <div className="rounded-xl border border-border/60 p-4 bg-muted/30">
                   <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Lançamento</div>
                   <div className="font-medium text-sm">{paying.description}</div>
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/40">
-                    <span className="text-xs text-muted-foreground">{paying.kind === "income" ? "Receita de" : "Dívida de"} <strong className="text-foreground">{paying.person || "—"}</strong></span>
-                    <span className="text-base font-semibold tabular-nums">{brl(paying.amount)}</span>
+                  <div className="mt-3 pt-3 border-t border-border/40 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">
+                        {paying.kind === "income" ? "Receita de" : "Dívida de"}{" "}
+                        <strong className="text-foreground">{paying.person || "—"}</strong>
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="rounded-lg bg-background/70 border border-border/50 px-2.5 py-2">
+                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Valor total</div>
+                        <div className="mt-0.5 text-sm font-semibold tabular-nums">{brl(paymentTotal)}</div>
+                      </div>
+                      <div className="rounded-lg bg-success/5 border border-success/20 px-2.5 py-2">
+                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Já antecipado</div>
+                        <div className="mt-0.5 text-sm font-semibold tabular-nums text-success">{brl(paymentAdvanced)}</div>
+                      </div>
+                      <div className="rounded-lg bg-warning/5 border border-warning/20 px-2.5 py-2">
+                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Falta antecipar</div>
+                        <div className="mt-0.5 text-sm font-semibold tabular-nums text-warning">{brl(paymentRemaining)}</div>
+                      </div>
+                    </div>
                   </div>
                   {paying.kind === "expense" && norm(paying.person || "") === "familia" && (
                     <div className="mt-2 text-[10px] text-amber-500 font-medium flex items-center gap-1">
@@ -651,7 +676,12 @@ function LancamentosPage() {
                 <div className="grid gap-4">
                   {paying.kind === "expense" && !payBy && (
                     <div className="grid grid-cols-1 gap-3 px-2">
-                      <p className="text-sm text-center text-muted-foreground mb-2">Como deseja realizar este pagamento de <strong className="text-foreground">{brl(Number(paying.amount))}</strong>?</p>
+                      <p className="text-sm text-center text-muted-foreground mb-2">
+                        Como deseja realizar este pagamento?
+                        <span className="block mt-1 text-xs">
+                          Valor restante: <strong className="text-foreground">{brl(paymentRemaining)}</strong>
+                        </span>
+                      </p>
                       <Button 
                         className="h-11 rounded-xl shadow-md font-semibold"
                         onClick={() => {
