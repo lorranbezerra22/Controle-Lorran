@@ -2349,9 +2349,12 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
               <Undo2 className="w-6 h-6" />
             </div>
             <div className="space-y-1">
-              <h3 className="font-bold text-lg text-foreground">Confirmar recebimento</h3>
+              <h3 className="font-bold text-lg text-foreground">Confirmar recebimento do reembolso</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Confirme apenas quando o reembolso de <span className="font-bold text-success">{brl(Math.abs(Number(installment.amount)))}</span> já tiver sido recebido.
+                O crédito de <span className="font-bold text-success">{brl(Math.abs(Number(installment.amount)))}</span> já foi abatido diretamente na fatura?
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Você poderá apenas confirmar o recebimento ou também creditar o valor nas contas.
               </p>
             </div>
 
@@ -2424,19 +2427,54 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
               <p className="font-semibold text-success mb-1">Depois da confirmação:</p>
               <ul className="list-disc pl-4 space-y-1">
                 <li>O crédito reduzirá o restante da fatura no dashboard.</li>
-                <li>O valor será creditado nas contas selecionadas.</li>
+                <li>Você escolherá se o valor também será creditado nas contas.</li>
               </ul>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 pt-2">
+            <div className="space-y-3 pt-2">
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-left">
+                <div className="text-xs font-semibold text-primary">
+                  Como deseja registrar este reembolso?
+                </div>
+                <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                  Escolha apenas uma opção. O crédito da fatura só será aplicado
+                  depois da confirmação.
+                </p>
+              </div>
+
               <Button
-                className="h-12 text-sm font-bold rounded-xl shadow-lg bg-success hover:bg-success/90 text-success-foreground transition-all transform hover:scale-[1.02]"
+                className="h-12 w-full rounded-xl text-sm font-bold shadow-lg bg-success hover:bg-success/90 text-success-foreground transition-all transform hover:scale-[1.02]"
                 onClick={() => {
-                  onFullPay(notes, null, { accountId: selectedAccountId, accountTayaneId: selectedAccountTayaneId });
+                  onFullPay(notes, null, {
+                    accountId: selectedAccountId,
+                    accountTayaneId: selectedAccountTayaneId,
+                  });
                 }}
               >
-                Confirmar e Estornar Saldo
+                <Undo2 className="h-4 w-4" />
+                Confirmar e creditar nas contas
               </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 w-full rounded-xl border-primary/30 text-sm font-semibold hover:bg-primary/10"
+                onClick={() => {
+                  onFullPay(notes, null, {
+                    accountId: "none",
+                    accountTayaneId: "none",
+                  });
+                }}
+              >
+                <Check className="h-4 w-4" />
+                Apenas confirmar recebimento
+              </Button>
+
+              <p className="text-center text-[10px] leading-relaxed text-muted-foreground">
+                “Apenas confirmar recebimento” registra o estorno como recebido
+                e reduz o restante da fatura, sem criar crédito ou alterar o
+                saldo das contas.
+              </p>
             </div>
           </div>
           <Button variant="ghost" className="w-full text-xs" onClick={() => onDone()}>Ainda não recebi</Button>
