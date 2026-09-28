@@ -248,9 +248,14 @@ function Dashboard() {
     
     // CORREÇÃO CRÍTICA: Se a parcela está marcada como paga, o restante é 0.
     // Isso deve valer para valores positivos E negativos (estornos).
+    // Estornos confirmados reduzem o valor que ainda falta pagar.
+    // Parcelas positivas pagas não entram no restante; estornos pendentes
+    // só devem afetar o restante depois de confirmados.
     if (i.status === "paid") {
-      return s;
+      return amount < 0 ? s + amount * factor : s;
     }
+
+    if (amount < 0) return s;
 
     const paidAmount = Number(i.paid_amount || 0);
     const personQuota = amount * factor;
@@ -697,9 +702,15 @@ function Dashboard() {
                     const factor = personFactor(costPersonInst(i));
                     if (factor === 0) return s;
 
-                    if (i.status === "paid") return s;
-
                     const amount = Number(i.amount);
+
+                    // Estorno confirmado reduz o restante da fatura.
+                    // Estorno pendente ainda não deve gerar crédito disponível.
+                    if (i.status === "paid") {
+                      return amount < 0 ? s + amount * factor : s;
+                    }
+                    if (amount < 0) return s;
+
                     const paidAmount = Number(i.paid_amount || 0);
                     // O restante para a pessoa deve ser proporcional à sua cota
                     const personQuota = amount * factor;

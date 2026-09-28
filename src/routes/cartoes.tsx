@@ -405,6 +405,12 @@ function CartoesPage() {
         m.brandTotals[b] = m.brandTotals[b] ?? { fatura: 0, restante: 0 };
         m.brandTotals[b].fatura += valueForTotal;
 
+        // Estornos pendentes ainda não são crédito confirmado.
+        // Quando pagos/confirmados, o valor negativo reduz o restante.
+        if (payment.total < 0 && payment.hasPending) {
+          valueForRestante = 0;
+        }
+
         m.restante += valueForRestante;
         m.brandTotals[b].restante += valueForRestante;
       }
