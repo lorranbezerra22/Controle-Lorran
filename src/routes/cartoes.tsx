@@ -1031,7 +1031,18 @@ function CartoesPage() {
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => setShowProgressInfo(i)}
+                        onClick={() => {
+                          // Estornos pendentes abrem diretamente a confirmação de recebimento.
+                          // Depois de confirmado, o ícone continua abrindo o histórico normal.
+                          if (Number(i.amount) < 0 && i.status !== "paid") {
+                            setPartialPayOpen({
+                              ...i,
+                              _refundConfirmation: true,
+                            });
+                          } else {
+                            setShowProgressInfo(i);
+                          }
+                        }}
                         onContextMenu={(e) => {
                           e.preventDefault();
                           if (isPartial || i.status === "paid") setEditPaidOpen(i);
@@ -1086,7 +1097,11 @@ function CartoesPage() {
       <Dialog open={!!partialPayOpen} onOpenChange={(o) => !o && setPartialPayOpen(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Pagamento</DialogTitle>
+            <DialogTitle>
+              {partialPayOpen?._refundConfirmation
+                ? "Confirmar recebimento do estorno"
+                : "Pagamento"}
+            </DialogTitle>
           </DialogHeader>
           {partialPayOpen && (
             <AnticipatePayForm
@@ -1227,8 +1242,31 @@ function CartoesPage() {
                       </div>
 
                       {isEstornoInfo ? (
-                        <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-                          Este estorno abate o valor da fatura automaticamente. Não é necessário confirmar pagamento.
+                        <div className="space-y-3 rounded-lg border border-warning/30 bg-warning/5 p-3">
+                          <div className="text-xs text-muted-foreground">
+                            O valor só será considerado como crédito da fatura depois que você confirmar que recebeu o reembolso.
+                          </div>
+
+                          {showProgressInfo.status !== "paid" ? (
+                            <Button
+                              className="w-full"
+                              onClick={() => {
+                                setShowProgressInfo(null);
+                                setPartialPayOpen({
+                                  ...showProgressInfo,
+                                  _refundConfirmation: true,
+                                });
+                              }}
+                            >
+                              <Check className="mr-2 h-4 w-4" />
+                              Confirmar que recebi o reembolso
+                            </Button>
+                          ) : (
+                            <div className="flex items-center gap-2 text-xs font-medium text-success">
+                              <Check className="h-4 w-4" />
+                              Reembolso recebido e aplicado na fatura
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="flex flex-wrap gap-2">
@@ -2306,14 +2344,14 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
 
       return (
         <div className="space-y-4">
-          <div className="bg-emerald-500/10 p-5 rounded-2xl border border-emerald-500/30 text-center space-y-4">
-            <div className="w-12 h-12 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-2 text-emerald-500">
+          <div className="bg-success/10 p-5 rounded-2xl border border-success/30 text-center space-y-4">
+            <div className="w-12 h-12 bg-success/20 rounded-full flex items-center justify-center mx-auto mb-2 text-success">
               <Undo2 className="w-6 h-6" />
             </div>
             <div className="space-y-1">
-              <h3 className="font-bold text-lg text-foreground">Confirmar Estorno</h3>
+              <h3 className="font-bold text-lg text-foreground">Confirmar recebimento</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Deseja confirmar o recebimento deste estorno de <span className="font-bold text-emerald-500">{brl(Math.abs(Number(installment.amount)))}</span>?
+                Confirme apenas quando o reembolso de <span className="font-bold text-success">{brl(Math.abs(Number(installment.amount)))}</span> já tiver sido recebido.
               </p>
             </div>
 
@@ -2383,16 +2421,16 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
             </div>
 
             <div className="p-3 bg-background/50 rounded-lg text-[11px] text-left border border-emerald-500/20 text-muted-foreground">
-              <p className="font-semibold text-emerald-600 mb-1">Impacto financeiro:</p>
+              <p className="font-semibold text-success mb-1">Depois da confirmação:</p>
               <ul className="list-disc pl-4 space-y-1">
-                <li>Abate o saldo da fatura do cartão.</li>
+                <li>O crédito reduzirá o restante da fatura no dashboard.</li>
                 <li>O valor será creditado nas contas selecionadas.</li>
               </ul>
             </div>
 
             <div className="grid grid-cols-1 gap-3 pt-2">
               <Button
-                className="h-12 text-sm font-bold rounded-xl shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all transform hover:scale-[1.02]"
+                className="h-12 text-sm font-bold rounded-xl shadow-lg bg-success hover:bg-success/90 text-success-foreground transition-all transform hover:scale-[1.02]"
                 onClick={() => {
                   onFullPay(notes, null, { accountId: selectedAccountId, accountTayaneId: selectedAccountTayaneId });
                 }}
@@ -2401,7 +2439,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
               </Button>
             </div>
           </div>
-          <Button variant="ghost" className="w-full text-xs" onClick={() => onDone()}>Cancelar</Button>
+          <Button variant="ghost" className="w-full text-xs" onClick={() => onDone()}>Ainda não recebi</Button>
         </div>
       );
     }
