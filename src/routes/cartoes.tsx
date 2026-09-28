@@ -876,15 +876,10 @@ function CartoesPage() {
                     <div className="flex flex-col">
                       <span>{i.cartao_compras?.description}</span>
                       {isPartial && i.status !== "paid" && (
-                        <div
-                          className="mt-1 w-24 cursor-help"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowProgressInfo(i);
-                          }}
-                        >
+                        <div className="mt-1 w-24">
                           <div className="flex justify-between text-[10px] mb-0.5 text-muted-foreground">
                             <span>{Math.round(pct)}% pago</span>
+                            <span className="text-[9px]">Use o relógio para alterar</span>
                           </div>
                           <div className="h-1 bg-muted rounded-full overflow-hidden">
                             <div className="h-full bg-success transition-all" style={{ width: `${pct}%` }} />
