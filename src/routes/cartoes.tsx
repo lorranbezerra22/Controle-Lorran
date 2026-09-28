@@ -1998,8 +1998,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }) => void, onDone: () => void, initialAmount?: number }) {
   const [payMode, setPayMode] = useState<"total" | "anticipate" | null>(null);
+  const currentRemaining = Math.max(
+    0,
+    Number(installment.amount || 0) - Number(installment.paid_amount || 0),
+  );
+
   const [payAmount, setPayAmount] = useState(
-    initialAmount !== undefined ? String(initialAmount.toFixed(2)) : "",
+    initialAmount !== undefined
+      ? String(Math.max(0, initialAmount).toFixed(2))
+      : String(currentRemaining.toFixed(2)),
   );
   const [notes, setNotes] = useState("");
   const [paidBy, setPaidBy] = useState<string>(installment.cartao_compras?.person || "");
@@ -2021,6 +2028,22 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
     }
   }, [accounts]);
 
+  useEffect(() => {
+    const syncedRemaining = Math.max(
+      0,
+      Number(installment.amount || 0) - Number(installment.paid_amount || 0),
+    );
+
+    setPayAmount(
+      String(
+        Math.max(
+          0,
+          initialAmount !== undefined ? initialAmount : syncedRemaining,
+        ).toFixed(2),
+      ),
+    );
+  }, [initialAmount, installment.amount, installment.paid_amount]);
+
 
   const originalPerson = installment.cartao_compras?.person || "";
   const isFamilia = normalizeName(originalPerson) === "familia";
@@ -2040,7 +2063,14 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
     // Buscar participação atual desta pessoa para esta parcela
     const currentPart = (installment.participacoes || []).find((p: any) => normalizeName(p.person) === normalizeName(costPerson));
     const alreadyPaid = Number(currentPart?.amount || 0);
-    const totalRemaining = Math.max(0, Number(installment.amount) - Number(installment.paid_amount || 0));
+    const totalRemaining = Math.max(
+      0,
+      Number(installment.amount || 0) - Number(installment.paid_amount || 0),
+    );
+
+    if (amountToPay > totalRemaining + 0.01) {
+      return toast.error(`O valor máximo para este pagamento é ${brl(totalRemaining)}.`);
+    }
     // Para Família, cada pessoa começa com uma cota de 50%.
     // Quando o pagador assume valores acima da própria cota, o limite
     // passa a ser o saldo global ainda pendente, sem descontar novamente
