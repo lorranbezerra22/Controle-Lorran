@@ -557,17 +557,25 @@ function CartoesPage() {
 
       if (deleteError) throw deleteError;
 
+      // Estorno (valor negativo): remover a confirmação volta tudo para pendente
+      const isEstornoRemoval = Number(installment.amount || 0) < 0;
       const { error: installmentError } = await supabase
         .from("cartao_parcelas")
         .update({
-          paid_amount: newPaidAmount,
-          status:
-            newPaidAmount >= Number(installment.amount || 0) - 0.01
+          paid_amount: isEstornoRemoval ? 0 : newPaidAmount,
+          paid_by: isEstornoRemoval ? null : installment.paid_by ?? null,
+          status: isEstornoRemoval
+            ? "pending"
+            : newPaidAmount >= Number(installment.amount || 0) - 0.01
               ? "paid"
               : "pending",
           notes: remainingTransactions[0]?.notes || null,
         } as any)
         .eq("id", installment.id);
+
+      if (isEstornoRemoval) {
+        await supabase.from("participacoes_parcelas").delete().eq("installment_id", installment.id);
+      }
 
       if (installmentError) throw installmentError;
 
