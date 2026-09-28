@@ -2413,9 +2413,29 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
 
 return (
     <form onSubmit={(e) => handlePay(e, { accountId: selectedAccountId, accountTayaneId: selectedAccountTayaneId })} className="space-y-4">
-      <div className="bg-muted/50 p-3 rounded-lg border border-border space-y-1">
-        <div className="text-xs text-muted-foreground uppercase">Antecipação Parcial</div>
-        <div className="text-lg font-bold">{brl(Number(installment.amount || 0))}</div>
+      <div className="bg-muted/50 p-3 rounded-lg border border-border space-y-3">
+        <div>
+          <div className="text-xs text-muted-foreground uppercase">Antecipação Parcial</div>
+          <div className="text-lg font-bold">{brl(Number(installment.amount || 0))}</div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 border-t border-border/60 pt-3 text-xs">
+          <div>
+            <span className="block text-muted-foreground">Valor total</span>
+            <strong className="text-foreground">{brl(Number(installment.amount || 0))}</strong>
+          </div>
+          <div>
+            <span className="block text-muted-foreground">Já antecipado</span>
+            <strong className="text-success">{brl(Number(installment.paid_amount || 0))}</strong>
+          </div>
+          <div>
+            <span className="block text-muted-foreground">Falta</span>
+            <strong className={currentRemaining > 0.01 ? "text-warning" : "text-success"}>
+              {brl(currentRemaining)}
+            </strong>
+          </div>
+        </div>
+
         {isFamilia && (
           <div className="text-[10px] text-amber-500 font-medium flex items-center gap-1 mt-1">
             <AlertTriangle className="w-3 h-3" />
