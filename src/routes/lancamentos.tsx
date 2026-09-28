@@ -75,6 +75,7 @@ function LancamentosPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null);
+  const [reverting, setReverting] = useState<any>(null);
   const [adjusting, setAdjusting] = useState<any>(null);
   const [paying, setPaying] = useState<any>(null);
   const [payBy, setPayBy] = useState<string>("");
@@ -209,15 +210,7 @@ function LancamentosPage() {
 
   const togglePaid = async (t: any) => {
     if (t.status === "paid") {
-      // Revertendo pagamento: limpa paid_by e contas
-      const { error } = await supabase.from("transacoes").update({
-        status: "pending",
-        account_id: null,
-        account_tayane_id: null,
-        paid_by: null,
-      }).eq("id", t.id);
-      if (error) toast.error(error.message);
-      else { invalidate("transactions"); invalidate("accounts"); toast.success("Lançamento pendente e saldo estornado"); }
+      setReverting(t);
       return;
     }
     // Abrir diálogo de pagamento com seleção de "Pago por" e conta
@@ -246,6 +239,27 @@ function LancamentosPage() {
     setPaying(t);
   };
 
+
+  const confirmRevert = async () => {
+    if (!reverting) return;
+
+    const { error } = await supabase.from("transacoes").update({
+      status: "pending",
+      account_id: null,
+      account_tayane_id: null,
+      paid_by: null,
+    }).eq("id", reverting.id);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    invalidate("transactions");
+    invalidate("accounts");
+    setReverting(null);
+    toast.success("Lançamento pendente e saldo estornado");
+  };
 
   const confirmPay = async () => {
     if (!paying) return;
@@ -606,6 +620,43 @@ function LancamentosPage() {
                 )}
               </div>
               <Button variant="ghost" size="sm" className="w-full" onClick={() => setDeleting(null)}>Cancelar</Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!reverting} onOpenChange={(o) => !o && setReverting(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmar estorno</DialogTitle>
+          </DialogHeader>
+
+          {reverting && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Confirma o estorno do lançamento{" "}
+                <strong className="text-foreground">{reverting.description}</strong>?
+                O lançamento voltará para “Pendente” e os débitos nas contas serão revertidos.
+              </p>
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setReverting(null)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={confirmRevert}
+                >
+                  Confirmar estorno
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
