@@ -2256,7 +2256,9 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
   const [saving, setSaving] = useState(false);
   const { data: accounts = [] } = useAccounts();
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
-  const [selectedAccountTayaneId, setSelectedAccountTayaneId] = useState<string>("");
+    const [selectedAccountTayaneId, setSelectedAccountTayaneId] = useState<string>("");
+  const [refundChoice, setRefundChoice] = useState<"credit" | "no-credit" | null>(null);
+
 
   const lorranAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "lorran" || normalizeName(a.bank || "").includes("revolut") || normalizeName(a.bank || "").includes("nubank"));
   const tayaneAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "tayane" || normalizeName(a.bank || "").includes("mercado"));
@@ -2443,7 +2445,8 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
               </div>
             </div>
             <div className="space-y-4 p-5">
-
+              {refundChoice === "credit" ? (
+                <>
             <div className="space-y-3 text-left">
               <div className="mb-3 flex items-start gap-3 rounded-xl border border-border bg-muted/20 p-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background text-primary shadow-sm">
@@ -2519,8 +2522,9 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
                 </div>
               )}
             </div>
-
-            <div className="space-y-3 border-t border-border pt-4">
+                </>
+              ) : (
+                <div className="space-y-3 border-t border-border pt-4">
               <div>
                 <p className="text-sm font-semibold text-foreground">Como deseja registrar o estorno?</p>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
@@ -2531,12 +2535,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
               <button
                 type="button"
                 className="group flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 text-left transition-all hover:border-primary/60 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                onClick={() => {
-                  onFullPay(notes, null, {
-                    accountId: selectedAccountId,
-                    accountTayaneId: selectedAccountTayaneId,
-                  });
-                }}
+                onClick={() => setRefundChoice("credit")}
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
                   <Banknote className="h-5 w-5" />
@@ -2572,6 +2571,32 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
                 <div className="h-5 w-5 shrink-0 rounded-full border-2 border-muted-foreground/40 bg-background" />
               </button>
             </div>
+              )}
+
+              {refundChoice === "credit" && (
+                <div className="space-y-3 border-t border-border pt-4">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Revise as contas e confirme</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      O valor será creditado somente após a confirmação final.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    className="w-full"
+                    onClick={() => onFullPay(notes, null, {
+                      accountId: selectedAccountId,
+                      accountTayaneId: selectedAccountTayaneId,
+                    })}
+                  >
+                    <Banknote className="mr-2 h-4 w-4" />
+                    Confirmar crédito de {brl(Math.abs(installmentAmount))}
+                  </Button>
+                  <Button type="button" variant="ghost" className="w-full text-xs" onClick={() => setRefundChoice(null)}>
+                    Voltar às opções
+                  </Button>
+                </div>
+              )}
           </div>
           </div>
           <Button variant="ghost" className="w-full text-xs" onClick={() => onDone()}>
