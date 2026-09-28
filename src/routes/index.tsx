@@ -274,7 +274,20 @@ function Dashboard() {
   }, 0);
 
   // Balanço projetado = Saldo da Conta + A receber − (despesas restantes + fatura restante)
-  const balanco = personFilter === "all" ? 0 : saldoConta + receitasPend - despesasRestante - faturaRest;
+  // Estornos confirmados sem crédito em conta reduzem a fatura, mas não devem
+  // aumentar o saldo disponível no dashboard. Neutralizamos apenas essa parte
+  // no cálculo do balanço; o impacto na fatura continua visível nos cartões.
+  const faturasSemCredito = monthInst
+    .filter((i: any) =>
+      Number(i.amount || 0) < 0 &&
+      i.status === "paid" &&
+      !tx.some((t: any) => t.card_installment_id === i.id && t.kind === "income"),
+    )
+    .reduce((s: number, i: any) => s + Number(i.amount || 0) * personFactor(costPersonInst(i)), 0);
+
+  const balanco = personFilter === "all"
+    ? 0
+    : saldoConta + receitasPend - despesasRestante - faturaRest - faturasSemCredito;
 
   // Cards fixos Lorran/Tayane/Família/Loja — usa shares efetivos (respeita ajustes).
   const personMonth = useMemo(() => {
