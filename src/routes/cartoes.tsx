@@ -610,7 +610,7 @@ function CartoesPage() {
             paid_at: new Date().toISOString(),
             user_id: user.id,
           } as any)
-          .eq("id", participation.id);
+          .eq("id", participation!.id);
 
         if (error) throw error;
       }
