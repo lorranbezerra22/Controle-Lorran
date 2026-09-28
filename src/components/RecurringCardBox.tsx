@@ -289,7 +289,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
               (purchase.person || null) === person &&
               Math.abs(
                 Number(purchase.total_amount || 0) -
-                  Number(template.splitAmounts?.[person] || 0),
+                  Number((person ? template.splitAmounts?.[person] : 0) || 0),
               ) < 0.01,
           );
         }

@@ -610,7 +610,7 @@ function CartoesPage() {
             paid_at: new Date().toISOString(),
             user_id: user.id,
           } as any)
-          .eq("id", participation.id);
+          .eq("id", participation!.id);
 
         if (error) throw error;
       }
@@ -1162,9 +1162,19 @@ function CartoesPage() {
               <div className="space-y-4">
                 {(() => {
                   const total = Number(showProgressInfo.amount || 0);
-                  const paid = Math.min(total, Math.max(0, Number(showProgressInfo.paid_amount || 0)));
-                  const remaining = Math.max(0, Number((total - paid).toFixed(2)));
-                  const progress = total > 0 ? Math.min(100, (paid / total) * 100) : 0;
+                  // Estorno (valor negativo): tratar pelo status, pois o cálculo min/max zera o "Falta".
+                  const isEstornoInfo = total < 0;
+                  const estornoPaid = showProgressInfo.status === "paid";
+                  const paid = isEstornoInfo
+                    ? (estornoPaid ? total : 0)
+                    : Math.min(total, Math.max(0, Number(showProgressInfo.paid_amount || 0)));
+                  const remaining = isEstornoInfo
+                    ? (estornoPaid ? 0 : total)
+                    : Math.max(0, Number((total - paid).toFixed(2)));
+                  const progress = isEstornoInfo
+                    ? (estornoPaid ? 100 : 0)
+                    : (total > 0 ? Math.min(100, (paid / total) * 100) : 0);
+                  const canPay = isEstornoInfo ? !estornoPaid : remaining > 0.01;
 
                   return (
                     <>
@@ -1197,12 +1207,12 @@ function CartoesPage() {
                             <strong>{brl(total)}</strong>
                           </div>
                           <div>
-                            <span className="block text-muted-foreground">Já pago</span>
+                            <span className="block text-muted-foreground">{isEstornoInfo ? "Confirmado" : "Já pago"}</span>
                             <strong className="text-success">{brl(paid)}</strong>
                           </div>
                           <div>
                             <span className="block text-muted-foreground">Falta</span>
-                            <strong className={remaining > 0.01 ? "text-warning" : "text-success"}>
+                            <strong className={canPay ? "text-warning" : "text-success"}>
                               {brl(remaining)}
                             </strong>
                           </div>
@@ -1212,7 +1222,7 @@ function CartoesPage() {
                       <div className="flex flex-wrap gap-2">
                         <Button
                           className="flex-1"
-                          disabled={remaining <= 0.01}
+                          disabled={!canPay}
                           onClick={() => {
                             setShowProgressInfo(null);
                             setPartialPayOpen({
@@ -1221,8 +1231,8 @@ function CartoesPage() {
                             });
                           }}
                         >
-                          <Clock className="h-4 w-4" />
-                          Pagamento
+                          {isEstornoInfo ? <Undo2 className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+                          {isEstornoInfo ? "Confirmar estorno" : "Pagamento"}
                         </Button>
                       </div>
                     </>
