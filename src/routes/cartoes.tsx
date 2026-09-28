@@ -2742,18 +2742,47 @@ function RemovePaymentForm({ installment, allTransactions, onDone, transactionId
           await syncParticipation(transaction.person || installment.cartao_compras?.person, diff);
           toast.success("Pagamento atualizado");
         } else if (isRemoving) {
-          await supabase.from("transacoes").delete().eq("id", transaction.id);
-          const newPaidAmount = Math.max(0, Number((Number(installment.paid_amount || 0) - Number(transaction.amount)).toFixed(2)));
-          const remainingTrans = relatedTrans.filter(t => t.id !== selectedTransactionId);
-          await supabase.from("cartao_parcelas").update({
-            paid_amount: newPaidAmount,
-            status: newPaidAmount >= Number(installment.amount) - 0.01 ? "paid" : "pending",
-            notes: remainingTrans.length > 0 ? remainingTrans[0].notes : null
-          }).eq("id", installment.id);
-          await syncParticipation(
-            transaction.person || installment.cartao_compras?.person,
-            -Number(transaction.amount),
+          const { error: deleteError } = await supabase
+            .from("transacoes")
+            .delete()
+            .eq("id", transaction.id);
+
+          if (deleteError) throw deleteError;
+
+          const transactionAmount = Number(transaction.amount || 0);
+          const newPaidAmount = Math.max(
+            0,
+            Number(
+              (Number(installment.paid_amount || 0) - transactionAmount).toFixed(2),
+            ),
           );
+          const remainingTrans = relatedTrans.filter(
+            (item) => item.id !== selectedTransactionId,
+          );
+
+          const { error: installmentError } = await supabase
+            .from("cartao_parcelas")
+            .update({
+              paid_amount: newPaidAmount,
+              status:
+                newPaidAmount >= Number(installment.amount) - 0.01
+                  ? "paid"
+                  : "pending",
+              notes: remainingTrans.length > 0 ? remainingTrans[0].notes : null,
+            })
+            .eq("id", installment.id);
+
+          if (installmentError) throw installmentError;
+
+          // Mesmo que o lançamento tenha sido editado para R$ 0,00,
+          // ele precisa ser excluído normalmente do histórico.
+          if (transactionAmount !== 0) {
+            await syncParticipation(
+              transaction.person || installment.cartao_compras?.person,
+              -transactionAmount,
+            );
+          }
+
           toast.success("Pagamento removido");
         }
       }
