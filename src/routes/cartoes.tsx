@@ -432,7 +432,7 @@ function CartoesPage() {
 
   const getPaymentSplits = (person: string, amount: number, paidByOverride?: string | null) => buildPaymentSplits(accounts, person, amount, paidByOverride);
 
-  const togglePaid = async (i: any, notes?: string, paidByOverride?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }) => {
+  const togglePaid = async (i: any, notes?: string, paidByOverride?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }, creditToAccount = true) => {
     const isEstorno = Number(i.amount) < 0;
     const isPaying = i.status !== "paid";
     try {
@@ -450,8 +450,20 @@ function CartoesPage() {
         // O estorno (amount negativo) gera uma transação 'income' para repor o saldo na conta
         const skipAccountCredit =
           isEstorno &&
-          accountsOverride?.accountId === "none" &&
-          accountsOverride?.accountTayaneId === "none";
+          (!creditToAccount || (
+            accountsOverride?.accountId === "none" &&
+            accountsOverride?.accountTayaneId === "none"
+          ));
+
+        // Garante que "sem crédito em conta" também remova eventual crédito
+        // criado anteriormente para esta mesma parcela.
+        if (skipAccountCredit) {
+          const { error: creditCleanupError } = await supabase
+            .from("transacoes")
+            .delete()
+            .eq("card_installment_id", i.id);
+          if (creditCleanupError) throw creditCleanupError;
+        }
 
         const splits = skipAccountCredit
           ? []
@@ -506,7 +518,13 @@ function CartoesPage() {
         } as any).eq("id", i.id);
 
         if (error) throw error;
-        toast.success(isEstorno ? "Estorno confirmado e saldo estornado para as contas." : "Parcela marcada como paga.");
+        toast.success(
+          isEstorno
+            ? (skipAccountCredit
+              ? "Estorno confirmado sem alterar o saldo das contas."
+              : "Estorno confirmado e creditado nas contas.")
+            : "Parcela marcada como paga.",
+        );
       } else {
         // Cancelar Pagamento: Remove transações, participações e reseta parcela
         await supabase.from("transacoes").delete().eq("card_installment_id", i.id);
@@ -1134,7 +1152,7 @@ function CartoesPage() {
             <AnticipatePayForm
               installment={partialPayOpen}
               initialAmount={partialPayOpen?._anticipateAmount}
-              onFullPay={(notes, paidBy, accountsOverride) => { togglePaid(partialPayOpen, notes, paidBy, accountsOverride); setPartialPayOpen(null); }}
+              onFullPay={(notes, paidBy, accountsOverride, creditToAccount) => { togglePaid(partialPayOpen, notes, paidBy, accountsOverride, creditToAccount); setPartialPayOpen(null); }}
               onDone={() => { setPartialPayOpen(null); invalidate("installments"); invalidate("accounts"); invalidate("transactions"); }}
             />
           )}
@@ -2214,7 +2232,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }) => void, onDone: () => void, initialAmount?: number }) {
+function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }, creditToAccount?: boolean) => void, onDone: () => void, initialAmount?: number }) {
   // Estornos (valor negativo) sempre abrem a tela de confirmação, nunca o modo antecipação
   const [payMode, setPayMode] = useState<"total" | "anticipate" | null>(
     initialAmount !== undefined && Number(installment.amount || 0) >= 0 ? "anticipate" : null,
@@ -2513,7 +2531,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
                   onFullPay(notes, null, {
                     accountId: "none",
                     accountTayaneId: "none",
-                  });
+                  }, false);
                 }}
               >
                 <Check className="h-4 w-4" />
