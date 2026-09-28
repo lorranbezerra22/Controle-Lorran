@@ -2639,8 +2639,18 @@ function RemovePaymentForm({ installment, allTransactions, onDone, transactionId
       if (t) {
         setEditAmount(String(t.amount));
         setEditNotes(t.notes || "");
-        setIsEditing(true);
         setSelectedTransactionId(t.id);
+
+        // Respeita a ação escolhida no histórico.
+        // Antes, o modo "remove" era sobrescrito por "edit" sempre
+        // que uma transação era aberta diretamente pelo histórico.
+        if (mode === "remove") {
+          setIsRemoving(true);
+          setIsEditing(false);
+        } else {
+          setIsEditing(true);
+          setIsRemoving(false);
+        }
       }
     } else if (relatedTrans.length === 1 && (mode === "auto" || !mode)) {
       // Se só tem um lançamento e estamos em modo auto, pré-seleciona ele
@@ -2648,8 +2658,10 @@ function RemovePaymentForm({ installment, allTransactions, onDone, transactionId
       setSelectedTransactionId(t.id);
       setEditAmount(String(t.amount));
       setEditNotes(t.notes || "");
+      setIsEditing(false);
+      setIsRemoving(false);
     }
-  }, [transactionIdToEdit, allTransactions, mode, relatedTrans]);
+  }, [transactionIdToEdit, mode, relatedTrans]);
 
   const handleAction = async (e: React.FormEvent) => {
     e.preventDefault();
