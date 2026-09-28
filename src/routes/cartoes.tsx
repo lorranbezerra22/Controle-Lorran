@@ -84,6 +84,16 @@ const buildPaymentSplits = (accounts: any[], person: string, amount: number, pai
   const isEstorno = amount < 0;
   const absAmount = Math.abs(amount);
 
+  // "Apenas confirmar recebimento" não deve criar crédito em nenhuma conta.
+  // O valor ainda é registrado na fatura, mas sem lançamento financeiro.
+  if (
+    isEstorno &&
+    accountsOverride?.accountId === "none" &&
+    accountsOverride?.accountTayaneId === "none"
+  ) {
+    return [];
+  }
+
   // Se for despesa de Família
   if (p === "familia") {
     const lorranAcc = pickPaymentAccount(accounts, "Lorran", ["revolut", "nubank"], accountsOverride?.accountId);
@@ -438,7 +448,14 @@ function CartoesPage() {
 
         // 1. Criar lançamento financeiro (débito para despesa, CRÉDITO para estorno)
         // O estorno (amount negativo) gera uma transação 'income' para repor o saldo na conta
-        const splits = buildPaymentSplits(accounts, originalPerson, amount, paidByOverride, accountsOverride);
+        const skipAccountCredit =
+          isEstorno &&
+          accountsOverride?.accountId === "none" &&
+          accountsOverride?.accountTayaneId === "none";
+
+        const splits = skipAccountCredit
+          ? []
+          : buildPaymentSplits(accounts, originalPerson, amount, paidByOverride, accountsOverride);
 
         // Se houver splits (contas selecionadas), cria as transações
         if (splits.length > 0) {
@@ -2384,18 +2401,19 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
       const tayaneAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "tayane" || normalizeName(a.bank || "").includes("mercado"));
 
       return (
-        <div className="space-y-4">
-          <div className="bg-success/10 p-5 rounded-2xl border border-success/30 text-center space-y-4">
+        <div className="space-y-3">
+          <div className="bg-success/10 p-4 rounded-2xl border border-success/30 text-center space-y-3">
             <div className="w-12 h-12 bg-success/20 rounded-full flex items-center justify-center mx-auto mb-2 text-success">
               <Undo2 className="w-6 h-6" />
             </div>
             <div className="space-y-1">
               <h3 className="font-bold text-lg text-foreground">Confirmar recebimento do reembolso</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                O crédito de <span className="font-bold text-success">{brl(Math.abs(Number(installment.amount)))}</span> já foi abatido diretamente na fatura?
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Você poderá apenas confirmar o recebimento ou também creditar o valor nas contas.
+                O crédito de{" "}
+                <span className="font-bold text-success">
+                  {brl(Math.abs(Number(installment.amount)))}
+                </span>{" "}
+                já foi abatido diretamente na fatura?
               </p>
             </div>
 
@@ -2464,27 +2482,18 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
               )}
             </div>
 
-            <div className="p-3 bg-background/50 rounded-lg text-[11px] text-left border border-emerald-500/20 text-muted-foreground">
-              <p className="font-semibold text-success mb-1">Depois da confirmação:</p>
-              <ul className="list-disc pl-4 space-y-1">
-                <li>O crédito reduzirá o restante da fatura no dashboard.</li>
-                <li>Você escolherá se o valor também será creditado nas contas.</li>
-              </ul>
-            </div>
-
-            <div className="space-y-3 pt-2">
+            <div className="space-y-2 pt-1">
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-left">
                 <div className="text-xs font-semibold text-primary">
                   Como deseja registrar este reembolso?
                 </div>
                 <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                  Escolha apenas uma opção. O crédito da fatura só será aplicado
-                  depois da confirmação.
+                  Escolha se o recebimento também deve atualizar o saldo das contas.
                 </p>
               </div>
 
               <Button
-                className="h-12 w-full rounded-xl text-sm font-bold shadow-lg bg-success hover:bg-success/90 text-success-foreground transition-all transform hover:scale-[1.02]"
+                className="h-11 w-full rounded-xl text-sm font-bold shadow-lg bg-success hover:bg-success/90 text-success-foreground transition-all"
                 onClick={() => {
                   onFullPay(notes, null, {
                     accountId: selectedAccountId,
@@ -2499,7 +2508,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
               <Button
                 type="button"
                 variant="outline"
-                className="h-12 w-full rounded-xl border-primary/30 text-sm font-semibold hover:bg-primary/10"
+                className="h-11 w-full rounded-xl border-primary/30 text-sm font-semibold hover:bg-primary/10"
                 onClick={() => {
                   onFullPay(notes, null, {
                     accountId: "none",
@@ -2512,13 +2521,13 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
               </Button>
 
               <p className="text-center text-[10px] leading-relaxed text-muted-foreground">
-                “Apenas confirmar recebimento” registra o estorno como recebido
-                e reduz o restante da fatura, sem criar crédito ou alterar o
-                saldo das contas.
+                Apenas confirmar reduz o restante da fatura e não altera o saldo das contas.
               </p>
             </div>
           </div>
-          <Button variant="ghost" className="w-full text-xs" onClick={() => onDone()}>Ainda não recebi</Button>
+          <Button variant="ghost" className="w-full text-xs" onClick={() => onDone()}>
+            Ainda não recebi
+          </Button>
         </div>
       );
     }
