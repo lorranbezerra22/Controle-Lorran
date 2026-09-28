@@ -1940,6 +1940,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
   const [payAmount, setPayAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [paidBy, setPaidBy] = useState<string>(installment.cartao_compras?.person || "");
+  const [allowAboveQuota, setAllowAboveQuota] = useState(false);
   const [saving, setSaving] = useState(false);
   const { data: accounts = [] } = useAccounts();
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
@@ -1971,21 +1972,18 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
 
     if (amountToPay <= 0) return toast.error("Valor inválido");
 
-    if (isFamilia && overrideActive) {
-      if (amountToPay > quota + 0.01) {
-        return toast.error(`Para antecipação individual de Família, o valor máximo é a sua parte (${brl(quota)})`);
-      }
-    }
-
     const costPerson = overrideActive ? paidBy.trim() : originalPerson;
 
     // Buscar participação atual desta pessoa para esta parcela
     const currentPart = (installment.participacoes || []).find((p: any) => normalizeName(p.person) === normalizeName(costPerson));
     const alreadyPaid = Number(currentPart?.amount || 0);
-    const personRemaining = isFamilia ? Math.max(0, quota - alreadyPaid) : Math.max(0, Number(installment.amount) - Number(installment.paid_amount || 0));
+    const totalRemaining = Math.max(0, Number(installment.amount) - Number(installment.paid_amount || 0));
+    const personRemaining = isFamilia
+      ? Math.max(0, (allowAboveQuota ? totalRemaining : quota) - alreadyPaid)
+      : totalRemaining;
 
     if (amountToPay > personRemaining + 0.01) {
-      return toast.error(`Valor excede o saldo pendente de ${costPerson} (${brl(personRemaining)})`);
+      return toast.error(`Valor excede o saldo pendente disponível (${brl(personRemaining)})`);
     }
 
     if (Math.abs(amountToPay - originalAmount) < 0.01 && !isFamilia) {
@@ -2308,6 +2306,8 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
     );
   }
 
+  const totalRemaining = Math.max(0, Number(installment.amount) - Number(installment.paid_amount || 0));
+
   return (
     <form onSubmit={(e) => handlePay(e, { accountId: selectedAccountId, accountTayaneId: selectedAccountTayaneId })} className="space-y-4">
       <div className="bg-muted/50 p-3 rounded-lg border border-border space-y-1">
@@ -2325,10 +2325,28 @@ function AnticipatePayForm({ installment, onFullPay, onDone }: { installment: an
         <Label>Quem está antecipando?</Label>
         <PersonSelect value={paidBy} onChange={setPaidBy} extras={originalPerson ? [originalPerson] : []} />
         {isFamilia && overrideActive && (
-          <p className="text-[10px] text-amber-500">
-            Aviso: Você está pagando como <strong>{paidBy}</strong>.
-            O limite para esta antecipação individual é <strong>{brl(quota)}</strong>.
-          </p>
+          <div className="space-y-2">
+            <p className="text-[10px] text-amber-500">
+              Aviso: Você está pagando como <strong>{paidBy}</strong>.
+              {allowAboveQuota
+                ? <> Você assumirá também a parte restante da Família, até <strong>{brl(totalRemaining)}</strong>.</>
+                : <> O limite padrão para esta antecipação individual é <strong>{brl(quota)}</strong>.</>}
+            </p>
+            <label className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/5 p-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={allowAboveQuota}
+                onChange={(e) => setAllowAboveQuota(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span className="text-[11px] text-muted-foreground">
+                <strong className="text-foreground">Permitir pagar acima dos 50%</strong>
+                <span className="block mt-0.5">
+                  Usar quando uma pessoa for assumir também parte ou todo o valor da outra.
+                </span>
+              </span>
+            </label>
+          </div>
         )}
       </div>
 
