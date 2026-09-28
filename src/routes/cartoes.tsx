@@ -496,17 +496,27 @@ function CartoesPage() {
 
         await supabase.from("participacoes_parcelas").delete().eq("installment_id", i.id);
 
-        await supabase.from("cartao_parcelas").update({
-          status: "pending",
-          paid_amount: 0,
-          paid_by: null,
-          metadata: { ...((i.metadata as any) || {}), partial_payments: [] }
-        } as any).eq("id", i.id);
+        const { error: resetError } = await supabase
+          .from("cartao_parcelas")
+          .update({
+            status: "pending",
+            paid_amount: 0,
+            paid_by: null,
+            metadata: { ...((i.metadata as any) || {}), partial_payments: [] },
+          } as any)
+          .eq("id", i.id);
 
-        toast.success("Pagamento removido");
+        if (resetError) throw resetError;
+
+        toast.success(
+          isEstorno
+            ? "Confirmação removida. O crédito do reembolso foi desfeito."
+            : "Pagamento removido",
+        );
       }
       invalidate("installments");
       invalidate("accounts");
+      invalidate("transactions");
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -1262,9 +1272,40 @@ function CartoesPage() {
                               Confirmar que recebi o reembolso
                             </Button>
                           ) : (
-                            <div className="flex items-center gap-2 text-xs font-medium text-success">
-                              <Check className="h-4 w-4" />
-                              Reembolso recebido e aplicado na fatura
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2 text-xs font-medium text-success">
+                                <Check className="h-4 w-4" />
+                                Reembolso recebido e aplicado na fatura
+                              </div>
+
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                onClick={async () => {
+                                  if (
+                                    !confirm(
+                                      "Remover a confirmação deste reembolso? Se o valor foi creditado em uma conta, o crédito também será desfeito.",
+                                    )
+                                  ) {
+                                    return;
+                                  }
+
+                                  await togglePaid(showProgressInfo);
+                                  setShowProgressInfo(null);
+                                }}
+                              >
+                                <Undo2 className="mr-2 h-4 w-4" />
+                                Remover confirmação e desfazer crédito
+                              </Button>
+
+                              <p className="text-[10px] leading-relaxed text-muted-foreground">
+                                Esta ação remove a confirmação do recebimento,
+                                exclui o crédito lançado nas contas e deixa o
+                                estorno pendente novamente. Se você escolheu
+                                apenas confirmar o recebimento, nenhum saldo de
+                                conta será alterado.
+                              </p>
                             </div>
                           )}
                         </div>
