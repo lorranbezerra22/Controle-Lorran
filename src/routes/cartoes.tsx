@@ -1141,7 +1141,7 @@ function CartoesPage() {
 
 
       <Dialog open={!!partialPayOpen} onOpenChange={(o) => !o && setPartialPayOpen(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {partialPayOpen?._refundConfirmation
@@ -2426,23 +2426,36 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
       const tayaneAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "tayane" || normalizeName(a.bank || "").includes("mercado"));
 
       return (
-        <div className="space-y-3">
-          <div className="bg-success/10 p-4 rounded-2xl border border-success/30 text-center space-y-3">
-            <div className="w-12 h-12 bg-success/20 rounded-full flex items-center justify-center mx-auto mb-2 text-success">
-              <Undo2 className="w-6 h-6" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="font-bold text-lg text-foreground">Confirmar recebimento do reembolso</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                O crédito de{" "}
-                <span className="font-bold text-success">
+        <div className="space-y-4">
+          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+            <div className="flex flex-col items-center border-b border-border bg-muted/30 px-5 py-5 text-center">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Undo2 className="h-6 w-6" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Valor do estorno</p>
+                <h3 className="text-2xl font-bold tabular-nums text-foreground">
                   {brl(Math.abs(Number(installment.amount)))}
-                </span>{" "}
-                já foi abatido diretamente na fatura?
-              </p>
+                </h3>
+                <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
+                  Confirme como o recebimento deste estorno deve ser registrado no sistema.
+                </p>
+              </div>
             </div>
+            <div className="space-y-4 p-5">
 
             <div className="space-y-3 text-left">
+              <div className="mb-3 flex items-start gap-3 rounded-xl border border-border bg-muted/20 p-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background text-primary shadow-sm">
+                  <Banknote className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Destino do crédito</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                    Selecione a conta abaixo caso queira creditar o valor após confirmar o estorno.
+                  </p>
+                </div>
+              </div>
               {isFamilia ? (
                 <>
                   <div className="space-y-1.5">
@@ -2507,18 +2520,17 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
               )}
             </div>
 
-            <div className="space-y-2 pt-1">
-              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-left">
-                <div className="text-xs font-semibold text-primary">
-                  Como deseja registrar este reembolso?
-                </div>
-                <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                  Escolha se o recebimento também deve atualizar o saldo das contas.
+            <div className="space-y-3 border-t border-border pt-4">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Como deseja registrar o estorno?</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Selecione uma das opções abaixo para concluir a confirmação.
                 </p>
               </div>
 
-              <Button
-                className="h-11 w-full rounded-xl text-sm font-bold shadow-lg bg-success hover:bg-success/90 text-success-foreground transition-all"
+              <button
+                type="button"
+                className="group flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 text-left transition-all hover:border-primary/60 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 onClick={() => {
                   onFullPay(notes, null, {
                     accountId: selectedAccountId,
@@ -2526,14 +2538,21 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
                   });
                 }}
               >
-                <Undo2 className="h-4 w-4" />
-                Confirmar e creditar nas contas
-              </Button>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+                  <Banknote className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-foreground">Confirmar e creditar nas contas</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                    Confirma o estorno e adiciona o valor à conta selecionada.
+                  </p>
+                </div>
+                <div className="h-5 w-5 shrink-0 rounded-full border-2 border-primary bg-primary shadow-[inset_0_0_0_3px_var(--background)]" />
+              </button>
 
-              <Button
+              <button
                 type="button"
-                variant="outline"
-                className="h-11 w-full rounded-xl border-primary/30 text-sm font-semibold hover:bg-primary/10"
+                className="group flex w-full items-center gap-3 rounded-xl border border-border bg-background p-4 text-left transition-all hover:border-muted-foreground/40 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 onClick={() => {
                   onFullPay(notes, null, {
                     accountId: "none",
@@ -2541,14 +2560,19 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
                   }, false);
                 }}
               >
-                <Check className="h-4 w-4" />
-                Apenas confirmar recebimento
-              </Button>
-
-              <p className="text-center text-[10px] leading-relaxed text-muted-foreground">
-                Apenas confirmar reduz o restante da fatura e não altera o saldo das contas.
-              </p>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  <Check className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-foreground">Confirmar sem crédito em conta</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                    Confirma o estorno e apenas reduz o restante da fatura.
+                  </p>
+                </div>
+                <div className="h-5 w-5 shrink-0 rounded-full border-2 border-muted-foreground/40 bg-background" />
+              </button>
             </div>
+          </div>
           </div>
           <Button variant="ghost" className="w-full text-xs" onClick={() => onDone()}>
             Ainda não recebi
