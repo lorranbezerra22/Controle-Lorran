@@ -514,6 +514,121 @@ function CartoesPage() {
     if (error) toast.error(error.message); else { invalidate("installments"); toast.success("Parcela removida"); setDeleting(null); }
   };
 
+  const removePaymentDirectly = async (installment: any, transaction: any) => {
+    if (!transaction?.id || transaction.isVirtual) {
+      toast.error("Não foi possível identificar o lançamento.");
+      return;
+    }
+
+    if (!confirm(`Remover o pagamento de ${brl(Number(transaction.amount || 0))}?`)) {
+      return;
+    }
+
+    if (!__tryLock()) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      const transactionAmount = Number(transaction.amount || 0);
+      const newPaidAmount = Math.max(
+        0,
+        Number(
+          (Number(installment.paid_amount || 0) - transactionAmount).toFixed(2),
+        ),
+      );
+
+      const remainingTransactions = allTransactions
+        .filter(
+          (item: any) =>
+            item.card_installment_id === installment.id &&
+            item.id !== transaction.id,
+        )
+        .sort(
+          (a: any, b: any) =>
+            new Date(b.posted_at || b.created_at).getTime() -
+            new Date(a.posted_at || a.created_at).getTime(),
+        );
+
+      const { error: deleteError } = await supabase
+        .from("transacoes")
+        .delete()
+        .eq("id", transaction.id);
+
+      if (deleteError) throw deleteError;
+
+      const { error: installmentError } = await supabase
+        .from("cartao_parcelas")
+        .update({
+          paid_amount: newPaidAmount,
+          status:
+            newPaidAmount >= Number(installment.amount || 0) - 0.01
+              ? "paid"
+              : "pending",
+          notes: remainingTransactions[0]?.notes || null,
+        } as any)
+        .eq("id", installment.id);
+
+      if (installmentError) throw installmentError;
+
+      const person =
+        transaction.person || installment.cartao_compras?.person || "Familia";
+
+      const { data: participation, error: participationError } = await supabase
+        .from("participacoes_parcelas")
+        .select("id, amount")
+        .eq("installment_id", installment.id)
+        .eq("person", person)
+        .maybeSingle();
+
+      if (participationError) throw participationError;
+
+      const nextParticipationAmount = Number(
+        (Number(participation?.amount || 0) - transactionAmount).toFixed(2),
+      );
+
+      if (nextParticipationAmount <= 0.01) {
+        if (participation?.id) {
+          const { error } = await supabase
+            .from("participacoes_parcelas")
+            .delete()
+            .eq("id", participation.id);
+
+          if (error) throw error;
+        }
+      } else {
+        const { error } = await supabase
+          .from("participacoes_parcelas")
+          .update({
+            amount: nextParticipationAmount,
+            status:
+              Math.abs(
+                nextParticipationAmount - Number(installment.amount || 0),
+              ) < 0.01
+                ? "paid"
+                : "pending",
+            paid_at: new Date().toISOString(),
+            user_id: user.id,
+          } as any)
+          .eq("id", participation.id);
+
+        if (error) throw error;
+      }
+
+      setShowProgressInfo(null);
+      setRemovePaymentOpen(null);
+      setEditingTransactionId(null);
+      invalidate("installments");
+      invalidate("accounts");
+      invalidate("transactions");
+      toast.success("Pagamento removido");
+    } catch (err: any) {
+      toast.error(err.message || "Não foi possível remover o pagamento.");
+    } finally {
+      __release();
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -1151,11 +1266,7 @@ function CartoesPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => {
-                                  setShowProgressInfo(null);
-                                  setEditingTransactionId(t.id);
-                                  setRemovePaymentOpen({ ...showProgressInfo, _mode: "remove" });
-                                }}
+                                onClick={() => removePaymentDirectly(showProgressInfo, t)}
                               >
                                 <Trash2 className="w-3 h-3" />
                               </Button>
