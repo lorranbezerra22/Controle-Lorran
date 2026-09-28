@@ -170,12 +170,13 @@ const getInstallmentPaymentState = (installment: any) => {
   const rawPaid = Number(installment.paid_amount || 0);
   const isPaid = installment.status === "paid";
 
-  // Se for estorno (valor negativo)
+  // Estorno confirmado é uma redução da fatura, não um pagamento negativo.
+  // paid_amount permanece em zero para evitar queparticipações e dashboards somem o estorno como saldo devedor.
   if (total < 0) {
     return {
       total,
-      paid: isPaid ? total : 0,
-      remaining: isPaid ? 0 : total, // Se pago, restante é 0. Se pendente, é o valor negativo (crédito).
+      paid: isPaid ? Math.abs(total) : 0,
+      remaining: isPaid ? 0 : total,
       hasPaid: isPaid,
       hasPending: !isPaid,
     };
@@ -504,7 +505,7 @@ function CartoesPage() {
           user_id: user.id,
           installment_id: i.id,
           person: costPerson,
-          amount: amount,
+          amount: Math.abs(amount),
           status: "paid",
           paid_at: new Date().toISOString()
         } as any, { onConflict: 'installment_id,person' });
@@ -513,7 +514,7 @@ function CartoesPage() {
 
         const { error } = await supabase.from("cartao_parcelas").update({
           status: "paid",
-          paid_amount: amount,
+          paid_amount: isEstorno ? 0 : amount,
           paid_by: paidByOverride || null,
         } as any).eq("id", i.id);
 
@@ -2237,15 +2238,17 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
   const [payMode, setPayMode] = useState<"total" | "anticipate" | null>(
     initialAmount !== undefined && Number(installment.amount || 0) >= 0 ? "anticipate" : null,
   );
-  const currentRemaining = Math.max(
-    0,
-    Number(installment.amount || 0) - Number(installment.paid_amount || 0),
-  );
+  const installmentAmount = Number(installment.amount || 0);
+  const isRefund = installmentAmount < 0;
+  const currentRemaining = isRefund
+    ? 0
+    : Math.max(0, installmentAmount - Number(installment.paid_amount || 0));
+  const defaultAmount = isRefund ? Math.abs(installmentAmount) : currentRemaining;
 
   const [payAmount, setPayAmount] = useState(
     initialAmount !== undefined
       ? String(Math.max(0, initialAmount).toFixed(2))
-      : String(currentRemaining.toFixed(2)),
+      : String(defaultAmount.toFixed(2)),
   );
   const [notes, setNotes] = useState("");
   const [paidBy, setPaidBy] = useState<string>(installment.cartao_compras?.person || "");
@@ -2273,15 +2276,19 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
       Number(installment.amount || 0) - Number(installment.paid_amount || 0),
     );
 
-    setPayAmount(
+                setPayAmount(
       String(
         Math.max(
           0,
-          initialAmount !== undefined ? initialAmount : syncedRemaining,
+          initialAmount !== undefined
+            ? initialAmount
+            : installmentAmount < 0
+              ? Math.abs(installmentAmount)
+              : syncedRemaining,
         ).toFixed(2),
       ),
     );
-  }, [initialAmount, installment.amount, installment.paid_amount]);
+  }, [initialAmount, installmentAmount, installment.paid_amount]);
 
 
   const originalPerson = installment.cartao_compras?.person || "";
