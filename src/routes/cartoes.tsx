@@ -2106,9 +2106,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }) => void, onDone: () => void, initialAmount?: number }) {
-  // Estornos (valor negativo) sempre abrem a tela de confirmação, nunca o modo antecipação
   const [payMode, setPayMode] = useState<"total" | "anticipate" | null>(
-    initialAmount !== undefined && Number(installment.amount || 0) >= 0 ? "anticipate" : null,
+    initialAmount !== undefined ? "anticipate" : null,
   );
   const currentRemaining = Math.max(
     0,
