@@ -1417,7 +1417,7 @@ function CartoesPage() {
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Ajuste de lançamento</DialogTitle>
+            <DialogTitle>Ajuste de pagamento</DialogTitle>
           </DialogHeader>
           {responsibilityInstallment && (
             <CardResponsibilityForm
@@ -1766,6 +1766,8 @@ function CardResponsibilityForm({
   onDone: () => void;
   onCancel: () => void;
 }) {
+  // Família permanece 50/50 por padrão. O ajuste salvo em metadata só
+  // substitui as cotas desta parcela; ele não altera a regra global.
   const total = Math.max(0, Number(installment.amount || 0));
   const initial = normalizeResponsibility(installment);
   const [rows, setRows] = useState(() =>
@@ -1830,7 +1832,7 @@ function CardResponsibilityForm({
 
       if (error) throw error;
 
-      toast.success("Responsabilidade ajustada. Agora o pagamento pode ser feito normalmente.");
+      toast.success("Ajuste de pagamento salvo. Os valores de cada responsável foram atualizados.");
       onDone();
     } catch (err: any) {
       toast.error(err.message || "Não foi possível salvar o ajuste.");
@@ -3182,6 +3184,8 @@ function AnticipatePayForm({
 
   const originalPerson = installment.cartao_compras?.person || "";
   const isFamilia = normalizeName(originalPerson) === "familia";
+  // Usa a cota ajustada desta parcela quando existir. Sem ajuste, a regra
+  // padrão continua sendo 50% para cada pessoa da Família.
   const quota = responsibilityForPerson(installment, paidBy || originalPerson);
 
   const overrideActive = !!paidBy && paidBy.trim() && normalizeName(paidBy) !== normalizeName(originalPerson);
@@ -3535,7 +3539,7 @@ function AnticipatePayForm({
                 className="h-12 text-sm font-semibold rounded-xl border-primary/30 hover:border-primary hover:bg-primary/5"
                 onClick={onAdjustResponsibility}
               >
-                Ajustar lançamento
+                Ajustar pagamento
               </Button>
             )}
 
