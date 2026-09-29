@@ -2246,6 +2246,141 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function RefundReceiptPanel({
+  installment,
+  onConfirm,
+  onCancel,
+}: {
+  installment: any;
+  onConfirm: (
+    notes?: string,
+    paidBy?: string | null,
+    accountsOverride?: {
+      accountId?: string | null;
+      accountTayaneId?: string | null;
+    },
+    creditToAccount?: boolean,
+  ) => void;
+  onCancel: () => void;
+}) {
+  const amount = Math.abs(Number(installment.amount || 0));
+  const description = installment.cartao_compras?.description || "Estorno";
+  const person = installment.cartao_compras?.person || "Sem pessoa";
+  const category = installment.cartao_compras?.categorias?.name || "Sem categoria";
+
+  return (
+    <div className="space-y-4">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <div className="relative overflow-hidden border-b border-border bg-gradient-to-br from-success/10 via-card to-primary/5 px-5 py-5">
+          <div className="absolute -right-8 -top-10 h-32 w-32 rounded-full bg-success/10 blur-2xl" />
+
+          <div className="relative flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-success/15 text-success">
+              <Undo2 className="h-5 w-5" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="mb-1 flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-success">
+                  Estorno recebido
+                </span>
+                <span className="rounded-full border border-success/25 bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success">
+                  Abate a fatura
+                </span>
+              </div>
+
+              <h3 className="truncate text-base font-semibold text-foreground">
+                {description}
+              </h3>
+
+              <p className="mt-1 text-xs text-muted-foreground">
+                {person} · parcela {installment.installment_number}/
+                {installment.cartao_compras?.installments_count || 1}
+              </p>
+            </div>
+
+            <div className="relative shrink-0 text-right">
+              <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
+                Valor
+              </span>
+              <strong className="mt-0.5 block text-xl tabular-nums text-success">
+                {brl(amount)}
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 divide-x divide-border">
+          <div className="p-3.5">
+            <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
+              Categoria
+            </span>
+            <span className="mt-1 block truncate text-sm font-medium text-foreground">
+              {category}
+            </span>
+          </div>
+
+          <div className="p-3.5">
+            <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
+              Fatura
+            </span>
+            <span className="mt-1 block text-sm font-medium text-foreground">
+              {fmtDate(installment.due_at)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-success/25 bg-success/5 p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-success/15 text-success">
+            <Check className="h-4 w-4" />
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">
+              Confirmar abatimento
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              O valor será considerado na fatura e na categoria, sem movimentar contas.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          className="flex-1"
+          onClick={onCancel}
+        >
+          Agora não
+        </Button>
+
+        <Button
+          type="button"
+          className="flex-1 bg-success text-success-foreground hover:bg-success/90"
+          onClick={() =>
+            onConfirm(
+              undefined,
+              null,
+              {
+                accountId: "none",
+                accountTayaneId: "none",
+              },
+              false,
+            )
+          }
+        >
+          <Check className="mr-2 h-4 w-4" />
+          Confirmar estorno
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function RefundConfirmationPanel({
   installment,
   accounts,
@@ -2692,9 +2827,8 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
 
     if (isEstorno) {
       return (
-        <RefundConfirmationPanel
+        <RefundReceiptPanel
           installment={installment}
-          accounts={accounts}
           onConfirm={onFullPay}
           onCancel={onDone}
         />
