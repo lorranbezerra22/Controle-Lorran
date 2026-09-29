@@ -1330,13 +1330,7 @@ function CartoesPage() {
                         {(Number(i.amount) < 0 ? isRefundConfirmed(i) : i.status === "paid") ? <Check className="w-3.5 h-3.5" /> : (Number(i.amount) < 0 ? <Undo2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />)}
                       </button>
                       {normalizeName(i.cartao_compras?.person || "") === "familia" && Number(i.amount) > 0 && (
-                        <button
-                          onClick={() => setResponsibilityInstallment(i)}
-                          title="Ajustar responsabilidade"
-                          className="w-7 h-7 rounded-md flex items-center justify-center bg-muted text-muted-foreground hover:bg-primary/20 hover:text-primary"
-                        >
-                          <SplitSquareHorizontal className="w-3.5 h-3.5" />
-                        </button>
+
                       )}
                       <button onClick={() => setDeleting(i)} className="w-7 h-7 rounded-md flex items-center justify-center bg-muted text-muted-foreground hover:bg-destructive/20 hover:text-destructive">
                         <Trash2 className="w-3.5 h-3.5" />
@@ -1403,6 +1397,10 @@ function CartoesPage() {
                 setShowProgressInfo(null);
               }}
               onDone={() => { setPartialPayOpen(null); invalidate("installments"); invalidate("accounts"); invalidate("transactions"); }}
+              onAdjustResponsibility={() => {
+                setPartialPayOpen(null);
+                setResponsibilityInstallment(partialPayOpen);
+              }}
             />
           )}
         </DialogContent>
@@ -3092,7 +3090,27 @@ function RefundConfirmationPanel({
   );
 }
 
-function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }, creditToAccount?: boolean) => void, onDone: () => void, initialAmount?: number }) {
+function AnticipatePayForm({
+  installment,
+  onFullPay,
+  onDone,
+  onAdjustResponsibility,
+  initialAmount,
+}: {
+  installment: any;
+  onFullPay: (
+    notes?: string,
+    paidBy?: string | null,
+    accountsOverride?: {
+      accountId?: string | null;
+      accountTayaneId?: string | null;
+    },
+    creditToAccount?: boolean,
+  ) => void;
+  onDone: () => void;
+  onAdjustResponsibility?: () => void;
+  initialAmount?: number;
+}) {
   // Estornos (valor negativo) sempre abrem a tela de confirmação, nunca o modo antecipação
   const [payMode, setPayMode] = useState<"total" | "anticipate" | null>(
     (installment as any)._quickPay && Number(installment.amount || 0) >= 0
@@ -3504,6 +3522,17 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
             >
               Pagar restante
             </Button>
+            {isFamilia && onAdjustResponsibility && (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 rounded-xl border-primary/30 text-sm font-semibold hover:border-primary hover:bg-primary/5"
+                onClick={onAdjustResponsibility}
+              >
+                <SplitSquareHorizontal className="mr-2 h-4 w-4" />
+                Ajustar responsabilidade
+              </Button>
+            )}
           </div>
         </div>
         <Button variant="ghost" className="w-full text-xs" onClick={() => onDone()}>Cancelar</Button>
