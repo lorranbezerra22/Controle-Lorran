@@ -175,9 +175,10 @@ const getInstallmentPaymentState = (installment: any) => {
   if (total < 0) {
     return {
       total,
-      // Estorno confirmado é um crédito: permanece negativo no valor pago.
-      // O restante, porém, nunca pode ficar negativo nem aumentar a pagar.
-      paid: isPaid ? total : 0,
+      // O estorno reduz a fatura, mas não é um pagamento negativo.
+      // Exibimos o valor confirmado como positivo para evitar conflito
+      // entre "valor pago" e "restante".
+      paid: isPaid ? Math.abs(total) : 0,
       remaining: 0,
       hasPaid: isPaid,
       hasPending: !isPaid,
@@ -509,23 +510,33 @@ function CartoesPage() {
           }
         }
 
-        // 2. Registrar participação total na nova tabela
-        const { error: partError } = await supabase.from("participacoes_parcelas").upsert({
-          user_id: user.id,
-          installment_id: i.id,
-          person: costPerson,
-          // Estorno é crédito e deve reduzir o valor pago,
-          // sem transformar o crédito em uma despesa positiva.
-          amount: isEstorno ? amount : Math.abs(amount),
-          status: "paid",
-          paid_at: new Date().toISOString()
-        } as any, { onConflict: 'installment_id,person' });
+        // 2. Registrar a participação apenas para pagamentos de despesas.
+        // Estornos não são pagamentos negativos e não devem criar participação
+        // negativa, pois isso faz o restante aumentar em outros indicadores.
+        if (isEstorno) {
+          const { error: refundParticipationError } = await supabase
+            .from("participacoes_parcelas")
+            .delete()
+            .eq("installment_id", i.id);
 
-        if (partError) throw partError;
+          if (refundParticipationError) throw refundParticipationError;
+        } else {
+          const { error: partError } = await supabase.from("participacoes_parcelas").upsert({
+            user_id: user.id,
+            installment_id: i.id,
+            person: costPerson,
+            amount: Math.abs(amount),
+            status: "paid",
+            paid_at: new Date().toISOString()
+          } as any, { onConflict: "installment_id,person" });
+
+          if (partError) throw partError;
+        }
 
         const { error } = await supabase.from("cartao_parcelas").update({
           status: "paid",
-          paid_amount: isEstorno ? 0 : amount,
+          // Estorno confirmado reduz a fatura, mas paid_amount continua zerado.
+          paid_amount: 0,
           paid_by: paidByOverride || null,
         } as any).eq("id", i.id);
 
@@ -1245,11 +1256,9 @@ function CartoesPage() {
                   const isEstornoInfo = total < 0;
                   const estornoPaid = showProgressInfo.status === "paid";
                   const paid = isEstornoInfo
-                    ? (estornoPaid ? total : 0)
+                    ? (estornoPaid ? Math.abs(total) : 0)
                     : Math.min(total, Math.max(0, Number(showProgressInfo.paid_amount || 0)));
-                  const remaining = isEstornoInfo
-                    ? 0
-                    : Math.max(0, Number((total - paid).toFixed(2)));
+                  const remaining = 0;
                   const progress = isEstornoInfo
                     ? (estornoPaid ? 100 : 0)
                     : (total > 0 ? Math.min(100, (paid / total) * 100) : 0);
