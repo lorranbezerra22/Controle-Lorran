@@ -367,6 +367,10 @@ function CartoesPage() {
       const m = (map[effectiveCardId] = map[effectiveCardId] ?? { fatura: 0, restante: 0, brandTotals: {} });
       const payment = getInstallmentPaymentState(i);
 
+      // O valor negativo do estorno já compõe o total líquido da fatura.
+      // A confirmação não cria pagamento nem saldo restante.
+      const refundOnly = payment.total < 0;
+
       const person = (i.cartao_compras?.person || "").toLowerCase().trim();
       const filter = personFilter !== "all" ? personFilter.toLowerCase().trim() : "all";
       const filter2 = personFilter2 !== "all" ? personFilter2.toLowerCase().trim() : "all";
@@ -377,7 +381,7 @@ function CartoesPage() {
 
       if (matchesFilter) {
         let valueForTotal = payment.total;
-        let valueForRestante = payment.remaining;
+        let valueForRestante = refundOnly ? 0 : payment.remaining;
 
         if (isFam && (filter !== "all" || filter2 !== "all")) {
           const parts = i.participacoes || [];
@@ -386,7 +390,10 @@ function CartoesPage() {
 
           const quota = payment.total / 2;
 
-          if (filter === "lorran" || filter2 === "lorran") {
+          if (refundOnly) {
+            // Mantém o estorno no total líquido da fatura, mas nunca no restante.
+            valueForRestante = 0;
+          } else if (filter === "lorran" || filter2 === "lorran") {
             const myPaid = paidByLorran;
             const myRemaining = i.status === "paid" ? 0 : quota - myPaid;
             valueForTotal = quota;
@@ -424,13 +431,13 @@ function CartoesPage() {
         m.brandTotals[b] = m.brandTotals[b] ?? { fatura: 0, restante: 0 };
         m.brandTotals[b].fatura += valueForTotal;
 
-        // Estornos pendentes ainda não são crédito confirmado.
-        // Quando pagos/confirmados, o valor negativo reduz o restante.
-        if (payment.total < 0 && payment.hasPending) {
+        // Estornos nunca entram no restante. O valor negativo já foi lançado
+        // na fatura e na categoria quando o estorno foi registrado.
+        if (payment.total < 0) {
           valueForRestante = 0;
         }
 
-        m.restante += valueForRestante;
+        m.restante += Math.max(0, valueForRestante);
         m.brandTotals[b].restante += valueForRestante;
       }
     });

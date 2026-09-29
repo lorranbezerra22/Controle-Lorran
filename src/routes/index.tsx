@@ -348,7 +348,11 @@ function Dashboard() {
         ensure("Tayane").restante += Math.max(0, quota - tayanePaid);
       } else {
         ensure(p)[type] += amount;
-        if (!isPaid) {
+
+        // Estornos já estão refletidos no valor negativo da categoria e da fatura.
+        // A confirmação do recebimento é apenas operacional: não representa
+        // pagamento e não deve criar saldo restante negativo.
+        if (!isPaid && !(type === "card" && amount < 0)) {
           const actualPaid = Math.max(0, paidAmount || 0);
           ensure(p).restante += Math.max(0, amount - actualPaid);
         }
@@ -1285,6 +1289,11 @@ function computePaidRest(targetName: string, monthTx: any[], monthInst: any[], a
   monthInst.forEach(i => {
     if (i.category_id === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a") return;
     const v = Number(i.amount);
+
+    // O estorno negativo já abate a fatura e a categoria no lançamento.
+    // Não deve aparecer como pago nem como restante após a confirmação.
+    if (v < 0) return;
+
     const itemPerson = (i.cartao_compras?.person || "").trim();
     const isItemFamilia = norm(itemPerson) === "familia";
     let factor = 0;
