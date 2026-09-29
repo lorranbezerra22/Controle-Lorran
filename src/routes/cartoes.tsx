@@ -367,8 +367,8 @@ function CartoesPage() {
       const m = (map[effectiveCardId] = map[effectiveCardId] ?? { fatura: 0, restante: 0, brandTotals: {} });
       const payment = getInstallmentPaymentState(i);
 
-      // O valor negativo do estorno já compõe o total líquido da fatura.
-      // A confirmação não cria pagamento nem saldo restante.
+      // O lançamento negativo já reduz a fatura, mas só reduz o
+      // restante depois que o recebimento do estorno for confirmado.
       const refundOnly = payment.total < 0;
 
       const person = (i.cartao_compras?.person || "").toLowerCase().trim();
@@ -438,9 +438,55 @@ function CartoesPage() {
         }
 
         m.restante += Math.max(0, valueForRestante);
-        m.brandTotals[b].restante += valueForRestante;
+        m.brandTotals[b].restante += Math.max(0, valueForRestante);
       }
     });
+
+    // Um estorno confirmado funciona como crédito contra o restante da
+    // fatura. Ele não é um pagamento e não altera paid_amount, contas ou
+    // participações; apenas libera o valor que já foi abatido na fatura.
+    monthInst.forEach((i: any) => {
+      const refundAmount = Number(i.amount || 0);
+      if (refundAmount >= 0 || !isRefundConfirmed(i)) return;
+
+      const person = (i.cartao_compras?.person || "").toLowerCase().trim();
+      const filter = personFilter !== "all" ? personFilter.toLowerCase().trim() : "all";
+      const filter2 = personFilter2 !== "all" ? personFilter2.toLowerCase().trim() : "all";
+      const isFam = person === "familia";
+
+      const matchesFilter =
+        filter === "all" ||
+        person === filter ||
+        (isFam && (filter === "lorran" || filter === "tayane")) ||
+        person === filter2 ||
+        (isFam && (filter2 === "lorran" || filter2 === "tayane"));
+
+      if (!matchesFilter) return;
+
+      const factor =
+        isFam && filter !== "all" && filter2 !== "all"
+          ? 0.5
+          : isFam && (filter === "lorran" || filter === "tayane" || filter2 === "lorran" || filter2 === "tayane")
+            ? 0.5
+            : 1;
+
+      const credit = Math.abs(refundAmount) * factor;
+      const target = map[i.card_id];
+      if (!target) return;
+
+      target.restante = Math.max(0, target.restante - credit);
+
+      const metadata = i.cartoes?.metadata as {
+        brand?: string;
+        brands?: Array<{ brand?: string; last_digits?: string }>;
+      } | undefined;
+      const brand = i.cartao_compras?.brand || metadata?.brand || "Cartão";
+      const brandTotal = target.brandTotals[brand];
+      if (brandTotal) {
+        brandTotal.restante = Math.max(0, brandTotal.restante - credit);
+      }
+    });
+
     return map;
   }, [monthInst, personFilter, personFilter2, statusFilter]);
 

@@ -251,25 +251,17 @@ function Dashboard() {
 
   // Cartões — respeita filtros
   const fatura = monthInst.reduce((s: number, i: any) => s + Number(i.amount) * personFactor(costPersonInst(i)), 0);
-  const faturaRest = monthInst.reduce((s: number, i: any) => {
+  const faturaRestBeforeRefunds = monthInst.reduce((s: number, i: any) => {
     const factor = personFactor(costPersonInst(i));
     if (factor === 0) return s;
     const amount = Number(i.amount);
     
-    // CORREÇÃO CRÍTICA: Se a parcela está marcada como paga, o restante é 0.
-    // Isso deve valer para valores positivos E negativos (estornos).
-    // Estornos confirmados reduzem o valor que ainda falta pagar.
-    // Parcelas positivas pagas não entram no restante; estornos pendentes
-    // só devem afetar o restante depois de confirmados.
-    if (i.status === "paid") {
-      // Estorno confirmado já foi aplicado no valor da fatura.
-      // Ele não representa um pagamento negativo nem deve alterar
-      // novamente o valor restante do dashboard.
-      return s;
-    }
+    // Parcelas positivas pagas não entram no restante.
+    if (i.status === "paid") return s;
 
-    // Estorno pendente já reduz o valor da fatura, mas ainda não
-    // deve alterar o restante até ser confirmado.
+    // Estorno pendente ainda não libera saldo para pagamento.
+    // O valor negativo já está refletido na fatura, mas a confirmação
+    // é necessária para reduzir o restante.
     if (amount < 0) return s;
 
     const paidAmount = Number(i.paid_amount || 0);
@@ -287,6 +279,18 @@ function Dashboard() {
     }
     return s + Math.max(0, amount - paidAmount);
   }, 0);
+
+  const confirmedRefundCredit = monthInst.reduce((s: number, i: any) => {
+    const amount = Number(i.amount || 0);
+    if (amount >= 0 || !isRefundConfirmed(i)) return s;
+
+    const factor = personFactor(costPersonInst(i));
+    return s + Math.abs(amount) * factor;
+  }, 0);
+
+  // O estorno confirmado reduz o restante da fatura, mas não é tratado
+  // como pagamento e não altera paid_amount, saldo de conta ou categoria.
+  const faturaRest = Math.max(0, faturaRestBeforeRefunds - confirmedRefundCredit);
 
   // Balanço projetado = Saldo da Conta + A receber −
   // (despesas restantes + fatura restante).
@@ -330,6 +334,25 @@ function Dashboard() {
       if (isFamilia(p)) {
         const totalOriginal = amount;
         const quota = totalOriginal / 2;
+
+        // Estorno de Família já reduziu a fatura e a categoria no lançamento
+        // negativo. Quando confirmado, reduz apenas o restante de cada
+        // participante, sem criar pagamento artificial.
+        if (type === "card" && totalOriginal < 0) {
+          if (isRefundConfirmed({ amount: totalOriginal, metadata })) {
+            ensure("Lorran").restante = Math.max(
+              0,
+              ensure("Lorran").restante - Math.abs(quota),
+            );
+            ensure("Tayane").restante = Math.max(
+              0,
+              ensure("Tayane").restante - Math.abs(quota),
+            );
+          }
+          ensure("Lorran")[type] += quota;
+          ensure("Tayane")[type] += quota;
+          return;
+        }
         
         // Priorizar nova tabela de participações, fallback para metadata legado
         const parts = participacoes && participacoes.length > 0 ? participacoes : (metadata?.partial_payments || []);
@@ -352,7 +375,7 @@ function Dashboard() {
         // Estornos já estão refletidos no valor negativo da categoria e da fatura.
         // A confirmação do recebimento é apenas operacional: não representa
         // pagamento e não deve criar saldo restante negativo.
-        if (!isPaid && !(type === "card" && amount < 0)) {
+          if (!isPaid && !(type === "card" && amount < 0)) {
           const actualPaid = Math.max(0, paidAmount || 0);
           ensure(p).restante += Math.max(0, amount - actualPaid);
         }
@@ -366,6 +389,22 @@ function Dashboard() {
     
     monthInst.forEach((i: any) => {
       addVal(i.cartao_compras?.person || "", Number(i.amount), i.status, "card", i.paid_by, i.cartao_compras?.description || "", i.category_id, i.metadata, Number(i.paid_amount || 0), i.participacoes);
+    });
+
+    // Para pessoas individuais, o crédito do estorno confirmado também
+    // reduz o restante sem inflar o campo "Pago".
+    monthInst.forEach((i: any) => {
+      const amount = Number(i.amount || 0);
+      if (amount >= 0 || !isRefundConfirmed(i)) return;
+
+      const rawPerson = i.cartao_compras?.person || "";
+      if (isFamilia(rawPerson)) return;
+
+      const person = String(rawPerson).trim();
+      const target = tot[person];
+      if (target) {
+        target.restante = Math.max(0, target.restante - Math.abs(amount));
+      }
     });
 
     const cardMap: Record<string, Record<string, number>> = {};
@@ -1292,7 +1331,18 @@ function computePaidRest(targetName: string, monthTx: any[], monthInst: any[], a
 
     // O estorno negativo já abate a fatura e a categoria no lançamento.
     // Não deve aparecer como pago nem como restante após a confirmação.
-    if (v < 0) return;
+    if (v < 0) {
+      // Estorno pendente não reduz o restante. Após a confirmação,
+      // ele libera o crédito correspondente para a pessoa.
+      if (isRefundConfirmed(i)) {
+        const itemPerson = (i.cartao_compras?.person || "").trim();
+        const isItemFamilia = norm(itemPerson) === "familia";
+        if (isNameFamilia && isItemFamilia) rest -= Math.abs(v);
+        else if (!isNameFamilia && isItemFamilia && splitsFamilia) rest -= Math.abs(v) / 2;
+        else if (!isNameFamilia && isTarget(itemPerson)) rest -= Math.abs(v);
+      }
+      return;
+    }
 
     const itemPerson = (i.cartao_compras?.person || "").trim();
     const isItemFamilia = norm(itemPerson) === "familia";
@@ -1326,7 +1376,7 @@ function computePaidRest(targetName: string, monthTx: any[], monthInst: any[], a
     }
   });
 
-  return { totalPago: paidAmt, totalRestante: rest };
+  return { totalPago: paidAmt, totalRestante: Math.max(0, rest) };
 }
 
 function PersonCard({ name, value, monthInst, monthTx, adjMap, expanded = true, onToggle }: { name: string; value: number; monthInst: any[]; monthTx: any[]; adjMap: any; expanded?: boolean; onToggle?: () => void }) {
