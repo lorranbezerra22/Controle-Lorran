@@ -260,6 +260,7 @@ function CartoesPage() {
   const [editingCard, setEditingCard] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null);
   const [showProgressInfo, setShowProgressInfo] = useState<any>(null);
+  const [responsibilityInstallment, setResponsibilityInstallment] = useState<any>(null);
 
   const lsGet = (k: string, d: string) => {
     if (typeof window === "undefined") return d;
@@ -1401,6 +1402,31 @@ function CartoesPage() {
                 setShowProgressInfo(null);
               }}
               onDone={() => { setPartialPayOpen(null); invalidate("installments"); invalidate("accounts"); invalidate("transactions"); }}
+              onAdjustResponsibility={() => {
+                setPartialPayOpen(null);
+                setResponsibilityInstallment(partialPayOpen);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!responsibilityInstallment}
+        onOpenChange={(open) => !open && setResponsibilityInstallment(null)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ajuste de lançamento</DialogTitle>
+          </DialogHeader>
+          {responsibilityInstallment && (
+            <CardResponsibilityForm
+              installment={responsibilityInstallment}
+              onDone={() => {
+                setResponsibilityInstallment(null);
+                invalidate("installments");
+              }}
+              onCancel={() => setResponsibilityInstallment(null)}
             />
           )}
         </DialogContent>
@@ -3074,6 +3100,7 @@ function AnticipatePayForm({
   installment,
   onFullPay,
   onDone,
+  onAdjustResponsibility,
   initialAmount,
 }: {
   installment: any;
@@ -3087,6 +3114,7 @@ function AnticipatePayForm({
     creditToAccount?: boolean,
   ) => void;
   onDone: () => void;
+  onAdjustResponsibility?: () => void;
   initialAmount?: number;
 }) {
   // Estornos (valor negativo) sempre abrem a tela de confirmação, nunca o modo antecipação
@@ -3500,6 +3528,16 @@ function AnticipatePayForm({
             >
               Pagar restante
             </Button>
+            {isFamilia && onAdjustResponsibility && (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 text-sm font-semibold rounded-xl border-primary/30 hover:border-primary hover:bg-primary/5"
+                onClick={onAdjustResponsibility}
+              >
+                Ajustar lançamento
+              </Button>
+            )}
 
           </div>
         </div>
