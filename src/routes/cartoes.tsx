@@ -1417,7 +1417,7 @@ function CartoesPage() {
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Ajuste de pagamento</DialogTitle>
+            <DialogTitle>Ajuste de responsabilidade</DialogTitle>
           </DialogHeader>
           {responsibilityInstallment && (
             <CardResponsibilityForm
@@ -1832,7 +1832,7 @@ function CardResponsibilityForm({
 
       if (error) throw error;
 
-      toast.success("Ajuste de pagamento salvo. Os valores de cada responsável foram atualizados.");
+      toast.success("Ajuste de responsabilidade salvo. Os valores de cada responsável foram atualizados.");
       onDone();
     } catch (err: any) {
       toast.error(err.message || "Não foi possível salvar o ajuste.");
@@ -3539,7 +3539,7 @@ function AnticipatePayForm({
                 className="h-12 text-sm font-semibold rounded-xl border-primary/30 hover:border-primary hover:bg-primary/5"
                 onClick={onAdjustResponsibility}
               >
-                Ajustar pagamento
+                Ajuste de responsabilidade
               </Button>
             )}
 
