@@ -169,23 +169,24 @@ const getInstallmentPaymentState = (installment: any) => {
   const total = Number(installment.amount || 0);
   const rawPaid = Number(installment.paid_amount || 0);
   const isPaid = installment.status === "paid";
+  const isRefund = total < 0;
 
-  // Estorno confirmado é uma redução da fatura, não um pagamento negativo.
-  // paid_amount permanece em zero para evitar queparticipações e dashboards somem o estorno como saldo devedor.
-  if (total < 0) {
+  // Estorno já foi aplicado no valor original da fatura. Confirmá-lo
+  // não é um pagamento e não deve alimentar "pago", "restante" ou saldo.
+  // O valor negativo continua sendo exibido apenas no total da fatura.
+  if (isRefund) {
     return {
       total,
-      // O estorno reduz a fatura, mas não é um pagamento negativo.
-      // Exibimos o valor confirmado como positivo para evitar conflito
-      // entre "valor pago" e "restante".
-      paid: isPaid ? Math.abs(total) : 0,
+      paid: 0,
       remaining: 0,
       hasPaid: isPaid,
       hasPending: !isPaid,
     };
   }
 
-  const paid = isPaid && rawPaid <= 0 ? total : (total < 0 ? Math.max(total, rawPaid) : Math.min(total, Math.max(0, rawPaid)));
+  const paid = isPaid && rawPaid <= 0
+    ? total
+    : Math.min(total, Math.max(0, rawPaid));
   const remaining = isPaid ? 0 : Number((total - paid).toFixed(2));
 
   return {

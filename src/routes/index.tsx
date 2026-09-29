@@ -195,7 +195,13 @@ function Dashboard() {
     .filter((t: any) => t.kind === "expense" && t.status === "paid" && t.category_id !== "0494a63e-6737-4a3c-8778-67ce5f96a0a1" && !t.card_installment_id)
     .reduce((s: number, t: any) => s + txValue(t), 0);
   const parcelasPagasAll = inst
-    .filter((i: any) => i.status === "paid" || Number(i.paid_amount || 0) > 0)
+    .filter((i: any) => {
+      // Estornos negativos já reduziram a fatura no lançamento original.
+      // Mesmo confirmados, não são pagamentos e não podem aumentar o saldo
+      // ao serem subtraídos novamente como parcela paga.
+      const amount = Number(i.amount) || 0;
+      return amount > 0 && (i.status === "paid" || Number(i.paid_amount || 0) > 0);
+    })
     .reduce((s: number, i: any) => s + Number(i.amount) * personFactor(costPersonInst(i)), 0);
   
   const saldoCalculado = receitasPagasAll - despesasPagasAll - parcelasPagasAll;
@@ -757,7 +763,9 @@ function Dashboard() {
                 // Estornos não são pagamentos negativos. O valor negativo
                 // já compõe a fatura, mas não deve gerar “pago” negativo
                 // nem contaminar o restante.
-                const pago = Math.max(0, fat - restante);
+                // Estornos fazem parte do valor líquido da fatura, mas não
+                // representam pagamento. Nunca podem gerar valor pago negativo.
+                const pago = fat > 0 ? Math.max(0, fat - restante) : 0;
                 const pctPago = fat > 0 ? (pago / fat) * 100 : 0;
                 const isPaid = restante === 0 && fat > 0;
                 return (
