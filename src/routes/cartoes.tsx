@@ -651,10 +651,21 @@ function CartoesPage() {
             : "Parcela marcada como paga.",
         );
       } else {
-        // Cancelar Pagamento: Remove transações, participações e reseta parcela
-        await supabase.from("transacoes").delete().eq("card_installment_id", i.id);
+        // Cancelar pagamento: primeiro remove os lançamentos financeiros
+        // e as participações. Só depois redefine a parcela.
+        const { error: transactionDeleteError } = await supabase
+          .from("transacoes")
+          .delete()
+          .eq("card_installment_id", i.id);
 
-        await supabase.from("participacoes_parcelas").delete().eq("installment_id", i.id);
+        if (transactionDeleteError) throw transactionDeleteError;
+
+        const { error: participationDeleteError } = await supabase
+          .from("participacoes_parcelas")
+          .delete()
+          .eq("installment_id", i.id);
+
+        if (participationDeleteError) throw participationDeleteError;
 
         const { error: resetError } = await supabase
           .from("cartao_parcelas")
