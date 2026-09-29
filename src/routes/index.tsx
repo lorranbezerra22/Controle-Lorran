@@ -252,9 +252,14 @@ function Dashboard() {
     // Parcelas positivas pagas não entram no restante; estornos pendentes
     // só devem afetar o restante depois de confirmados.
     if (i.status === "paid") {
-      return amount < 0 ? s + amount * factor : s;
+      // Estorno confirmado já foi aplicado no valor da fatura.
+      // Ele não representa um pagamento negativo nem deve alterar
+      // novamente o valor restante do dashboard.
+      return s;
     }
 
+    // Estorno pendente já reduz o valor da fatura, mas ainda não
+    // deve alterar o restante até ser confirmado.
     if (amount < 0) return s;
 
     const paidAmount = Number(i.paid_amount || 0);
@@ -273,21 +278,16 @@ function Dashboard() {
     return s + Math.max(0, amount - paidAmount);
   }, 0);
 
-  // Balanço projetado = Saldo da Conta + A receber − (despesas restantes + fatura restante)
-  // Estornos confirmados sem crédito em conta reduzem a fatura, mas não devem
-  // aumentar o saldo disponível no dashboard. Neutralizamos apenas essa parte
-  // no cálculo do balanço; o impacto na fatura continua visível nos cartões.
-  const faturasSemCredito = monthInst
-    .filter((i: any) =>
-      Number(i.amount || 0) < 0 &&
-      i.status === "paid" &&
-      !tx.some((t: any) => t.card_installment_id === i.id && t.kind === "income"),
-    )
-    .reduce((s: number, i: any) => s + Number(i.amount || 0) * personFactor(costPersonInst(i)), 0);
-
+  // Balanço projetado = Saldo da Conta + A receber −
+  // (despesas restantes + fatura restante).
+  //
+  // Estornos já reduzem o valor de `fatura` desde o lançamento inicial.
+  // Como não possuem valor pendente, não devem ser subtraídos novamente
+  // quando confirmados — especialmente quando a confirmação foi feita
+  // sem crédito em conta.
   const balanco = personFilter === "all"
     ? 0
-    : saldoConta + receitasPend - despesasRestante - faturaRest - faturasSemCredito;
+    : saldoConta + receitasPend - despesasRestante - faturaRest;
 
   // Cards fixos Lorran/Tayane/Família/Loja — usa shares efetivos (respeita ajustes).
   const personMonth = useMemo(() => {
@@ -720,9 +720,16 @@ function Dashboard() {
                     // Estorno confirmado reduz o restante da fatura.
                     // Estorno pendente ainda não deve gerar crédito disponível.
                     if (i.status === "paid") {
-                      return amount < 0 ? s + amount * factor : s;
+                      // O estorno já está refletido na fatura total.
+                      // Não o transformar em “pagamento negativo” nem
+                      // alterar novamente o restante.
+                      return s;
                     }
-                    if (amount < 0) return s;
+                    if (amount < 0) {
+                      // Estorno pendente já abate a fatura, mas não é
+                      // pagamento nem saldo restante.
+                      return s;
+                    }
 
                     const paidAmount = Number(i.paid_amount || 0);
                     // O restante para a pessoa deve ser proporcional à sua cota
@@ -747,6 +754,9 @@ function Dashboard() {
                     // Se não houver filtro de pessoa (ou filtro "Familia"), usa o total restante da parcela
                     return s + Math.max(0, amount - paidAmount);
                   }, 0);
+                // Estornos não são pagamentos negativos. O valor negativo
+                // já compõe a fatura, mas não deve gerar “pago” negativo
+                // nem contaminar o restante.
                 const pago = Math.max(0, fat - restante);
                 const pctPago = fat > 0 ? (pago / fat) * 100 : 0;
                 const isPaid = restante === 0 && fat > 0;
