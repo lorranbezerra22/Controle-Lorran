@@ -1417,7 +1417,10 @@ function CartoesPage() {
                 setResponsibilityInstallment(null);
                 invalidate("installments");
               }}
-              onCancel={() => setResponsibilityInstallment(null)}
+              onCancel={() => {
+                setResponsibilityInstallment(null);
+                setShowProgressInfo(responsibilityInstallment);
+              }}
             />
           )}
         </DialogContent>
@@ -1925,7 +1928,7 @@ function CardResponsibilityForm({
 
       <div className="flex gap-2">
         <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>
-          Cancelar
+          Voltar
         </Button>
         <Button type="button" className="flex-1" disabled={!valid || saving} onClick={save}>
           {saving ? "Salvando…" : "Salvar ajuste"}
