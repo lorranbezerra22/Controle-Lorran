@@ -14,7 +14,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 const __submitLock = { busy: false };
 const __tryLock = () => { if (__submitLock.busy) return false; __submitLock.busy = true; return true; };
 const __release = () => { __submitLock.busy = false; };
-import { Plus, CreditCard, Check, Clock, Trash2, Pencil, Banknote, Receipt, Undo2, AlertTriangle, Users, Equal, SlidersHorizontal, X, Trash, SplitSquareHorizontal } from "lucide-react";
+import { Plus, CreditCard, Check, Trash2, Pencil, Banknote, Receipt, Undo2, AlertTriangle, Users, Equal, SlidersHorizontal, X, Trash } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SmartInput } from "@/components/smart-input";
@@ -1308,14 +1308,21 @@ function CartoesPage() {
                       <button
                         onClick={() => {
                           // Estornos pendentes abrem diretamente a confirmação de recebimento.
-                          // Depois de confirmado, o ícone continua abrindo o histórico normal.
                           if (Number(i.amount) < 0 && !isRefundConfirmed(i)) {
                             setPartialPayOpen({
                               ...i,
                               _refundConfirmation: true,
                             });
-                          } else {
+                            return;
+                          }
+
+                          // Parcelas pendentes começam pelo diálogo de pagamento,
+                          // permitindo escolher entre pagar o total ou o restante.
+                          // Parcelas já pagas continuam abrindo o histórico.
+                          if (i.status === "paid") {
                             setShowProgressInfo(i);
+                          } else {
+                            setPartialPayOpen(i);
                           }
                         }}
                         onContextMenu={(e) => {
