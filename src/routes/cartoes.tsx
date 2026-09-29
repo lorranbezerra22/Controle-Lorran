@@ -1327,7 +1327,7 @@ function CartoesPage() {
                           ? (isRefundConfirmed(i) ? "Estorno confirmado (Clique para remover)" : "Estorno pendente (Clique para confirmar)")
                           : (i.status === "paid" ? "Remover/Editar pagamento" : (isPartial ? "Antecipar pagamento / Clique direito: ajuste manual" : "Antecipar pagamento"))}
                       >
-                        {(Number(i.amount) < 0 ? isRefundConfirmed(i) : i.status === "paid") ? <Check className="w-3.5 h-3.5" /> : (Number(i.amount) < 0 ? <Undo2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />)}
+                        {(Number(i.amount) < 0 ? isRefundConfirmed(i) : i.status === "paid") ? <Check className="w-3.5 h-3.5" /> : (Number(i.amount) < 0 ? <Undo2 className="w-3.5 h-3.5" /> : <Banknote className="w-3.5 h-3.5" />)}
                       </button>
                       {normalizeName(i.cartao_compras?.person || "") === "familia" && Number(i.amount) > 0 && (
 
@@ -1397,10 +1397,6 @@ function CartoesPage() {
                 setShowProgressInfo(null);
               }}
               onDone={() => { setPartialPayOpen(null); invalidate("installments"); invalidate("accounts"); invalidate("transactions"); }}
-              onAdjustResponsibility={() => {
-                setPartialPayOpen(null);
-                setResponsibilityInstallment(partialPayOpen);
-              }}
             />
           )}
         </DialogContent>
@@ -1639,7 +1635,7 @@ function CartoesPage() {
                               });
                             }}
                           >
-                            <Clock className="mr-2 h-4 w-4" />
+                            <Banknote className="mr-2 h-4 w-4" />
                             Confirmar pagamento
                           </Button>
 
@@ -3094,7 +3090,6 @@ function AnticipatePayForm({
   installment,
   onFullPay,
   onDone,
-  onAdjustResponsibility,
   initialAmount,
 }: {
   installment: any;
@@ -3108,7 +3103,6 @@ function AnticipatePayForm({
     creditToAccount?: boolean,
   ) => void;
   onDone: () => void;
-  onAdjustResponsibility?: () => void;
   initialAmount?: number;
 }) {
   // Estornos (valor negativo) sempre abrem a tela de confirmação, nunca o modo antecipação
@@ -3522,17 +3516,7 @@ function AnticipatePayForm({
             >
               Pagar restante
             </Button>
-            {isFamilia && onAdjustResponsibility && (
-              <Button
-                type="button"
-                variant="outline"
-                className="h-12 rounded-xl border-primary/30 text-sm font-semibold hover:border-primary hover:bg-primary/5"
-                onClick={onAdjustResponsibility}
-              >
-                <SplitSquareHorizontal className="mr-2 h-4 w-4" />
-                Ajustar responsabilidade
-              </Button>
-            )}
+
           </div>
         </div>
         <Button variant="ghost" className="w-full text-xs" onClick={() => onDone()}>Cancelar</Button>
