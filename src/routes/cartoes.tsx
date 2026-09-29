@@ -1393,6 +1393,10 @@ function CartoesPage() {
                 setPartialPayOpen(null);
                 setResponsibilityInstallment(partialPayOpen);
               }}
+              onBackToHistory={() => {
+                setPartialPayOpen(null);
+                setShowProgressInfo(partialPayOpen);
+              }}
             />
           )}
         </DialogContent>
@@ -3123,6 +3127,7 @@ function AnticipatePayForm({
   onFullPay,
   onDone,
   onAdjustResponsibility,
+  onBackToHistory,
   initialAmount,
 }: {
   installment: any;
@@ -3137,6 +3142,7 @@ function AnticipatePayForm({
   ) => void;
   onDone: () => void;
   onAdjustResponsibility?: () => void;
+  onBackToHistory?: () => void;
   initialAmount?: number;
 }) {
   // Estornos (valor negativo) sempre abrem a tela de confirmação, nunca o modo antecipação
@@ -3664,7 +3670,14 @@ function AnticipatePayForm({
         </div>
 
         <div className="flex gap-2">
-          <Button type="button" variant="outline" className="flex-1" onClick={() => setPayMode(null)}>Voltar</Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={() => onBackToHistory ? onBackToHistory() : setPayMode(null)}
+          >
+            Voltar
+          </Button>
           <Button type="submit" className="flex-1" disabled={saving}>Confirmar Pagamento</Button>
         </div>
       </form>
@@ -3837,7 +3850,14 @@ return (
       </div>
 
       <div className="flex gap-2">
-        <Button type="button" variant="outline" className="flex-1" onClick={() => setPayMode(null)}>Voltar</Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="flex-1"
+          onClick={() => onBackToHistory ? onBackToHistory() : setPayMode(null)}
+        >
+          Voltar
+        </Button>
         <Button
           type="submit"
           className="flex-1"
