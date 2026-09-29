@@ -260,7 +260,6 @@ function CartoesPage() {
   const [editingCard, setEditingCard] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null);
   const [showProgressInfo, setShowProgressInfo] = useState<any>(null);
-  const [responsibilityInstallment, setResponsibilityInstallment] = useState<any>(null);
 
   const lsGet = (k: string, d: string) => {
     if (typeof window === "undefined") return d;
@@ -1336,9 +1335,7 @@ function CartoesPage() {
                       >
                         {(Number(i.amount) < 0 ? isRefundConfirmed(i) : i.status === "paid") ? <Check className="w-3.5 h-3.5" /> : (Number(i.amount) < 0 ? <Undo2 className="w-3.5 h-3.5" /> : <Banknote className="w-3.5 h-3.5" />)}
                       </button>
-                      {normalizeName(i.cartao_compras?.person || "") === "familia" && Number(i.amount) > 0 && (
 
-                      )}
                       <button onClick={() => setDeleting(i)} className="w-7 h-7 rounded-md flex items-center justify-center bg-muted text-muted-foreground hover:bg-destructive/20 hover:text-destructive">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -1465,26 +1462,6 @@ function CartoesPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={!!responsibilityInstallment}
-        onOpenChange={(o) => !o && setResponsibilityInstallment(null)}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Ajustar responsabilidade</DialogTitle>
-          </DialogHeader>
-          {responsibilityInstallment && (
-            <CardResponsibilityForm
-              installment={responsibilityInstallment}
-              onDone={() => {
-                setResponsibilityInstallment(null);
-                invalidate("installments");
-              }}
-              onCancel={() => setResponsibilityInstallment(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={!!showProgressInfo} onOpenChange={(o) => !o && setShowProgressInfo(null)}>
         <DialogContent className="max-w-xl overflow-hidden rounded-2xl border-border bg-background p-0 shadow-2xl">
