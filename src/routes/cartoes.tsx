@@ -14,7 +14,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 const __submitLock = { busy: false };
 const __tryLock = () => { if (__submitLock.busy) return false; __submitLock.busy = true; return true; };
 const __release = () => { __submitLock.busy = false; };
-import { Plus, CreditCard, Check, Clock, Trash2, Pencil, Banknote, Receipt, Undo2, AlertTriangle, Users, Equal, SlidersHorizontal, X, Trash } from "lucide-react";
+import { Plus, CreditCard, Check, Clock, Trash2, Pencil, Banknote, Receipt, Undo2, AlertTriangle, Users, Equal, SlidersHorizontal, X, Trash, SplitSquareHorizontal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SmartInput } from "@/components/smart-input";
@@ -169,6 +169,39 @@ const isRefundConfirmed = (installment: any) =>
   Number(installment?.amount || 0) < 0 &&
   Boolean((installment?.metadata as any)?.refund_confirmed);
 
+const normalizeResponsibility = (installment: any) => {
+  const total = Math.max(0, Number(installment?.amount || 0));
+  const metadata = (installment?.metadata as any) || {};
+  const saved = Array.isArray(metadata.responsibility_adjustment)
+    ? metadata.responsibility_adjustment
+    : null;
+
+  if (normalizeName(installment?.cartao_compras?.person || "") !== "familia") {
+    return [];
+  }
+
+  if (saved?.length) {
+    return saved
+      .map((item: any) => ({
+        person: String(item.person || "").trim(),
+        amount: Math.max(0, Number(item.amount || 0)),
+      }))
+      .filter((item: any) => item.person && item.amount > 0);
+  }
+
+  return [
+    { person: "Lorran", amount: Number((total / 2).toFixed(2)) },
+    { person: "Tayane", amount: Number((total - total / 2).toFixed(2)) },
+  ];
+};
+
+const responsibilityForPerson = (installment: any, person: string) => {
+  const target = normalizeName(person);
+  return normalizeResponsibility(installment).find(
+    (item: any) => normalizeName(item.person) === target,
+  )?.amount ?? 0;
+};
+
 const getInstallmentPaymentState = (installment: any) => {
   const total = Number(installment.amount || 0);
   const rawPaid = Number(installment.paid_amount || 0);
@@ -227,6 +260,7 @@ function CartoesPage() {
   const [editingCard, setEditingCard] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null);
   const [showProgressInfo, setShowProgressInfo] = useState<any>(null);
+  const [responsibilityInstallment, setResponsibilityInstallment] = useState<any>(null);
 
   const lsGet = (k: string, d: string) => {
     if (typeof window === "undefined") return d;
@@ -1295,6 +1329,15 @@ function CartoesPage() {
                       >
                         {(Number(i.amount) < 0 ? isRefundConfirmed(i) : i.status === "paid") ? <Check className="w-3.5 h-3.5" /> : (Number(i.amount) < 0 ? <Undo2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />)}
                       </button>
+                      {normalizeName(i.cartao_compras?.person || "") === "familia" && Number(i.amount) > 0 && (
+                        <button
+                          onClick={() => setResponsibilityInstallment(i)}
+                          title="Ajustar responsabilidade"
+                          className="w-7 h-7 rounded-md flex items-center justify-center bg-muted text-muted-foreground hover:bg-primary/20 hover:text-primary"
+                        >
+                          <SplitSquareHorizontal className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       <button onClick={() => setDeleting(i)} className="w-7 h-7 rounded-md flex items-center justify-center bg-muted text-muted-foreground hover:bg-destructive/20 hover:text-destructive">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -1417,6 +1460,27 @@ function CartoesPage() {
               </div>
               <Button variant="ghost" size="sm" className="w-full" onClick={() => setDeleting(null)}>Cancelar</Button>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!responsibilityInstallment}
+        onOpenChange={(o) => !o && setResponsibilityInstallment(null)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ajustar responsabilidade</DialogTitle>
+          </DialogHeader>
+          {responsibilityInstallment && (
+            <CardResponsibilityForm
+              installment={responsibilityInstallment}
+              onDone={() => {
+                setResponsibilityInstallment(null);
+                invalidate("installments");
+              }}
+              onCancel={() => setResponsibilityInstallment(null)}
+            />
           )}
         </DialogContent>
       </Dialog>
@@ -1688,6 +1752,158 @@ function CartoesPage() {
 }
 
 
+
+function CardResponsibilityForm({
+  installment,
+  onDone,
+  onCancel,
+}: {
+  installment: any;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const total = Math.max(0, Number(installment.amount || 0));
+  const initial = normalizeResponsibility(installment);
+  const [rows, setRows] = useState(() =>
+    initial.length > 0
+      ? initial.map((item: any) => ({
+          person: item.person,
+          amount: String(item.amount.toFixed(2)),
+        }))
+      : [
+          { person: "Lorran", amount: String((total / 2).toFixed(2)) },
+          { person: "Tayane", amount: String((total / 2).toFixed(2)) },
+        ],
+  );
+  const [saving, setSaving] = useState(false);
+
+  const sum = rows.reduce((value, row) => value + Number(row.amount || 0), 0);
+  const valid =
+    rows.length > 0 &&
+    rows.every((row) => row.person && Number(row.amount) >= 0) &&
+    Math.abs(sum - total) < 0.01;
+
+  const updateRow = (index: number, patch: Partial<{ person: string; amount: string }>) => {
+    setRows((current) =>
+      current.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, ...patch } : row,
+      ),
+    );
+  };
+
+  const splitEqually = () => {
+    const half = Number((total / 2).toFixed(2));
+    setRows([
+      { person: "Lorran", amount: String(half.toFixed(2)) },
+      { person: "Tayane", amount: String((total - half).toFixed(2)) },
+    ]);
+  };
+
+  const save = async () => {
+    if (!valid) {
+      toast.error(`A soma precisa ser ${brl(total)}.`);
+      return;
+    }
+
+    if (!__tryLock()) return;
+    setSaving(true);
+
+    try {
+      const metadata = {
+        ...((installment.metadata as any) || {}),
+        responsibility_adjustment: rows
+          .filter((row) => Number(row.amount) > 0)
+          .map((row) => ({
+            person: row.person,
+            amount: Number(Number(row.amount).toFixed(2)),
+          })),
+      };
+
+      const { error } = await supabase
+        .from("cartao_parcelas")
+        .update({ metadata } as any)
+        .eq("id", installment.id);
+
+      if (error) throw error;
+
+      toast.success("Responsabilidade ajustada. Agora o pagamento pode ser feito normalmente.");
+      onDone();
+    } catch (err: any) {
+      toast.error(err.message || "Não foi possível salvar o ajuste.");
+    } finally {
+      setSaving(false);
+      __release();
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-border bg-muted/30 p-3">
+        <div className="text-sm font-medium">
+          {installment.cartao_compras?.description || "Parcela do cartão"}
+        </div>
+        <div className="mt-1 text-xs text-muted-foreground">
+          Valor total: <strong className="text-foreground">{brl(total)}</strong>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="flex gap-1 rounded-lg border border-border bg-muted/20 p-1">
+          <Button type="button" size="sm" variant="secondary" className="h-7 px-3">
+            R$
+          </Button>
+          <Button type="button" size="sm" variant="ghost" className="h-7 px-3" disabled>
+            %
+          </Button>
+        </div>
+        <Button type="button" variant="ghost" size="sm" onClick={splitEqually}>
+          Dividir igualmente
+        </Button>
+      </div>
+
+      <div className="space-y-2">
+        {rows.map((row, index) => (
+          <div key={`${row.person}-${index}`} className="flex items-center gap-2">
+            <Select
+              value={row.person}
+              onValueChange={(person) => updateRow(index, { person })}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Lorran">Lorran</SelectItem>
+                <SelectItem value="Tayane">Tayane</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={row.amount}
+              onChange={(event) => updateRow(index, { amount: event.target.value })}
+              className="w-28"
+            />
+            <span className="text-xs text-muted-foreground">R$</span>
+          </div>
+        ))}
+      </div>
+
+      <div className={`text-xs ${valid ? "text-muted-foreground" : "text-destructive"}`}>
+        Soma: {brl(sum)} / Esperado: {brl(total)}
+      </div>
+
+      <div className="flex gap-2">
+        <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="button" className="flex-1" disabled={!valid || saving} onClick={save}>
+          {saving ? "Salvando…" : "Salvar ajuste"}
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 function RefundHelper({ amount, rawAmount, selectedCategoryId, cats, person, purchaseDate, card, onPick }: { amount: number; rawAmount?: string; selectedCategoryId: string; cats: any[]; person?: string; purchaseDate?: string; card?: any; onPick: (id: string) => void }) {
   const { data: inst = [] } = useInstallments();
@@ -2942,7 +3158,7 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
 
   const originalPerson = installment.cartao_compras?.person || "";
   const isFamilia = normalizeName(originalPerson) === "familia";
-  const quota = Number(installment.amount || 0) / 2;
+  const quota = responsibilityForPerson(installment, paidBy || originalPerson);
 
   const overrideActive = !!paidBy && paidBy.trim() && normalizeName(paidBy) !== normalizeName(originalPerson);
 
@@ -3436,7 +3652,8 @@ return (
         {isFamilia && (
           <div className="text-[10px] text-amber-500 font-medium flex items-center gap-1 mt-1">
             <AlertTriangle className="w-3 h-3" />
-            Dividido: {brl(quota)} para Lorran e {brl(quota)} para Tayane
+            Responsabilidade: {brl(responsibilityForPerson(installment, "Lorran"))} para Lorran e{" "}
+            {brl(responsibilityForPerson(installment, "Tayane"))} para Tayane
           </div>
         )}
       </div>
