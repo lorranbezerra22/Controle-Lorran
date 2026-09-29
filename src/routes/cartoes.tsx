@@ -1386,6 +1386,7 @@ function CartoesPage() {
           </DialogHeader>
           {partialPayOpen && (
             <AnticipatePayForm
+              key={`${partialPayOpen.id}-${partialPayOpen._quickPay ? "total" : partialPayOpen._anticipateAmount !== undefined ? "anticipate" : "menu"}`}
               installment={partialPayOpen}
               initialAmount={partialPayOpen?._anticipateAmount}
               onFullPay={async (notes, paidBy, accountsOverride, creditToAccount) => {
@@ -1401,8 +1402,14 @@ function CartoesPage() {
               }}
               onDone={() => { setPartialPayOpen(null); invalidate("installments"); invalidate("accounts"); invalidate("transactions"); }}
               onBackToHistory={() => {
+                const historyInstallment = {
+                  ...partialPayOpen,
+                  _quickPay: false,
+                  _anticipateAmount: undefined,
+                };
+
                 setPartialPayOpen(null);
-                setShowProgressInfo(partialPayOpen);
+                setShowProgressInfo(historyInstallment);
               }}
             />
           )}
@@ -1636,12 +1643,13 @@ function CartoesPage() {
                                 setShowProgressInfo(null);
                                 setPartialPayOpen({
                                   ...showProgressInfo,
+                                  _quickPay: false,
                                   _anticipateAmount: remaining,
                                 });
                               }}
                             >
                               <Banknote className="mr-2 h-4 w-4" />
-                              Pagar restante
+                              Pagar antecipado
                             </Button>
                           </div>
 
