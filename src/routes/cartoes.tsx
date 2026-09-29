@@ -1386,7 +1386,7 @@ function CartoesPage() {
           </DialogHeader>
           {partialPayOpen && (
             <AnticipatePayForm
-              key={`${partialPayOpen.id}-${partialPayOpen._quickPay ? "total" : partialPayOpen._anticipateAmount !== undefined ? "anticipate" : "menu"}`}
+              key={`${partialPayOpen.id}-${partialPayOpen._paymentMode || (partialPayOpen._quickPay ? "total" : partialPayOpen._anticipateAmount !== undefined ? "anticipate" : "menu")}`}
               installment={partialPayOpen}
               initialAmount={partialPayOpen?._anticipateAmount}
               onFullPay={async (notes, paidBy, accountsOverride, creditToAccount) => {
@@ -1404,6 +1404,7 @@ function CartoesPage() {
               onBackToHistory={() => {
                 const historyInstallment = {
                   ...partialPayOpen,
+                  _paymentMode: "menu",
                   _quickPay: false,
                   _anticipateAmount: undefined,
                 };
@@ -1577,6 +1578,7 @@ function CartoesPage() {
                                 setShowProgressInfo(null);
                                 setPartialPayOpen({
                                   ...showProgressInfo,
+                                  _paymentMode: "refund",
                                   _refundConfirmation: true,
                                 });
                               }}
@@ -1626,7 +1628,9 @@ function CartoesPage() {
                                 setShowProgressInfo(null);
                                 setPartialPayOpen({
                                   ...showProgressInfo,
+                                  _paymentMode: "total",
                                   _quickPay: true,
+                                  _anticipateAmount: undefined,
                                 });
                               }}
                             >
@@ -1643,6 +1647,7 @@ function CartoesPage() {
                                 setShowProgressInfo(null);
                                 setPartialPayOpen({
                                   ...showProgressInfo,
+                                  _paymentMode: "anticipate",
                                   _quickPay: false,
                                   _anticipateAmount: remaining,
                                 });
@@ -3218,13 +3223,30 @@ function AnticipatePayForm({
   initialAmount?: number;
 }) {
   // Estornos (valor negativo) sempre abrem a tela de confirmação, nunca o modo antecipação
-  const [payMode, setPayMode] = useState<"total" | "anticipate" | null>(
-    (installment as any)._quickPay && Number(installment.amount || 0) >= 0
-      ? "total"
-      : initialAmount !== undefined && Number(installment.amount || 0) >= 0
-        ? "anticipate"
-        : null,
-  );
+  const [payMode, setPayMode] = useState<"total" | "anticipate" | null>(() => {
+    const requestedMode = (installment as any)._paymentMode;
+
+    if (requestedMode === "total" && Number(installment.amount || 0) >= 0) {
+      return "total";
+    }
+
+    if (
+      requestedMode === "anticipate" &&
+      Number(installment.amount || 0) >= 0
+    ) {
+      return "anticipate";
+    }
+
+    if ((installment as any)._quickPay && Number(installment.amount || 0) >= 0) {
+      return "total";
+    }
+
+    if (initialAmount !== undefined && Number(installment.amount || 0) >= 0) {
+      return "anticipate";
+    }
+
+    return null;
+  });
   const installmentAmount = Number(installment.amount || 0);
   const isRefund = installmentAmount < 0;
   const currentRemaining = isRefund
