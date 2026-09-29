@@ -1811,10 +1811,6 @@ function CardResponsibilityForm({
   const [saving, setSaving] = useState(false);
 
   const sum = rows.reduce((value, row) => value + Number(row.amount || 0), 0);
-  const remaining = Number((total - sum).toFixed(2));
-  const progress = total > 0
-    ? Math.min(100, Math.max(0, (sum / total) * 100))
-    : 0;
   const valid =
     rows.length > 0 &&
     rows.every((row) => row.person && Number(row.amount) >= 0) &&
@@ -1926,69 +1922,12 @@ function CardResponsibilityForm({
         ))}
       </div>
 
-      <div className="rounded-xl border border-border bg-muted/20 p-3.5 space-y-3">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
-              Valor dividido
-            </span>
-            <strong className="mt-1 block text-lg tabular-nums text-foreground">
-              {brl(sum)}
-              <span className="ml-1 text-xs font-normal text-muted-foreground">
-                de {brl(total)}
-              </span>
-            </strong>
-          </div>
-
-          <div className="text-right">
-            <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
-              {remaining >= 0 ? "Restante" : "Excedente"}
-            </span>
-            <strong
-              className={`mt-1 block text-sm tabular-nums ${
-                remaining === 0
-                  ? "text-success"
-                  : remaining > 0
-                    ? "text-warning"
-                    : "text-destructive"
-              }`}
-            >
-              {brl(Math.abs(remaining))}
-            </strong>
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <div className="h-2 overflow-hidden rounded-full bg-muted">
-            <div
-              className={`h-full rounded-full transition-all duration-300 ${
-                remaining === 0
-                  ? "bg-success"
-                  : remaining < 0
-                    ? "bg-destructive"
-                    : "bg-primary"
-              }`}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-
-          <div className="flex justify-between text-[10px] text-muted-foreground">
-            <span>{progress.toFixed(0)}% dividido</span>
-            <span>{brl(total)} total</span>
-          </div>
-        </div>
-
-        <div
-          className={`text-xs ${
-            valid ? "text-success" : "text-muted-foreground"
-          }`}
-        >
-          {valid
-            ? "Valor distribuído corretamente."
-            : remaining > 0
-              ? `Ainda faltam ${brl(remaining)} para completar.`
-              : `O valor ultrapassa o total em ${brl(Math.abs(remaining))}.`}
-        </div>
+      <div
+        className={`text-xs ${
+          valid ? "text-success" : "text-muted-foreground"
+        }`}
+      >
+        Soma: {brl(sum)} / Esperado: {brl(total)}
       </div>
 
       <div className="flex gap-2">
