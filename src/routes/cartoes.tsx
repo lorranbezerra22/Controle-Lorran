@@ -1240,9 +1240,25 @@ function CartoesPage() {
       </Dialog>
 
       <Dialog open={!!showProgressInfo} onOpenChange={(o) => !o && setShowProgressInfo(null)}>
-        <DialogContent className="max-w-lg overflow-hidden p-0">
-          <DialogHeader className="border-b border-border px-5 py-4">
-            <DialogTitle className="text-lg">Histórico de pagamentos</DialogTitle>
+        <DialogContent className="max-w-xl overflow-hidden rounded-2xl border-border bg-background p-0 shadow-2xl">
+          <DialogHeader className="border-b border-border bg-card px-6 py-5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+                  Cartão
+                </p>
+                <DialogTitle className="mt-1 text-xl">Histórico de pagamentos</DialogTitle>
+              </div>
+              <div className="rounded-xl bg-primary/10 px-3 py-2 text-right">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Parcela
+                </p>
+                <p className="text-sm font-semibold text-primary">
+                  {showProgressInfo?.installment_number}/
+                  {showProgressInfo?.cartao_compras?.installments_count || 1}
+                </p>
+              </div>
+            </div>
           </DialogHeader>
           {showProgressInfo && (() => {
             const relatedTrans = allTransactions
@@ -1250,7 +1266,7 @@ function CartoesPage() {
               .sort((a: any, b: any) => new Date(b.posted_at || b.created_at).getTime() - new Date(a.posted_at || a.created_at).getTime());
 
             return (
-              <div className="space-y-4">
+              <div className="max-h-[min(720px,calc(100vh-150px))] space-y-5 overflow-y-auto px-6 py-5">
                 {(() => {
                   const total = Number(showProgressInfo.amount || 0);
                   const isEstornoInfo = total < 0;
@@ -1268,18 +1284,15 @@ function CartoesPage() {
 
                   return (
                     <>
-                      <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+                      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-5">
                         <div>
                           <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                             Lançamento
                           </div>
-                          <div className="mt-1 font-semibold text-base">
+                          <div className="mt-1 text-lg font-bold text-foreground">
                             {showProgressInfo.cartao_compras?.description || "Pagamento do cartão"}
                           </div>
-                          <div className="mt-1 text-xs text-muted-foreground">
-                            Parcela {showProgressInfo.installment_number}/
-                            {showProgressInfo.cartao_compras?.installments_count || 1}
-                            {" · "}
+                          <div className="mt-1 text-sm text-muted-foreground">
                             {showProgressInfo.cartao_compras?.person || "Sem pessoa"}
                           </div>
                         </div>
@@ -1291,7 +1304,7 @@ function CartoesPage() {
                           />
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div className="grid grid-cols-3 gap-3 border-t border-border/70 pt-4 text-xs">
                           <div>
                             <span className="block text-muted-foreground">Valor</span>
                             <strong>{brl(total)}</strong>
@@ -1360,18 +1373,19 @@ function CartoesPage() {
                       ) : (
                         <div className="flex flex-wrap gap-2">
                           <Button
-                            className="flex-1"
+                            className="h-12 w-full rounded-xl text-sm font-semibold shadow-lg shadow-primary/10"
                             disabled={!canPay}
                             onClick={() => {
                               setShowProgressInfo(null);
                               setPartialPayOpen({
                                 ...showProgressInfo,
                                 _anticipateAmount: remaining,
+                                _quickPay: true,
                               });
                             }}
                           >
-                            <Clock className="h-4 w-4" />
-                            {remaining > 0.01 ? "Confirmar pagamento" : "Pagamento"}
+                            <Clock className="mr-2 h-4 w-4" />
+                            Confirmar pagamento
                           </Button>
                         </div>
                       )}
@@ -1379,14 +1393,20 @@ function CartoesPage() {
                   );
                 })()}
 
-                <div className="space-y-2">
-                  <Label className="text-[10px] tracking-[0.16em] text-muted-foreground uppercase">
-                    Lançamentos
-                  </Label>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                      Lançamentos
+                    </Label>
+                    <span className="text-xs text-muted-foreground">
+                      {relatedTrans.length} registro{relatedTrans.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
                   <div className="max-h-[260px] overflow-y-auto space-y-2 pr-1">
                     {relatedTrans.length === 0 ? (
-                      <div className="rounded-xl bg-muted/20 p-4 text-center text-sm italic text-muted-foreground">
-                        Nenhum lançamento
+                      <div className="rounded-2xl border border-dashed border-border bg-muted/10 px-4 py-8 text-center">
+                        <Receipt className="mx-auto mb-2 h-5 w-5 text-muted-foreground/60" />
+                        <p className="text-sm text-muted-foreground">Nenhum lançamento registrado</p>
                       </div>
                     ) : (
                       relatedTrans.map((t: any) => (
@@ -1433,8 +1453,12 @@ function CartoesPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end border-t border-border pt-3">
-                  <Button variant="outline" onClick={() => setShowProgressInfo(null)}>
+                <div className="flex justify-end border-t border-border pt-4">
+                  <Button
+                    variant="outline"
+                    className="rounded-xl px-5"
+                    onClick={() => setShowProgressInfo(null)}
+                  >
                     Fechar
                   </Button>
                 </div>
@@ -2639,7 +2663,11 @@ function RefundConfirmationPanel({
 function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }, creditToAccount?: boolean) => void, onDone: () => void, initialAmount?: number }) {
   // Estornos (valor negativo) sempre abrem a tela de confirmação, nunca o modo antecipação
   const [payMode, setPayMode] = useState<"total" | "anticipate" | null>(
-    initialAmount !== undefined && Number(installment.amount || 0) >= 0 ? "anticipate" : null,
+    (installment as any)._quickPay && Number(installment.amount || 0) >= 0
+      ? "total"
+      : initialAmount !== undefined && Number(installment.amount || 0) >= 0
+        ? "anticipate"
+        : null,
   );
   const installmentAmount = Number(installment.amount || 0);
   const isRefund = installmentAmount < 0;
