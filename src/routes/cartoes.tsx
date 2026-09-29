@@ -1164,7 +1164,7 @@ function CartoesPage() {
 
 
       <Dialog open={!!partialPayOpen} onOpenChange={(o) => !o && setPartialPayOpen(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>
               {partialPayOpen?._refundConfirmation
@@ -2246,6 +2246,260 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function RefundConfirmationPanel({
+  installment,
+  accounts,
+  onConfirm,
+  onCancel,
+}: {
+  installment: any;
+  accounts: any[];
+  onConfirm: (
+    notes?: string,
+    paidBy?: string | null,
+    accountsOverride?: {
+      accountId?: string | null;
+      accountTayaneId?: string | null;
+    },
+    creditToAccount?: boolean,
+  ) => void;
+  onCancel: () => void;
+}) {
+  const [mode, setMode] = useState<"choose" | "credit">("choose");
+  const [selectedAccountId, setSelectedAccountId] = useState("");
+  const [selectedAccountTayaneId, setSelectedAccountTayaneId] = useState("");
+
+  const amount = Math.abs(Number(installment.amount || 0));
+  const person = installment.cartao_compras?.person || "";
+  const description = installment.cartao_compras?.description || "Estorno";
+  const isFamilia = normalizeName(person) === "familia";
+
+  const lorranAccounts = accounts.filter(
+    (account: any) =>
+      normalizeName(account.account_name || "") === "lorran" ||
+      normalizeName(account.bank || "").includes("revolut") ||
+      normalizeName(account.bank || "").includes("nubank"),
+  );
+
+  const tayaneAccounts = accounts.filter(
+    (account: any) =>
+      normalizeName(account.account_name || "") === "tayane" ||
+      normalizeName(account.bank || "").includes("mercado"),
+  );
+
+  const accountOptions = isFamilia ? lorranAccounts : accounts;
+
+  useEffect(() => {
+    if (isFamilia) {
+      setSelectedAccountId(lorranAccounts[0]?.id || "");
+      setSelectedAccountTayaneId(tayaneAccounts[0]?.id || "");
+    } else {
+      setSelectedAccountId(accounts[0]?.id || "");
+    }
+  }, [accounts, isFamilia]);
+
+  const confirmWithoutCredit = () => {
+    onConfirm(undefined, null, {
+      accountId: "none",
+      accountTayaneId: "none",
+    }, false);
+  };
+
+  const confirmCredit = () => {
+    if (!selectedAccountId || (isFamilia && !selectedAccountTayaneId)) {
+      toast.error("Selecione a conta do crédito.");
+      return;
+    }
+
+    onConfirm(undefined, null, {
+      accountId: selectedAccountId,
+      accountTayaneId: isFamilia ? selectedAccountTayaneId : null,
+    }, true);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <div className="flex items-center gap-3 border-b border-border bg-muted/20 p-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-warning/15 text-warning">
+            <Undo2 className="h-5 w-5" />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {description}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Parcela {installment.installment_number}/
+              {installment.cartao_compras?.installments_count || 1}
+              {" · "}
+              {person || "Sem pessoa"}
+            </p>
+          </div>
+
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Estorno
+            </p>
+            <p className="text-lg font-bold tabular-nums text-success">
+              {brl(amount)}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 divide-x divide-border border-b border-border">
+          <div className="p-3">
+            <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
+              Categoria
+            </span>
+            <span className="mt-1 block truncate text-sm font-medium">
+              {installment.cartao_compras?.categorias?.name || "Estorno"}
+            </span>
+          </div>
+          <div className="p-3">
+            <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
+              Fatura
+            </span>
+            <span className="mt-1 block text-sm font-medium">
+              {fmtDate(installment.due_at)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {mode === "choose" ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="group h-auto min-h-28 justify-start gap-3 rounded-2xl border-primary/40 bg-primary/5 p-4 text-left hover:border-primary hover:bg-primary/10"
+            onClick={() => setMode("credit")}
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <Banknote className="h-5 w-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block font-semibold text-foreground">
+                Creditar nas contas
+              </span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Adicionar {brl(amount)} ao saldo
+              </span>
+            </span>
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="group h-auto min-h-28 justify-start gap-3 rounded-2xl border-border bg-muted/20 p-4 text-left hover:border-success/50 hover:bg-success/10"
+            onClick={confirmWithoutCredit}
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-success/15 text-success">
+              <Check className="h-5 w-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block font-semibold text-foreground">
+                Apenas confirmar
+              </span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Sem alterar o saldo das contas
+              </span>
+            </span>
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-3 rounded-2xl border border-primary/25 bg-primary/5 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold">Conta do crédito</p>
+              <p className="text-xs text-muted-foreground">{brl(amount)}</p>
+            </div>
+            <Banknote className="h-5 w-5 text-primary" />
+          </div>
+
+          {isFamilia ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Lorran · 50%</Label>
+                <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Selecionar conta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {lorranAccounts.map((account: any) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.bank} · {account.account_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Tayane · 50%</Label>
+                <Select value={selectedAccountTayaneId} onValueChange={setSelectedAccountTayaneId}>
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Selecionar conta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tayaneAccounts.map((account: any) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.bank} · {account.account_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Conta de destino</Label>
+              <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Selecionar conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accountOptions.map((account: any) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.bank} · {account.account_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => setMode("choose")}
+            >
+              Voltar
+            </Button>
+            <Button type="button" className="flex-1" onClick={confirmCredit}>
+              <Check className="mr-2 h-4 w-4" />
+              Confirmar crédito
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {mode === "choose" && (
+        <Button
+          type="button"
+          variant="ghost"
+          className="w-full text-muted-foreground"
+          onClick={onCancel}
+        >
+          Cancelar
+        </Button>
+      )}
+    </div>
+  );
+}
+
 function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { installment: any, onFullPay: (notes?: string, paidBy?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }, creditToAccount?: boolean) => void, onDone: () => void, initialAmount?: number }) {
   // Estornos (valor negativo) sempre abrem a tela de confirmação, nunca o modo antecipação
   const [payMode, setPayMode] = useState<"total" | "anticipate" | null>(
@@ -2435,6 +2689,17 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
 
   if (!payMode) {
     const isEstorno = Number(installment.amount || 0) < 0;
+
+    if (isEstorno) {
+      return (
+        <RefundConfirmationPanel
+          installment={installment}
+          accounts={accounts}
+          onConfirm={onFullPay}
+          onCancel={onDone}
+        />
+      );
+    }
 
     if (isEstorno) {
       const lorranAccs = accounts.filter((a: any) => normalizeName(a.account_name || "") === "lorran" || normalizeName(a.bank || "").includes("revolut") || normalizeName(a.bank || "").includes("nubank"));
