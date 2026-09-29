@@ -449,12 +449,19 @@ function CartoesPage() {
 
         // 1. Criar lançamento financeiro (débito para despesa, CRÉDITO para estorno)
         // O estorno (amount negativo) gera uma transação 'income' para repor o saldo na conta
+        // Quando o usuário escolhe “Confirmar sem crédito em conta”, o estorno
+        // deve apenas ser confirmado na fatura. Nenhuma transação financeira
+        // pode ser criada, mesmo que existam contas selecionadas no estado do
+        // formulário.
         const skipAccountCredit =
           isEstorno &&
-          (!creditToAccount || (
-            accountsOverride?.accountId === "none" &&
-            accountsOverride?.accountTayaneId === "none"
-          ));
+          (
+            creditToAccount === false ||
+            (
+              accountsOverride?.accountId === "none" &&
+              accountsOverride?.accountTayaneId === "none"
+            )
+          );
 
         // Garante que "sem crédito em conta" também remova eventual crédito
         // criado anteriormente para esta mesma parcela.
@@ -2553,10 +2560,15 @@ function AnticipatePayForm({ installment, onFullPay, onDone, initialAmount }: { 
                 type="button"
                 className="group flex w-full items-center gap-3 rounded-xl border border-border bg-background p-4 text-left transition-all hover:border-muted-foreground/40 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 onClick={() => {
-                  onFullPay(notes, null, {
-                    accountId: "none",
-                    accountTayaneId: "none",
-                  }, false);
+                  onFullPay(
+                    notes,
+                    null,
+                    {
+                      accountId: "none",
+                      accountTayaneId: "none",
+                    },
+                    false,
+                  );
                 }}
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
