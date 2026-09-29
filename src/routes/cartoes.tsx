@@ -1307,23 +1307,10 @@ function CartoesPage() {
                       </button>
                       <button
                         onClick={() => {
-                          // Estornos pendentes abrem diretamente a confirmação de recebimento.
-                          if (Number(i.amount) < 0 && !isRefundConfirmed(i)) {
-                            setPartialPayOpen({
-                              ...i,
-                              _refundConfirmation: true,
-                            });
-                            return;
-                          }
-
-                          // Parcelas pendentes começam pelo diálogo de pagamento,
-                          // permitindo escolher entre pagar o total ou o restante.
-                          // Parcelas já pagas continuam abrindo o histórico.
-                          if (i.status === "paid") {
-                            setShowProgressInfo(i);
-                          } else {
-                            setPartialPayOpen(i);
-                          }
+                          // Todas as parcelas usam o mesmo menu de ação.
+                          // O histórico também exibe as opções de pagamento,
+                          // ajuste de responsabilidade e cancelamento quando aplicável.
+                          setShowProgressInfo(i);
                         }}
                         onContextMenu={(e) => {
                           e.preventDefault();
@@ -1632,22 +1619,55 @@ function CartoesPage() {
                           )}
                         </div>
                       ) : (
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            className="h-12 w-full rounded-xl text-sm font-semibold shadow-lg shadow-primary/10"
-                            disabled={!canPay}
-                            onClick={() => {
-                              setShowProgressInfo(null);
-                              setPartialPayOpen({
-                                ...showProgressInfo,
-                                _anticipateAmount: remaining,
-                                _quickPay: true,
-                              });
-                            }}
-                          >
-                            <Banknote className="mr-2 h-4 w-4" />
-                            Confirmar pagamento
-                          </Button>
+                        <div className="space-y-2">
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <Button
+                              className="h-11 w-full rounded-xl text-sm font-semibold shadow-lg shadow-primary/10"
+                              disabled={!canPay}
+                              onClick={() => {
+                                setShowProgressInfo(null);
+                                setPartialPayOpen({
+                                  ...showProgressInfo,
+                                  _quickPay: true,
+                                });
+                              }}
+                            >
+                              <Banknote className="mr-2 h-4 w-4" />
+                              Pagar total
+                            </Button>
+
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-11 w-full rounded-xl text-sm font-semibold"
+                              disabled={!canPay}
+                              onClick={() => {
+                                setShowProgressInfo(null);
+                                setPartialPayOpen({
+                                  ...showProgressInfo,
+                                  _anticipateAmount: remaining,
+                                });
+                              }}
+                            >
+                              <Banknote className="mr-2 h-4 w-4" />
+                              Pagar restante
+                            </Button>
+                          </div>
+
+                          {normalizeName(showProgressInfo.cartao_compras?.person || "") === "familia" && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-11 w-full rounded-xl border-primary/30 text-sm font-semibold hover:border-primary hover:bg-primary/5"
+                              onClick={() => {
+                                setShowProgressInfo(null);
+                                setResponsibilityInstallment(showProgressInfo);
+                              }}
+                            >
+                              <Users className="mr-2 h-4 w-4" />
+                              Ajuste de responsabilidade
+                            </Button>
+                          )}
 
                           {relatedTrans.length > 0 && (
                             <Button
