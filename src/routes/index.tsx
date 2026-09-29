@@ -788,7 +788,7 @@ function Dashboard() {
                   (s: number, i: any) => s + installmentValue(i),
                   0,
                 );
-                const restante = cardMonthInst
+                const restanteBruto = cardMonthInst
                   .reduce((s: number, i: any) => {
                     const factor = personFactor(costPersonInst(i));
                     if (factor === 0) return s;
@@ -829,17 +829,27 @@ function Dashboard() {
                     // Se não houver filtro de pessoa (ou filtro "Familia"), usa o total restante da parcela
                     return s + Math.max(0, amount - paidAmount);
                   }, 0);
+
+                // O restante nunca pode ultrapassar o valor líquido da fatura.
+                // Isso evita que parcelas antigas ou ajustes de participação
+                // deixem o card visualmente inconsistente.
+                const faturaLiquida = Math.max(0, fat);
+                const restante = Math.min(
+                  Math.max(0, restanteBruto),
+                  faturaLiquida,
+                );
+
                 // Estornos não são pagamentos negativos. O valor negativo
                 // já compõe a fatura, mas não deve gerar “pago” negativo
                 // nem contaminar o restante.
                 // Estornos fazem parte do valor líquido da fatura, mas não
                 // representam pagamento. Nunca podem gerar valor pago negativo.
-                const pago = fat > 0 ? Math.max(0, fat - restante) : 0;
-                const pctPago = fat > 0 ? (pago / fat) * 100 : 0;
-                const isPaid = restante === 0 && fat > 0;
+                const pago = faturaLiquida > 0 ? Math.max(0, faturaLiquida - restante) : 0;
+                const pctPago = faturaLiquida > 0 ? (pago / faturaLiquida) * 100 : 0;
+                const isPaid = restante === 0 && faturaLiquida > 0;
                 return (
-                  <div key={c.id} className="group relative rounded-xl border border-border/60 bg-background/40 backdrop-blur p-3 hover:border-primary/40 transition-colors">
-                    <div className="flex items-center gap-3 mb-3">
+                  <div key={c.id} className="group relative overflow-hidden rounded-2xl border border-border/60 bg-background/40 p-4 backdrop-blur transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5">
+                    <div className="mb-4 flex items-center gap-3">
                       <BankIcon bank={c.bank || c.name} size={28} square />
                       <div className="min-w-0 flex-1 flex flex-col gap-0.5">
                         <div className="text-sm font-medium truncate text-foreground">{c.name}</div>
@@ -849,18 +859,22 @@ function Dashboard() {
                         {isPaid ? "OK" : "Aberto"}
                       </span>
                     </div>
-                    <div className="relative h-2 rounded-full bg-muted overflow-hidden mb-3">
+                    <div className="relative mb-4 h-2.5 overflow-hidden rounded-full bg-muted/80">
                       <div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-success/80 to-success transition-all duration-700" style={{ width: `${Math.min(100, pctPago)}%` }} />
                       <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ backgroundImage: "linear-gradient(90deg, transparent 0, transparent 6px, var(--background) 6px, var(--background) 7px)", backgroundSize: "7px 100%" }} />
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="rounded-lg bg-background/60 border border-border/50 px-2 py-1.5 flex flex-col gap-1">
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Fatura</div>
-                        <div className="font-semibold tabular-nums text-foreground">{brl(fat)}</div>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div className="rounded-xl border border-border/50 bg-background/60 px-2.5 py-2">
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Fatura</div>
+                        <div className="mt-1 font-semibold tabular-nums text-foreground">{brl(fat)}</div>
                       </div>
-                      <div className="rounded-lg bg-background/60 border border-border/50 px-2 py-1.5 flex flex-col gap-1">
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Restante</div>
-                        <div className={`font-semibold tabular-nums ${isPaid ? "text-success" : "text-destructive"}`}>{brl(restante)}</div>
+                      <div className="rounded-xl border border-success/20 bg-success/5 px-2.5 py-2">
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Pago</div>
+                        <div className="mt-1 font-semibold tabular-nums text-success">{brl(pago)}</div>
+                      </div>
+                      <div className={`rounded-xl border px-2.5 py-2 ${isPaid ? "border-success/20 bg-success/5" : "border-destructive/20 bg-destructive/5"}`}>
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Restante</div>
+                        <div className={`mt-1 font-semibold tabular-nums ${isPaid ? "text-success" : "text-destructive"}`}>{brl(restante)}</div>
                       </div>
                     </div>
                   </div>

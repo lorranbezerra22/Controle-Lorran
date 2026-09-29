@@ -262,7 +262,7 @@ function CartoesPage() {
   const [editingCard, setEditingCard] = useState<any>(null);
   const [deleting, setDeleting] = useState<any>(null);
   const [showProgressInfo, setShowProgressInfo] = useState<any>(null);
-  const [responsibilityInstallment, setResponsibilityInstallment] = useState<any>(null);
+
 
   const lsGet = (k: string, d: string) => {
     if (typeof window === "undefined") return d;
@@ -1400,10 +1400,6 @@ function CartoesPage() {
                 setShowProgressInfo(null);
               }}
               onDone={() => { setPartialPayOpen(null); invalidate("installments"); invalidate("accounts"); invalidate("transactions"); }}
-              onAdjustResponsibility={() => {
-                setPartialPayOpen(null);
-                setResponsibilityInstallment(partialPayOpen);
-              }}
               onBackToHistory={() => {
                 setPartialPayOpen(null);
                 setShowProgressInfo(partialPayOpen);
@@ -1413,29 +1409,6 @@ function CartoesPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={!!responsibilityInstallment}
-        onOpenChange={(open) => !open && setResponsibilityInstallment(null)}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Ajuste de responsabilidade</DialogTitle>
-          </DialogHeader>
-          {responsibilityInstallment && (
-            <CardResponsibilityForm
-              installment={responsibilityInstallment}
-              onDone={() => {
-                setResponsibilityInstallment(null);
-                invalidate("installments");
-              }}
-              onCancel={() => {
-                setResponsibilityInstallment(null);
-                setShowProgressInfo(responsibilityInstallment);
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={!!removePaymentOpen} onOpenChange={(o) => { if (!o) { setRemovePaymentOpen(null); setEditingTransactionId(null); } }}>
         <DialogContent>
@@ -3219,7 +3192,6 @@ function AnticipatePayForm({
   installment,
   onFullPay,
   onDone,
-  onAdjustResponsibility,
   onBackToHistory,
   initialAmount,
 }: {
@@ -3234,7 +3206,6 @@ function AnticipatePayForm({
     creditToAccount?: boolean,
   ) => void;
   onDone: () => void;
-  onAdjustResponsibility?: () => void;
   onBackToHistory?: () => void;
   initialAmount?: number;
 }) {
