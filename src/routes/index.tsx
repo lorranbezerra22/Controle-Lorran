@@ -280,17 +280,19 @@ function Dashboard() {
     return s + Math.max(0, amount - paidAmount);
   }, 0);
 
-  const confirmedRefundCredit = monthInst.reduce((s: number, i: any) => {
+  const refundCredit = monthInst.reduce((s: number, i: any) => {
     const amount = Number(i.amount || 0);
-    if (amount >= 0 || !isRefundConfirmed(i)) return s;
+    if (amount >= 0) return s;
 
+    // O valor negativo já é um crédito contra o restante no momento
+    // do lançamento. A confirmação não deve abatê-lo novamente.
     const factor = personFactor(costPersonInst(i));
     return s + Math.abs(amount) * factor;
   }, 0);
 
-  // O estorno confirmado reduz o restante da fatura, mas não é tratado
-  // como pagamento e não altera paid_amount, saldo de conta ou categoria.
-  const faturaRest = Math.max(0, faturaRestBeforeRefunds - confirmedRefundCredit);
+  // Estornos reduzem o restante assim que são lançados. Confirmar o
+  // recebimento é apenas um marcador operacional.
+  const faturaRest = Math.max(0, faturaRestBeforeRefunds - refundCredit);
 
   // Balanço projetado = Saldo da Conta + A receber −
   // (despesas restantes + fatura restante).
@@ -339,16 +341,16 @@ function Dashboard() {
         // negativo. Quando confirmado, reduz apenas o restante de cada
         // participante, sem criar pagamento artificial.
         if (type === "card" && totalOriginal < 0) {
-          if (isRefundConfirmed({ amount: totalOriginal, metadata })) {
-            ensure("Lorran").restante = Math.max(
-              0,
-              ensure("Lorran").restante - Math.abs(quota),
-            );
-            ensure("Tayane").restante = Math.max(
-              0,
-              ensure("Tayane").restante - Math.abs(quota),
-            );
-          }
+          // Estorno de Família abate imediatamente metade do restante
+          // de cada pessoa. A confirmação não cria pagamento.
+          ensure("Lorran").restante = Math.max(
+            0,
+            ensure("Lorran").restante - Math.abs(quota),
+          );
+          ensure("Tayane").restante = Math.max(
+            0,
+            ensure("Tayane").restante - Math.abs(quota),
+          );
           ensure("Lorran")[type] += quota;
           ensure("Tayane")[type] += quota;
           return;
@@ -395,7 +397,9 @@ function Dashboard() {
     // reduz o restante sem inflar o campo "Pago".
     monthInst.forEach((i: any) => {
       const amount = Number(i.amount || 0);
-      if (amount >= 0 || !isRefundConfirmed(i)) return;
+      // O estorno já foi lançado como crédito negativo e deve reduzir
+      // o restante mesmo antes da confirmação.
+      if (amount >= 0) return;
 
       const rawPerson = i.cartao_compras?.person || "";
       if (isFamilia(rawPerson)) return;

@@ -447,7 +447,10 @@ function CartoesPage() {
     // participações; apenas libera o valor que já foi abatido na fatura.
     monthInst.forEach((i: any) => {
       const refundAmount = Number(i.amount || 0);
-      if (refundAmount >= 0 || !isRefundConfirmed(i)) return;
+      // O estorno negativo já reduz o restante assim que é lançado.
+      // A confirmação apenas registra o recebimento e não deve aplicar
+      // o mesmo abatimento uma segunda vez.
+      if (refundAmount >= 0) return;
 
       const person = (i.cartao_compras?.person || "").toLowerCase().trim();
       const filter = personFilter !== "all" ? personFilter.toLowerCase().trim() : "all";
