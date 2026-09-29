@@ -165,6 +165,10 @@ export const Route = createFileRoute("/cartoes")({
   head: () => ({ meta: [{ title: "Cartões — Gestão Família" }] }),
 });
 
+const isRefundConfirmed = (installment: any) =>
+  Number(installment?.amount || 0) < 0 &&
+  Boolean((installment?.metadata as any)?.refund_confirmed);
+
 const getInstallmentPaymentState = (installment: any) => {
   const total = Number(installment.amount || 0);
   const rawPaid = Number(installment.paid_amount || 0);
@@ -179,8 +183,8 @@ const getInstallmentPaymentState = (installment: any) => {
       total,
       paid: 0,
       remaining: 0,
-      hasPaid: isPaid,
-      hasPending: !isPaid,
+      hasPaid: isRefundConfirmed(installment),
+      hasPending: !isRefundConfirmed(installment),
     };
   }
 
@@ -439,7 +443,9 @@ function CartoesPage() {
 
   const togglePaid = async (i: any, notes?: string, paidByOverride?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }, creditToAccount = true) => {
     const isEstorno = Number(i.amount) < 0;
-    const isPaying = i.status !== "paid";
+    const isPaying = isEstorno
+      ? !isRefundConfirmed(i)
+      : i.status !== "paid";
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
@@ -533,9 +539,9 @@ function CartoesPage() {
           }
         }
 
-        // 2. Registrar a participação apenas para pagamentos de despesas.
-        // Estornos não são pagamentos negativos e não devem criar participação
-        // negativa, pois isso faz o restante aumentar em outros indicadores.
+        // Estornos já foram lançados na fatura como valores negativos.
+        // Confirmar o recebimento é somente um marcador operacional:
+        // não altera fatura, categoria, contas ou participações.
         if (isEstorno) {
           const { error: refundParticipationError } = await supabase
             .from("participacoes_parcelas")
@@ -556,14 +562,32 @@ function CartoesPage() {
           if (partError) throw partError;
         }
 
-        const { error } = await supabase.from("cartao_parcelas").update({
-          status: "paid",
-          // Estorno confirmado reduz a fatura, mas paid_amount continua zerado.
-          paid_amount: isEstorno
-            ? 0
-            : Math.min(installmentTotal, currentPaidAmount + amountToRegister),
-          paid_by: paidByOverride || null,
-        } as any).eq("id", i.id);
+        const installmentUpdate = isEstorno
+          ? {
+              // O estorno já foi considerado no lançamento negativo.
+              // A confirmação não deve alterar status, fatura, categoria ou pago.
+              status: "pending",
+              paid_amount: 0,
+              paid_by: null,
+              metadata: {
+                ...((i.metadata as any) || {}),
+                refund_confirmed: true,
+                refund_confirmed_at: new Date().toISOString(),
+              },
+            }
+          : {
+              status: "paid",
+              paid_amount: Math.min(
+                installmentTotal,
+                currentPaidAmount + amountToRegister,
+              ),
+              paid_by: paidByOverride || null,
+            };
+
+        const { error } = await supabase
+          .from("cartao_parcelas")
+          .update(installmentUpdate as any)
+          .eq("id", i.id);
 
         if (error) throw error;
         toast.success(
@@ -585,7 +609,12 @@ function CartoesPage() {
             status: "pending",
             paid_amount: 0,
             paid_by: null,
-            metadata: { ...((i.metadata as any) || {}), partial_payments: [] },
+            metadata: {
+              ...((i.metadata as any) || {}),
+              partial_payments: [],
+              refund_confirmed: false,
+              refund_confirmed_at: null,
+            },
           } as any)
           .eq("id", i.id);
 
@@ -1127,7 +1156,7 @@ function CartoesPage() {
                         onClick={() => {
                           // Estornos pendentes abrem diretamente a confirmação de recebimento.
                           // Depois de confirmado, o ícone continua abrindo o histórico normal.
-                          if (Number(i.amount) < 0 && i.status !== "paid") {
+                          if (Number(i.amount) < 0 && !isRefundConfirmed(i)) {
                             setPartialPayOpen({
                               ...i,
                               _refundConfirmation: true,
@@ -1140,12 +1169,12 @@ function CartoesPage() {
                           e.preventDefault();
                           if (isPartial || i.status === "paid") setEditPaidOpen(i);
                         }}
-                        className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${i.status === "paid" ? "bg-success/20 text-success shadow-sm" : (Number(i.amount) < 0 ? "bg-warning/20 text-warning border border-warning/30 animate-pulse hover:bg-warning/30" : "bg-muted text-muted-foreground hover:bg-warning/20 hover:text-warning")}`}
+                        className={`w-7 h-7 rounded-md flex items-center justify-center transition-all ${(Number(i.amount) < 0 ? isRefundConfirmed(i) : i.status === "paid") ? "bg-success/20 text-success shadow-sm" : (Number(i.amount) < 0 ? "bg-warning/20 text-warning border border-warning/30 animate-pulse hover:bg-warning/30" : "bg-muted text-muted-foreground hover:bg-warning/20 hover:text-warning")}`}
                         title={Number(i.amount) < 0
-                          ? (i.status === "paid" ? "Estorno confirmado (Clique para remover)" : "Estorno pendente (Clique para confirmar)")
+                          ? (isRefundConfirmed(i) ? "Estorno confirmado (Clique para remover)" : "Estorno pendente (Clique para confirmar)")
                           : (i.status === "paid" ? "Remover/Editar pagamento" : (isPartial ? "Antecipar pagamento / Clique direito: ajuste manual" : "Antecipar pagamento"))}
                       >
-                        {i.status === "paid" ? <Check className="w-3.5 h-3.5" /> : (Number(i.amount) < 0 ? <Undo2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />)}
+                        {(Number(i.amount) < 0 ? isRefundConfirmed(i) : i.status === "paid") ? <Check className="w-3.5 h-3.5" /> : (Number(i.amount) < 0 ? <Undo2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />)}
                       </button>
                       <button onClick={() => setDeleting(i)} className="w-7 h-7 rounded-md flex items-center justify-center bg-muted text-muted-foreground hover:bg-destructive/20 hover:text-destructive">
                         <Trash2 className="w-3.5 h-3.5" />
@@ -1304,7 +1333,7 @@ function CartoesPage() {
                 {(() => {
                   const total = Number(showProgressInfo.amount || 0);
                   const isEstornoInfo = total < 0;
-                  const estornoPaid = showProgressInfo.status === "paid";
+                  const estornoPaid = isRefundConfirmed(showProgressInfo);
                   const linkedPaid = relatedTrans.reduce(
                     (sum: number, transaction: any) =>
                       sum + Number(transaction.amount || 0),
@@ -1369,7 +1398,7 @@ function CartoesPage() {
 
                       {isEstornoInfo ? (
                         <div className="space-y-3 rounded-xl border border-warning/30 bg-warning/5 p-3">
-                          {showProgressInfo.status !== "paid" ? (
+                          {!isRefundConfirmed(showProgressInfo) ? (
                             <Button
                               className="w-full"
                               onClick={() => {

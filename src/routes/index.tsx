@@ -45,6 +45,10 @@ function colorFromString(s: string): string {
   return `oklch(0.68 0.18 ${h % 360})`;
 }
 
+const isRefundConfirmed = (installment: any) =>
+  Number(installment?.amount || 0) < 0 &&
+  Boolean((installment?.metadata as any)?.refund_confirmed);
+
 function Dashboard() {
   const txQ = useTransactions();
   const instQ = useInstallments();
@@ -725,15 +729,12 @@ function Dashboard() {
 
                     // Estorno confirmado reduz o restante da fatura.
                     // Estorno pendente ainda não deve gerar crédito disponível.
-                    if (i.status === "paid") {
-                      // O estorno já está refletido na fatura total.
-                      // Não o transformar em “pagamento negativo” nem
-                      // alterar novamente o restante.
+                    if (amount < 0) {
+                      // Estornos nunca são pagamentos. O valor já está
+                      // refletido no lançamento negativo da fatura.
                       return s;
                     }
-                    if (amount < 0) {
-                      // Estorno pendente já abate a fatura, mas não é
-                      // pagamento nem saldo restante.
+                    if (i.status === "paid") {
                       return s;
                     }
 
