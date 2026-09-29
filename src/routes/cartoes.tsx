@@ -175,8 +175,10 @@ const getInstallmentPaymentState = (installment: any) => {
   if (total < 0) {
     return {
       total,
-      paid: isPaid ? Math.abs(total) : 0,
-      remaining: isPaid ? 0 : total,
+      // Estorno confirmado é um crédito: permanece negativo no valor pago.
+      // O restante, porém, nunca pode ficar negativo nem aumentar a pagar.
+      paid: isPaid ? total : 0,
+      remaining: 0,
       hasPaid: isPaid,
       hasPending: !isPaid,
     };
@@ -512,7 +514,9 @@ function CartoesPage() {
           user_id: user.id,
           installment_id: i.id,
           person: costPerson,
-          amount: Math.abs(amount),
+          // Estorno é crédito e deve reduzir o valor pago,
+          // sem transformar o crédito em uma despesa positiva.
+          amount: isEstorno ? amount : Math.abs(amount),
           status: "paid",
           paid_at: new Date().toISOString()
         } as any, { onConflict: 'installment_id,person' });
@@ -1244,7 +1248,7 @@ function CartoesPage() {
                     ? (estornoPaid ? total : 0)
                     : Math.min(total, Math.max(0, Number(showProgressInfo.paid_amount || 0)));
                   const remaining = isEstornoInfo
-                    ? (estornoPaid ? 0 : total)
+                    ? 0
                     : Math.max(0, Number((total - paid).toFixed(2)));
                   const progress = isEstornoInfo
                     ? (estornoPaid ? 100 : 0)
