@@ -697,6 +697,58 @@ function CartoesPage() {
       toast.error(err.message);
     }
   };
+  const cancelInstallmentPayment = async (installment: any) => {
+    if (!installment?.id || !__tryLock()) return;
+
+    try {
+      const { error: transactionError } = await supabase
+        .from("transacoes")
+        .delete()
+        .eq("card_installment_id", installment.id);
+
+      if (transactionError) throw transactionError;
+
+      const { error: participationError } = await supabase
+        .from("participacoes_parcelas")
+        .delete()
+        .eq("installment_id", installment.id);
+
+      if (participationError) throw participationError;
+
+      const { error: installmentError } = await supabase
+        .from("cartao_parcelas")
+        .update({
+          status: "pending",
+          paid_amount: 0,
+          paid_by: null,
+          notes: null,
+          metadata: {
+            ...((installment.metadata as any) || {}),
+            partial_payments: [],
+            refund_confirmed: false,
+            refund_confirmed_at: null,
+          },
+        } as any)
+        .eq("id", installment.id);
+
+      if (installmentError) throw installmentError;
+
+      invalidate("installments");
+      invalidate("accounts");
+      invalidate("transactions");
+
+      toast.success(
+        Number(installment.amount || 0) < 0
+          ? "Confirmação do estorno removida."
+          : "Pagamento cancelado e saldo restaurado.",
+      );
+    } catch (err: any) {
+      toast.error(err.message || "Não foi possível cancelar a operação.");
+    } finally {
+      __release();
+    }
+  };
+
   const removeAll = async (i: any) => {
     const { error } = await supabase.from("cartao_compras").delete().eq("id", i.purchase_id);
     if (error) toast.error(error.message); else { invalidate("installments"); toast.success("Compra removida"); setDeleting(null); }
@@ -1496,7 +1548,7 @@ function CartoesPage() {
                                     return;
                                   }
 
-                                  await togglePaid(showProgressInfo);
+                                  await cancelInstallmentPayment(showProgressInfo);
                                   setShowProgressInfo(null);
                                 }}
                               >
@@ -1525,6 +1577,29 @@ function CartoesPage() {
                             <Clock className="mr-2 h-4 w-4" />
                             Confirmar pagamento
                           </Button>
+
+                          {relatedTrans.length > 0 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-10 w-full rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                              onClick={async () => {
+                                if (
+                                  !confirm(
+                                    "Cancelar este pagamento? Os lançamentos serão removidos e o valor restante será restaurado.",
+                                  )
+                                ) {
+                                  return;
+                                }
+
+                                await cancelInstallmentPayment(showProgressInfo);
+                                setShowProgressInfo(null);
+                              }}
+                            >
+                              <Undo2 className="mr-2 h-4 w-4" />
+                              Cancelar pagamento
+                            </Button>
+                          )}
                         </div>
                       )}
                     </>
@@ -3978,17 +4053,39 @@ function EditPaidForm({ installment, onDone }: { installment: any, onDone: () =>
     try {
       const diff = val - oldVal;
 
-      // Ao ajustar o valor manualmente via botão direito, limpamos o histórico de transações específicas
-      // para manter o controle manual conforme solicitado
-      await supabase.from("transacoes").delete().eq("card_installment_id", installment.id);
+      // Ao ajustar manualmente o valor pago, removemos também as
+      // participações antigas. Caso contrário, o histórico de cotas
+      // continuava informando que o pagamento existia mesmo depois
+      // de as transações terem sido apagadas.
+      const { error: transactionError } = await supabase
+        .from("transacoes")
+        .delete()
+        .eq("card_installment_id", installment.id);
+
+      if (transactionError) throw transactionError;
+
+      const { error: participationError } = await supabase
+        .from("participacoes_parcelas")
+        .delete()
+        .eq("installment_id", installment.id);
+
+      if (participationError) throw participationError;
 
       // Atualizar a parcela
-      const { error: instErr } = await supabase.from("cartao_parcelas").update({
-        paid_amount: val,
-        status: Math.abs(val - total) < 0.01 ? "paid" : "pending",
-        notes: null
-      }).eq("id", installment.id);
+      const { error: instErr } = await supabase
+        .from("cartao_parcelas")
+        .update({
+          paid_amount: val,
+          status: Math.abs(val - total) < 0.01 ? "paid" : "pending",
+          notes: null,
+        })
+        .eq("id", installment.id);
+
       if (instErr) throw instErr;
+
+      invalidate("installments");
+      invalidate("accounts");
+      invalidate("transactions");
 
       toast.success("Valor pago atualizado e saldo ajustado");
       onDone();
