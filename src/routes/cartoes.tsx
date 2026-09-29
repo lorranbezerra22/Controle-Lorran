@@ -1240,9 +1240,9 @@ function CartoesPage() {
       </Dialog>
 
       <Dialog open={!!showProgressInfo} onOpenChange={(o) => !o && setShowProgressInfo(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Histórico de Pagamentos</DialogTitle>
+        <DialogContent className="max-w-lg overflow-hidden p-0">
+          <DialogHeader className="border-b border-border px-5 py-4">
+            <DialogTitle className="text-lg">Histórico de pagamentos</DialogTitle>
           </DialogHeader>
           {showProgressInfo && (() => {
             const relatedTrans = allTransactions
@@ -1267,12 +1267,12 @@ function CartoesPage() {
 
                   return (
                     <>
-                      <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+                      <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
                         <div>
-                          <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                          <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                             Lançamento
                           </div>
-                          <div className="mt-1 font-semibold">
+                          <div className="mt-1 font-semibold text-base">
                             {showProgressInfo.cartao_compras?.description || "Pagamento do cartão"}
                           </div>
                           <div className="mt-1 text-xs text-muted-foreground">
@@ -1309,11 +1309,7 @@ function CartoesPage() {
                       </div>
 
                       {isEstornoInfo ? (
-                        <div className="space-y-3 rounded-lg border border-warning/30 bg-warning/5 p-3">
-                          <div className="text-xs text-muted-foreground">
-                            O valor só será considerado como crédito da fatura depois que você confirmar que recebeu o reembolso.
-                          </div>
-
+                        <div className="space-y-3 rounded-xl border border-warning/30 bg-warning/5 p-3">
                           {showProgressInfo.status !== "paid" ? (
                             <Button
                               className="w-full"
@@ -1326,13 +1322,13 @@ function CartoesPage() {
                               }}
                             >
                               <Check className="mr-2 h-4 w-4" />
-                              Confirmar que recebi o reembolso
+                              Confirmar recebimento
                             </Button>
                           ) : (
                             <div className="space-y-3">
                               <div className="flex items-center gap-2 text-xs font-medium text-success">
                                 <Check className="h-4 w-4" />
-                                Reembolso recebido e aplicado na fatura
+                                Recebido e aplicado na fatura
                               </div>
 
                               <Button
@@ -1356,13 +1352,7 @@ function CartoesPage() {
                                 Remover confirmação e desfazer crédito
                               </Button>
 
-                              <p className="text-[10px] leading-relaxed text-muted-foreground">
-                                Esta ação remove a confirmação do recebimento,
-                                exclui o crédito lançado nas contas e deixa o
-                                estorno pendente novamente. Se você escolheu
-                                apenas confirmar o recebimento, nenhum saldo de
-                                conta será alterado.
-                              </p>
+
                             </div>
                           )}
                         </div>
@@ -1389,22 +1379,22 @@ function CartoesPage() {
                 })()}
 
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground uppercase">
-                    Quem pagou o quê
+                  <Label className="text-[10px] tracking-[0.16em] text-muted-foreground uppercase">
+                    Lançamentos
                   </Label>
-                  <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
+                  <div className="max-h-[260px] overflow-y-auto space-y-2 pr-1">
                     {relatedTrans.length === 0 ? (
-                      <div className="text-sm text-muted-foreground italic p-4 text-center bg-muted/30 rounded-lg">
-                        Nenhum registro de pagamento encontrado.
+                      <div className="rounded-xl bg-muted/20 p-4 text-center text-sm italic text-muted-foreground">
+                        Nenhum lançamento
                       </div>
                     ) : (
                       relatedTrans.map((t: any) => (
-                        <div key={t.id} className="p-3 rounded-lg border border-border bg-card space-y-2 relative group">
+                        <div key={t.id} className="group relative space-y-2 rounded-xl border border-border bg-card p-3">
                           <div className="flex justify-between items-start gap-3">
                             <div>
                               <span className="font-semibold text-success">{brl(t.amount)}</span>
                               <span className="ml-2 text-xs text-muted-foreground">
-                                pago por {t.person || showProgressInfo.cartao_compras?.person || "Sem pessoa"}
+                                {t.person || showProgressInfo.cartao_compras?.person || "Sem pessoa"}
                               </span>
                             </div>
                             <div className="flex items-center gap-1">
@@ -1442,8 +1432,10 @@ function CartoesPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-2">
-                  <Button variant="outline" onClick={() => setShowProgressInfo(null)}>Fechar</Button>
+                <div className="flex justify-end border-t border-border pt-3">
+                  <Button variant="outline" onClick={() => setShowProgressInfo(null)}>
+                    Fechar
+                  </Button>
                 </div>
               </div>
             );
