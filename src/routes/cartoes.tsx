@@ -24,6 +24,7 @@ import { BankIcon } from "@/components/BankIcon";
 import { cardPurchaseSchema, firstZodError } from "@/lib/schemas";
 import { motion } from "framer-motion";
 import { CountUp } from "@/components/CountUp";
+import { installmentValueForPeople } from "@/lib/adjustments";
 import { PageHeader } from "@/components/PageHeader";
 import { RecurringCardBox } from "@/components/RecurringCardBox";
 const todayLocalISO = () => {
@@ -422,7 +423,16 @@ function CartoesPage() {
           const paidByLorran = parts.filter((p: any) => normalizeName(p.person) === "lorran").reduce((s: number, p: any) => s + Number(p.amount), 0);
           const paidByTayane = parts.filter((p: any) => normalizeName(p.person) === "tayane").reduce((s: number, p: any) => s + Number(p.amount), 0);
 
-          const quota = payment.total / 2;
+          const selectedPerson =
+            filter === "lorran" || filter2 === "lorran"
+              ? "Lorran"
+              : filter === "tayane" || filter2 === "tayane"
+                ? "Tayane"
+                : "";
+
+          const quota = selectedPerson
+            ? responsibilityForPerson(i, selectedPerson)
+            : payment.total / 2;
 
           if (refundOnly) {
             // Mantém o estorno no total líquido da fatura, mas nunca no restante.

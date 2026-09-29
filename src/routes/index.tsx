@@ -9,7 +9,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { personSplitAll, personColor, isFamilia } from "@/lib/people";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAdjustments, groupAdjustments, effectiveShares, costPersonInst } from "@/lib/adjustments";
+import {
+  useAdjustments,
+  groupAdjustments,
+  effectiveShares,
+  costPersonInst,
+  installmentValueForPeople,
+} from "@/lib/adjustments";
 import { CountUp } from "@/components/CountUp";
 import { Sparkline } from "@/components/Sparkline";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -168,6 +174,9 @@ function Dashboard() {
     return sel.includes(pNorm) ? 1 : 0;
   };
 
+  const installmentValue = (installment: any) =>
+    installmentValueForPeople(installment, personFilter, personFilter2);
+
 
 
 
@@ -250,7 +259,10 @@ function Dashboard() {
   const despesasRestante = sumTxBy("expense", "pending");
 
   // Cartões — respeita filtros
-  const fatura = monthInst.reduce((s: number, i: any) => s + Number(i.amount) * personFactor(costPersonInst(i)), 0);
+  const fatura = monthInst.reduce(
+    (s: number, i: any) => s + installmentValue(i),
+    0,
+  );
   const faturaRestBeforeRefunds = monthInst.reduce((s: number, i: any) => {
     const factor = personFactor(costPersonInst(i));
     if (factor === 0) return s;
@@ -466,7 +478,7 @@ function Dashboard() {
         const f = personFactor(costPersonInst(i));
         if (!f) return;
         const row = ensure(d.getFullYear());
-        row.Despesas += Number(i.amount) * f;
+        row.Despesas += installmentValueForPeople(i, personFilter, personFilter2);
         row.Balanço = row.Receitas - row.Despesas;
       });
       return Array.from(yearsMap.entries()).sort((a, b) => a[0] - b[0]).map(([y, v]) => ({ mes: String(y), ...v }));
@@ -486,7 +498,7 @@ function Dashboard() {
       if (d.getFullYear() !== selY) return;
       const f = personFactor(costPersonInst(i));
       if (!f) return;
-      arr[d.getMonth()].Despesas += Number(i.amount) * f;
+      arr[d.getMonth()].Despesas += installmentValueForPeople(i, personFilter, personFilter2);
       arr[d.getMonth()].Balanço = arr[d.getMonth()].Receitas - arr[d.getMonth()].Despesas;
     });
     return arr;
@@ -525,7 +537,8 @@ function Dashboard() {
       if (!f) return;
       const cid = i.cartao_compras?.category_id;
       const meta = (cid && catMap.get(cid)) || { name: "Sem categoria", icon: null };
-      const v = Number(i.amount) * f;
+      const v = installmentValueForPeople(i, personFilter, personFilter2);
+      if (!v) return;
       const agg = ensure(meta.name, meta.icon);
       agg.value += v;
       agg.card += v;
@@ -585,7 +598,8 @@ function Dashboard() {
       if (!f) return;
       const cid = i.cartao_compras?.category_id;
       const meta = (cid && catMap.get(cid)) || { name: "Sem categoria", icon: null };
-      const v = Number(i.amount) * f;
+      const v = installmentValueForPeople(i, personFilter, personFilter2);
+      if (!v) return;
       expMap.set(meta.name, (expMap.get(meta.name) ?? 0) + v);
     });
     return { expMap, incMap };
@@ -702,7 +716,11 @@ function Dashboard() {
           if (d.getFullYear() !== baseY) return;
           const f = personFactor(costPersonInst(i));
           if (!f) return;
-          monthsArr[d.getMonth()].fatura += Number(i.amount) * f;
+          monthsArr[d.getMonth()].fatura += installmentValueForPeople(
+            i,
+            personFilter,
+            personFilter2,
+          );
         });
         const sparkSaldo: number[] = [];
         let acc = 0;
@@ -766,7 +784,10 @@ function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {cards.map((c: any) => {
                 const cardMonthInst = monthInst.filter((i: any) => i.card_id === c.id);
-                const fat = cardMonthInst.reduce((s: number, i: any) => s + Number(i.amount) * personFactor(costPersonInst(i)), 0);
+                const fat = cardMonthInst.reduce(
+                  (s: number, i: any) => s + installmentValue(i),
+                  0,
+                );
                 const restante = cardMonthInst
                   .reduce((s: number, i: any) => {
                     const factor = personFactor(costPersonInst(i));

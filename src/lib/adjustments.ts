@@ -55,3 +55,72 @@ export const costPerson = (t: { person?: string | null; paid_by?: string | null 
 
 export const costPersonInst = (i: any) =>
   i?.paid_by || i?.cartao_compras?.person || "";
+
+const normalizePerson = (value: string | null | undefined) =>
+  (value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+export function installmentResponsibility(i: any): Share[] {
+  const amount = Number(i?.amount || 0);
+  const person = normalizePerson(i?.cartao_compras?.person);
+
+  if (person !== "familia") {
+    return [{ person: i?.cartao_compras?.person || null, amount }];
+  }
+
+  const metadata = (i?.metadata || {}) as any;
+  const saved = Array.isArray(metadata.responsibility_adjustment)
+    ? metadata.responsibility_adjustment
+        .map((item: any) => ({
+          person: String(item.person || "").trim(),
+          amount: Number(item.amount || 0),
+        }))
+        .filter((item: Share) => item.person && Number.isFinite(item.amount) && item.amount >= 0)
+    : [];
+
+  if (saved.length > 0) {
+    return saved;
+  }
+
+  const half = Number((amount / 2).toFixed(2));
+
+  return [
+    { person: "Lorran", amount: half },
+    { person: "Tayane", amount: Number((amount - half).toFixed(2)) },
+  ];
+}
+
+export function installmentValueForPeople(
+  installment: any,
+  primaryPerson: string,
+  secondaryPerson = "all",
+): number {
+  const selected = [primaryPerson, secondaryPerson]
+    .map(normalizePerson)
+    .filter((person) => person && person !== "all");
+
+  if (selected.length === 0) {
+    return Number(installment?.amount || 0);
+  }
+
+  const installmentPerson = normalizePerson(
+    installment?.cartao_compras?.person,
+  );
+
+  if (installmentPerson !== "familia") {
+    return selected.some((person) => person === installmentPerson)
+      ? Number(installment?.amount || 0)
+      : 0;
+  }
+
+  if (selected.includes("familia")) {
+    return Number(installment?.amount || 0);
+  }
+
+  return installmentResponsibility(installment)
+    .filter((share) => selected.includes(normalizePerson(share.person)))
+    .reduce((sum, share) => sum + Number(share.amount || 0), 0);
+}
