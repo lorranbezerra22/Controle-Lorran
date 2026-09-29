@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ProtectedShell } from "@/components/ProtectedShell";
 import { useTransactions, useCategories, usePeople, useAccounts, useInstallments, useCards } from "@/lib/queries";
+import { useAdjustments, groupAdjustments } from "@/lib/adjustments";
 import { brl, fmtDate } from "@/lib/format";
 import { useMemo, useState, useEffect } from "react";
 import { TrendingUp, TrendingDown, Wallet, Calendar, Users, ArrowUpRight, Scale, Undo2, CreditCard, ChevronDown, ChevronRight } from "lucide-react";
@@ -36,6 +37,8 @@ function FinanceiroPage() {
   const { data: accounts = [] } = useAccounts();
   const { data: installments = [] } = useInstallments();
   const { data: cards = [] } = useCards();
+  const { data: adjustments = [] } = useAdjustments();
+  const adjustmentMap = useMemo(() => groupAdjustments(adjustments), [adjustments]);
 
   const now = new Date();
   // Defaults = primeira opção ("all"). Persistido por página para não resetar ao trocar de aba.
@@ -108,20 +111,62 @@ function FinanceiroPage() {
   const baseTx = useMemo(
     () =>
       merged.flatMap((t: any) => {
-        // Se a pessoa original é Família, fazemos o split 50/50
-        const isFamily = (t.person || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === "familia" ||
-                        (t._debtPerson || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === "familia";
+        const normalize = (value: string) =>
+          (value || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .trim();
+
+        const isFamily =
+          normalize(t.person) === "familia" ||
+          normalize(t._debtPerson) === "familia";
 
         if (t.kind === "expense" && isFamily) {
+          // Quando existe um ajuste salvo, ele tem prioridade sobre a divisão
+          // padrão de 50/50. A regra antiga só é usada quando não há ajuste.
+          const adjustmentRows = adjustmentMap.get(t._origId || t.id) ?? [];
+
+          if (adjustmentRows.length > 0) {
+            return adjustmentRows.map((adjustment: any) => ({
+              ...t,
+              id: `${t.id}::adjustment::${adjustment.id}`,
+              _owner: adjustment.person,
+              _debtPerson: t._debtPerson || t.person,
+              _adjusted: true,
+              _familiaSplit: false,
+              _origId: t._origId || t.id,
+              amount: Number(adjustment.amount) || 0,
+              _originalItem: t._originalItem,
+            }));
+          }
+
           const half = Number(t.amount) / 2;
           return [
-            { ...t, id: `${t.id}::L`, _owner: "Lorran", amount: half, _familiaSplit: true, _origId: t.id, _originalItem: t._originalItem },
-            { ...t, id: `${t.id}::T`, _owner: "Tayane", amount: half, _familiaSplit: true, _origId: t.id, _originalItem: t._originalItem },
+            {
+              ...t,
+              id: `${t.id}::L`,
+              _owner: "Lorran",
+              amount: half,
+              _familiaSplit: true,
+              _origId: t.id,
+              _originalItem: t._originalItem,
+            },
+            {
+              ...t,
+              id: `${t.id}::T`,
+              _owner: "Tayane",
+              amount: half,
+              _familiaSplit: true,
+              _origId: t.id,
+              _originalItem: t._originalItem,
+            },
           ];
         }
+
         return [{ ...t, _owner: t.person }];
       }),
-    [merged],
+    [merged, adjustmentMap],
   );
 
   // Lista filtrada (despesa + receita conforme filtro)
