@@ -1253,13 +1253,14 @@ function CartoesPage() {
               <div className="space-y-4">
                 {(() => {
                   const total = Number(showProgressInfo.amount || 0);
-                  // Estorno (valor negativo): tratar pelo status, pois o cálculo min/max zera o "Falta".
                   const isEstornoInfo = total < 0;
                   const estornoPaid = showProgressInfo.status === "paid";
                   const paid = isEstornoInfo
                     ? (estornoPaid ? Math.abs(total) : 0)
                     : Math.min(total, Math.max(0, Number(showProgressInfo.paid_amount || 0)));
-                  const remaining = 0;
+                  const remaining = isEstornoInfo
+                    ? 0
+                    : Math.max(0, Number((total - paid).toFixed(2)));
                   const progress = isEstornoInfo
                     ? (estornoPaid ? 100 : 0)
                     : (total > 0 ? Math.min(100, (paid / total) * 100) : 0);
@@ -1370,7 +1371,7 @@ function CartoesPage() {
                             }}
                           >
                             <Clock className="h-4 w-4" />
-                            Pagamento
+                            {remaining > 0.01 ? "Confirmar pagamento" : "Pagamento"}
                           </Button>
                         </div>
                       )}
