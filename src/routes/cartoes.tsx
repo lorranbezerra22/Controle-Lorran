@@ -27,6 +27,7 @@ import { CountUp } from "@/components/CountUp";
 import { installmentValueForPeople } from "@/lib/adjustments";
 import { PageHeader } from "@/components/PageHeader";
 import { RecurringCardBox } from "@/components/RecurringCardBox";
+import { Progress } from "@/components/ui/progress";
 const todayLocalISO = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -1821,6 +1822,10 @@ function CardResponsibilityForm({
   const [saving, setSaving] = useState(false);
 
   const sum = rows.reduce((value, row) => value + Number(row.amount || 0), 0);
+  const remaining = Math.max(0, Number((total - sum).toFixed(2)));
+  const distributedPercent = total > 0
+    ? Math.min(100, Math.max(0, (sum / total) * 100))
+    : 0;
   const valid =
     rows.length > 0 &&
     rows.every((row) => row.person && Number(row.amount) >= 0) &&
@@ -1882,12 +1887,64 @@ function CardResponsibilityForm({
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border bg-muted/30 p-3">
-        <div className="text-sm font-medium">
-          {installment.cartao_compras?.description || "Parcela do cartão"}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium">
+              {installment.cartao_compras?.description || "Parcela do cartão"}
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              Valor total
+            </div>
+          </div>
+          <strong className="shrink-0 text-lg tabular-nums text-foreground">
+            {brl(total)}
+          </strong>
         </div>
-        <div className="mt-1 text-xs text-muted-foreground">
-          Valor total: <strong className="text-foreground">{brl(total)}</strong>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-3.5 shadow-sm">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+              Divisão atual
+            </div>
+            <div className="mt-1 text-sm font-semibold tabular-nums">
+              {brl(sum)} <span className="font-normal text-muted-foreground">de {brl(total)}</span>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              {remaining > 0.01 ? "Sobra" : "Distribuído"}
+            </div>
+            <div className={`text-sm font-bold tabular-nums ${remaining > 0.01 ? "text-warning" : "text-success"}`}>
+              {remaining > 0.01 ? brl(remaining) : brl(total)}
+            </div>
+          </div>
         </div>
+
+        <Progress value={distributedPercent} className="h-2.5 bg-muted" />
+
+        <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
+          <span>R$ 0</span>
+          <span className={valid ? "font-semibold text-success" : ""}>
+            {Math.round(distributedPercent)}%
+          </span>
+          <span>{brl(total)}</span>
+        </div>
+
+        {remaining > 0.01 && (
+          <div className="mt-3 rounded-lg border border-warning/25 bg-warning/5 px-3 py-2 text-xs text-warning">
+            Ainda falta distribuir <strong className="tabular-nums">{brl(remaining)}</strong>.
+          </div>
+        )}
+
+        {valid && (
+          <div className="mt-3 flex items-center gap-2 text-xs font-medium text-success">
+            <Check className="h-3.5 w-3.5" />
+            Valor totalmente distribuído
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between">
@@ -1904,40 +1961,74 @@ function CardResponsibilityForm({
         </Button>
       </div>
 
-      <div className="space-y-2">
-        {rows.map((row, index) => (
-          <div key={`${row.person}-${index}`} className="flex items-center gap-2">
-            <Select
-              value={row.person}
-              onValueChange={(person) => updateRow(index, { person })}
+      <div className="space-y-2.5">
+        {rows.map((row, index) => {
+          const amount = Math.max(0, Number(row.amount || 0));
+          const percentage = total > 0
+            ? Math.min(100, Math.max(0, (amount / total) * 100))
+            : 0;
+
+          return (
+            <div
+              key={`${row.person}-${index}`}
+              className="rounded-xl border border-border bg-muted/10 p-3"
             >
-              <SelectTrigger className="flex-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Lorran">Lorran</SelectItem>
-                <SelectItem value="Tayane">Tayane</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={row.amount}
-              onChange={(event) => updateRow(index, { amount: event.target.value })}
-              className="w-28"
-            />
-            <span className="text-xs text-muted-foreground">R$</span>
-          </div>
-        ))}
+              <div className="flex items-center gap-2">
+                <Select
+                  value={row.person}
+                  onValueChange={(person) => updateRow(index, { person })}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Lorran">Lorran</SelectItem>
+                    <SelectItem value="Tayane">Tayane</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    R$
+                  </span>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={row.amount}
+                    onChange={(event) => updateRow(index, { amount: event.target.value })}
+                    className="w-32 pl-8 text-right tabular-nums"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-2.5 flex items-center gap-2">
+                <Progress value={percentage} className="h-1.5 flex-1" />
+                <span className="w-14 text-right text-[11px] font-semibold tabular-nums text-muted-foreground">
+                  {Math.round(percentage)}%
+                </span>
+              </div>
+
+              <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+                <span>{brl(amount)} atribuídos</span>
+                <span>de {brl(total)}</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      <div
-        className={`text-xs ${
-          valid ? "text-success" : "text-muted-foreground"
-        }`}
-      >
-        Soma: {brl(sum)} / Esperado: {brl(total)}
+      <div className={`rounded-lg border px-3 py-2 text-xs ${
+        valid
+          ? "border-success/25 bg-success/5 text-success"
+          : "border-border bg-muted/20 text-muted-foreground"
+      }`}>
+        <div className="flex items-center justify-between gap-3">
+          <span>Numerador da divisão</span>
+          <strong className="tabular-nums">
+            {brl(sum)} / {brl(total)}
+          </strong>
+        </div>
       </div>
 
       <div className="flex gap-2">
