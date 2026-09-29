@@ -450,6 +450,22 @@ function CartoesPage() {
 
       if (isPaying) {
         const amount = Number(i.amount);
+        const installmentTotal = Math.abs(amount);
+
+        // Usa também os lançamentos vinculados para corrigir parcelas antigas
+        // cujo paid_amount ficou desatualizado após um pagamento parcial.
+        const linkedPaidAmount = allTransactions
+          .filter((transaction: any) => transaction.card_installment_id === i.id)
+          .reduce((sum: number, transaction: any) => sum + Number(transaction.amount || 0), 0);
+        const currentPaidAmount = isEstorno
+          ? 0
+          : Math.min(
+              installmentTotal,
+              Math.max(Number(i.paid_amount || 0), linkedPaidAmount),
+            );
+        const amountToRegister = isEstorno
+          ? installmentTotal
+          : Math.max(0, installmentTotal - currentPaidAmount);
 
         // 1. Criar lançamento financeiro (débito para despesa, CRÉDITO para estorno)
         // O estorno (amount negativo) gera uma transação 'income' para repor o saldo na conta
@@ -479,7 +495,13 @@ function CartoesPage() {
 
         const splits = skipAccountCredit
           ? []
-          : buildPaymentSplits(accounts, originalPerson, amount, paidByOverride, accountsOverride);
+          : buildPaymentSplits(
+              accounts,
+              originalPerson,
+              isEstorno ? -amountToRegister : amountToRegister,
+              paidByOverride,
+              accountsOverride,
+            );
 
         // Se houver splits (contas selecionadas), cria as transações
         if (splits.length > 0) {
@@ -537,7 +559,9 @@ function CartoesPage() {
         const { error } = await supabase.from("cartao_parcelas").update({
           status: "paid",
           // Estorno confirmado reduz a fatura, mas paid_amount continua zerado.
-          paid_amount: 0,
+          paid_amount: isEstorno
+            ? 0
+            : Math.min(installmentTotal, currentPaidAmount + amountToRegister),
           paid_by: paidByOverride || null,
         } as any).eq("id", i.id);
 
@@ -1176,7 +1200,17 @@ function CartoesPage() {
             <AnticipatePayForm
               installment={partialPayOpen}
               initialAmount={partialPayOpen?._anticipateAmount}
-              onFullPay={(notes, paidBy, accountsOverride, creditToAccount) => { togglePaid(partialPayOpen, notes, paidBy, accountsOverride, creditToAccount); setPartialPayOpen(null); }}
+              onFullPay={async (notes, paidBy, accountsOverride, creditToAccount) => {
+                await togglePaid(
+                  partialPayOpen,
+                  notes,
+                  paidBy,
+                  accountsOverride,
+                  creditToAccount,
+                );
+                setPartialPayOpen(null);
+                setShowProgressInfo(null);
+              }}
               onDone={() => { setPartialPayOpen(null); invalidate("installments"); invalidate("accounts"); invalidate("transactions"); }}
             />
           )}
@@ -1271,12 +1305,23 @@ function CartoesPage() {
                   const total = Number(showProgressInfo.amount || 0);
                   const isEstornoInfo = total < 0;
                   const estornoPaid = showProgressInfo.status === "paid";
+                  const linkedPaid = relatedTrans.reduce(
+                    (sum: number, transaction: any) =>
+                      sum + Number(transaction.amount || 0),
+                    0,
+                  );
                   const paid = isEstornoInfo
                     ? (estornoPaid ? Math.abs(total) : 0)
-                    : Math.min(total, Math.max(0, Number(showProgressInfo.paid_amount || 0)));
+                    : Math.min(
+                        Math.abs(total),
+                        Math.max(
+                          Number(showProgressInfo.paid_amount || 0),
+                          linkedPaid,
+                        ),
+                      );
                   const remaining = isEstornoInfo
                     ? 0
-                    : Math.max(0, Number((total - paid).toFixed(2)));
+                    : Math.max(0, Number((Math.abs(total) - paid).toFixed(2)));
                   const progress = isEstornoInfo
                     ? (estornoPaid ? 100 : 0)
                     : (total > 0 ? Math.min(100, (paid / total) * 100) : 0);
