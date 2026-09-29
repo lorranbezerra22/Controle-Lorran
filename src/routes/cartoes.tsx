@@ -1672,21 +1672,6 @@ function CartoesPage() {
                             </Button>
                           </div>
 
-                          {normalizeName(showProgressInfo.cartao_compras?.person || "") === "familia" && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="h-11 w-full rounded-xl border-primary/30 text-sm font-semibold hover:border-primary hover:bg-primary/5"
-                              onClick={() => {
-                                setShowProgressInfo(null);
-                                setResponsibilityInstallment(showProgressInfo);
-                              }}
-                            >
-                              <Users className="mr-2 h-4 w-4" />
-                              Ajuste de responsabilidade
-                            </Button>
-                          )}
-
                           {relatedTrans.length > 0 && (
                             <Button
                               type="button"
@@ -3666,17 +3651,6 @@ function AnticipatePayForm({
             >
               Pagar restante
             </Button>
-            {isFamilia && onAdjustResponsibility && (
-              <Button
-                type="button"
-                variant="outline"
-                className="h-12 text-sm font-semibold rounded-xl border-primary/30 hover:border-primary hover:bg-primary/5"
-                onClick={onAdjustResponsibility}
-              >
-                Ajuste de responsabilidade
-              </Button>
-            )}
-
           </div>
         </div>
         <Button variant="ghost" className="w-full text-xs" onClick={() => onDone()}>Cancelar</Button>
