@@ -781,7 +781,7 @@ function Dashboard() {
           {cards.length === 0 ? (
             <div className="text-sm text-muted-foreground py-6 text-center">Cadastre seus cartões na aba Cartões.</div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {cards.map((c: any) => {
                 const cardMonthInst = monthInst.filter((i: any) => i.card_id === c.id);
                 const fat = cardMonthInst.reduce(
@@ -848,8 +848,8 @@ function Dashboard() {
                 const pctPago = faturaLiquida > 0 ? (pago / faturaLiquida) * 100 : 0;
                 const isPaid = restante === 0 && faturaLiquida > 0;
                 return (
-                  <div key={c.id} className="group relative overflow-hidden rounded-2xl border border-border/60 bg-background/40 p-4 backdrop-blur transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5">
-                    <div className="mb-4 flex items-center gap-3">
+                  <div key={c.id} className="group relative overflow-hidden rounded-xl border border-border/60 bg-background/40 p-3 backdrop-blur transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5">
+                    <div className="mb-2.5 flex items-center gap-3">
                       <BankIcon bank={c.bank || c.name} size={28} square />
                       <div className="min-w-0 flex-1 flex flex-col gap-0.5">
                         <div className="text-sm font-medium truncate text-foreground">{c.name}</div>
@@ -859,22 +859,22 @@ function Dashboard() {
                         {isPaid ? "OK" : "Aberto"}
                       </span>
                     </div>
-                    <div className="relative mb-4 h-2.5 overflow-hidden rounded-full bg-muted/80">
+                    <div className="relative mb-2.5 h-1.5 overflow-hidden rounded-full bg-muted/80">
                       <div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-success/80 to-success transition-all duration-700" style={{ width: `${Math.min(100, pctPago)}%` }} />
                       <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ backgroundImage: "linear-gradient(90deg, transparent 0, transparent 6px, var(--background) 6px, var(--background) 7px)", backgroundSize: "7px 100%" }} />
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div className="rounded-xl border border-border/50 bg-background/60 px-2.5 py-2">
-                        <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Fatura</div>
-                        <div className="mt-1 font-semibold tabular-nums text-foreground">{brl(fat)}</div>
+                      <div className="rounded-lg border border-border/50 bg-background/60 px-2 py-1.5">
+                        <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Fatura</div>
+                        <div className="mt-0.5 text-sm font-semibold tabular-nums text-foreground">{brl(fat)}</div>
                       </div>
-                      <div className="rounded-xl border border-success/20 bg-success/5 px-2.5 py-2">
-                        <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Pago</div>
-                        <div className="mt-1 font-semibold tabular-nums text-success">{brl(pago)}</div>
+                      <div className="rounded-lg border border-success/20 bg-success/5 px-2 py-1.5">
+                        <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Pago</div>
+                        <div className="mt-0.5 text-sm font-semibold tabular-nums text-success">{brl(pago)}</div>
                       </div>
-                      <div className={`rounded-xl border px-2.5 py-2 ${isPaid ? "border-success/20 bg-success/5" : "border-destructive/20 bg-destructive/5"}`}>
-                        <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Restante</div>
-                        <div className={`mt-1 font-semibold tabular-nums ${isPaid ? "text-success" : "text-destructive"}`}>{brl(restante)}</div>
+                      <div className={`rounded-lg border px-2 py-1.5 ${isPaid ? "border-success/20 bg-success/5" : "border-destructive/20 bg-destructive/5"}`}>
+                        <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Restante</div>
+                        <div className={`mt-0.5 text-sm font-semibold tabular-nums ${isPaid ? "text-success" : "text-destructive"}`}>{brl(restante)}</div>
                       </div>
                     </div>
                   </div>
