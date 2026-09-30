@@ -2153,6 +2153,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
   const [splitPeople, setSplitPeople] = useState<string[]>([]);
   const [splitCustom, setSplitCustom] = useState(false);
   const [splitAmounts, setSplitAmounts] = useState<Record<string, string>>({});
+  const [splitCategoryIds, setSplitCategoryIds] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   const togglePerson = (name: string) => {
@@ -2185,10 +2186,14 @@ function PurchaseForm({ cards, cats, onDone }: any) {
       const n = Number(form.installments_count);
 
       // Lista de (pessoa, valor) para criar 1 compra por pessoa
-      let splits: Array<{ person: string | null; amount: number }>;
+      let splits: Array<{ person: string | null; amount: number; categoryId: string }>;
       if (splitMode && splitPeople.length >= 2) {
         if (splitCustom) {
-          splits = splitPeople.map((p) => ({ person: p, amount: Number(splitAmounts[p] || 0) }));
+          splits = splitPeople.map((p) => ({
+            person: p,
+            amount: Number(splitAmounts[p] || 0),
+            categoryId: splitCategoryIds[p] || "",
+          }));
           const sumCustom = splits.reduce((s, x) => s + x.amount, 0);
           if (Math.abs(sumCustom - total) > 0.01) throw new Error(`A soma dos valores (${brl(sumCustom)}) precisa ser igual ao total (${brl(total)}).`);
         } else {
@@ -2196,10 +2201,11 @@ function PurchaseForm({ cards, cats, onDone }: any) {
           splits = splitPeople.map((p, idx) => ({
             person: p,
             amount: idx === splitPeople.length - 1 ? +(total - per * (splitPeople.length - 1)).toFixed(2) : per,
+            categoryId: splitCategoryIds[p] || "",
           }));
         }
       } else {
-        splits = [{ person: form.person || null, amount: total }];
+        splits = [{ person: form.person || null, amount: total, categoryId: form.category_id }];
       }
 
       const purDate = new Date(form.purchase_date + "T00:00:00");
@@ -2226,7 +2232,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
           user_id: user!.id, card_id: card.id,
           description: splits.length > 1 ? `${form.description} (${s.person})` : form.description,
           purchase_date: form.purchase_date, total_amount: s.amount, installments_count: n,
-          category_id: form.category_id || null, person: finalPerson,
+          category_id: s.categoryId || null, person: finalPerson,
           brand: form.brand || null,
         }).select().single();
         if (pErr) throw pErr;
@@ -2325,6 +2331,44 @@ function PurchaseForm({ cards, cats, onDone }: any) {
 
           {splitPeople.length >= 2 && (
             <>
+              <div className="space-y-2 rounded-lg border border-border/60 bg-background/40 p-2.5">
+                <Label className="text-xs font-semibold">Categoria por pessoa</Label>
+                <p className="text-[10px] text-muted-foreground">
+                  Escolha uma categoria diferente para cada pessoa, se necessário.
+                </p>
+
+                <div className="space-y-2">
+                  {splitPeople.map((person) => (
+                    <div key={person} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] items-center gap-2">
+                      <span className="truncate text-xs font-medium">{person}</span>
+                      <Select
+                        value={splitCategoryIds[person] || "none"}
+                        onValueChange={(value) =>
+                          setSplitCategoryIds((current) => ({
+                            ...current,
+                            [person]: value === "none" ? "" : value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Sem categoria" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sem categoria</SelectItem>
+                          {cats
+                            .filter((c: any) => c.kind === "expense")
+                            .map((c: any) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.icon ? `${c.icon} ` : ""}
+                                {c.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <div className="flex items-center gap-2">
                 <div className="grid grid-cols-2 gap-0.5 flex-1 rounded-md bg-muted/50 p-0.5">
                   <button type="button" onClick={() => setSplitCustom(false)} className={`flex items-center justify-center gap-1 rounded py-1 text-[11px] font-medium transition-all ${!splitCustom ? "bg-background shadow-sm" : "text-muted-foreground"}`}>
@@ -2380,13 +2424,15 @@ function PurchaseForm({ cards, cats, onDone }: any) {
           )}
         </motion.div>
       )}
-      <div className="space-y-1.5">
-        <Label>Categoria</Label>
-        <Select value={form.category_id} onValueChange={v => setForm({ ...form, category_id: v })}>
-          <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
-          <SelectContent>{cats.filter((c: any) => c.kind === "expense").map((c: any) => <SelectItem key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ""}{c.name}</SelectItem>)}</SelectContent>
-        </Select>
-      </div>
+      {!splitMode && (
+        <div className="space-y-1.5">
+          <Label>Categoria</Label>
+          <Select value={form.category_id} onValueChange={v => setForm({ ...form, category_id: v })}>
+            <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+            <SelectContent>{cats.filter((c: any) => c.kind === "expense").map((c: any) => <SelectItem key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ""}{c.name}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      )}
       {(() => {
         const card = cards.find((c: any) => c.id === form.card_id);
         const brands = card?.metadata?.brands || [];
