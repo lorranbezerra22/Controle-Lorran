@@ -2230,7 +2230,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
 
         const { data: purchase, error: pErr } = await supabase.from("cartao_compras").insert({
           user_id: user!.id, card_id: card.id,
-          description: splits.length > 1 ? `${form.description} (${s.person})` : form.description,
+          description: form.description,
           purchase_date: form.purchase_date, total_amount: s.amount, installments_count: n,
           category_id: s.categoryId || null, person: finalPerson,
           brand: form.brand || null,
