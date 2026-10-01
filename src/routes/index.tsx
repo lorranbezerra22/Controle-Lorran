@@ -971,13 +971,13 @@ function Dashboard() {
                       <li key={c.name}>
                         <button type="button" onClick={() => setOpenCat(c)} className="w-full text-left rounded-lg px-2 py-1.5 hover:bg-muted/40 transition-colors border border-transparent hover:border-border/60">
                           <div className="flex items-center gap-2 text-sm">
-                            <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border border-border/50" style={{ background: `color-mix(in oklab, ${color} 15%, transparent)` }}>{c.icon ?? "•"}</span>
-                            <span className="flex-1 truncate text-foreground">{c.name}</span>
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/50 text-sm" style={{ background: `color-mix(in oklab, ${color} 15%, transparent)` }}>{c.icon ?? "•"}</span>
+                            <span className="flex-1 truncate text-sm font-medium text-foreground">{c.name}</span>
                             <DeltaBadge current={c.value} previous={prevCatMaps.expMap.get(c.name)} kind="expense" />
-                            <span className="text-xs tabular-nums font-medium text-foreground">{brl(c.value)}</span>
+                            <span className="text-xs tabular-nums font-semibold text-foreground">{brl(c.value)}</span>
                           </div>
                           <div className="flex items-center gap-2 mt-1 pl-9">
-                            <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+                            <div className="flex-1 h-1.5 rounded-full bg-muted/80 overflow-hidden">
                               <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
                             </div>
                             <span className="text-[10px] tabular-nums text-muted-foreground w-8 text-right">{pct.toFixed(0)}%</span>
@@ -1009,13 +1009,13 @@ function Dashboard() {
                         <li key={c.name}>
                           <button type="button" onClick={() => setOpenCat(c as any)} className="w-full text-left rounded-lg px-2 py-1.5 hover:bg-muted/40 transition-colors border border-transparent hover:border-border/60">
                             <div className="flex items-center gap-2 text-sm">
-                              <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border border-border/50" style={{ background: `color-mix(in oklab, ${color} 15%, transparent)` }}>{c.icon ?? "•"}</span>
-                              <span className="flex-1 truncate text-foreground">{c.name}</span>
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/50 text-sm" style={{ background: `color-mix(in oklab, ${color} 15%, transparent)` }}>{c.icon ?? "•"}</span>
+                              <span className="flex-1 truncate text-sm font-medium text-foreground">{c.name}</span>
                               <DeltaBadge current={c.value} previous={prevCatMaps.incMap.get(c.name)} kind="income" />
-                              <span className="text-xs tabular-nums font-medium text-foreground">{brl(c.value)}</span>
+                              <span className="text-xs tabular-nums font-semibold text-foreground">{brl(c.value)}</span>
                             </div>
                             <div className="flex items-center gap-2 mt-1 pl-9">
-                              <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+                              <div className="flex-1 h-1.5 rounded-full bg-muted/80 overflow-hidden">
                                 <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
                               </div>
                               <span className="text-[10px] tabular-nums text-muted-foreground w-8 text-right">{pct.toFixed(0)}%</span>
