@@ -554,6 +554,7 @@ function Dashboard() {
     categories.forEach((c: any) => catMap.set(c.id, { name: c.name, icon: c.icon ?? null }));
     type CatAgg = {
       value: number;
+      count: number;
       icon: string | null;
       manual: number;
       card: number;
@@ -562,7 +563,7 @@ function Dashboard() {
     };
     const map = new Map<string, CatAgg>();
     const ensure = (key: string, icon: string | null): CatAgg => {
-      const cur = map.get(key) ?? { value: 0, icon, manual: 0, card: 0, manualItems: [], cardItems: [] };
+      const cur = map.get(key) ?? { value: 0, count: 0, icon, manual: 0, card: 0, manualItems: [], cardItems: [] };
       if (!cur.icon && icon) cur.icon = icon;
       map.set(key, cur);
       return cur;
@@ -574,6 +575,7 @@ function Dashboard() {
       const icon = t.categorias?.icon ?? null;
       const agg = ensure(name, icon);
       agg.value += v;
+      agg.count += 1;
       agg.manual += v;
       agg.manualItems.push({ tx: t, share: v });
     });
@@ -586,6 +588,7 @@ function Dashboard() {
       if (!v) return;
       const agg = ensure(meta.name, meta.icon);
       agg.value += v;
+      agg.count += 1;
       agg.card += v;
       agg.cardItems.push({ inst: i, share: v });
     });
@@ -593,15 +596,16 @@ function Dashboard() {
   }, [monthTx, monthInst, categories, personFilter, personFilter2, adjMap]);
 
   const incomeCatData = useMemo(() => {
-    type Agg = { value: number; icon: string | null; manual: number; card: number; manualItems: Array<{ tx: any; share: number }>; cardItems: Array<{ inst: any; share: number }> };
+    type Agg = { value: number; count: number; icon: string | null; manual: number; card: number; manualItems: Array<{ tx: any; share: number }>; cardItems: Array<{ inst: any; share: number }> };
     const map = new Map<string, Agg>();
     monthTx.filter((t: any) => t.kind === "income" && !t.card_installment_id).forEach((t: any) => {
       const v = effectiveShares(t, adjMap).reduce((s, sh) => s + sh.amount * personFactor(sh.person), 0);
       if (!v) return;
       const name = t.categorias?.name ?? "Sem categoria";
       const icon = t.categorias?.icon ?? null;
-      const cur: Agg = map.get(name) ?? { value: 0, icon, manual: 0, card: 0, manualItems: [], cardItems: [] };
+      const cur: Agg = map.get(name) ?? { value: 0, count: 0, icon, manual: 0, card: 0, manualItems: [], cardItems: [] };
       cur.value += v;
+      cur.count += 1;
       cur.manual += v;
       cur.manualItems.push({ tx: t, share: v });
       if (!cur.icon && icon) cur.icon = icon;
@@ -1014,20 +1018,26 @@ function Dashboard() {
                     const color = colorFromString(c.icon || c.name);
                     return (
                       <li key={c.name}>
-                        <button type="button" onClick={() => setOpenCat(c)} className="w-full text-left rounded-lg px-2 py-1.5 hover:bg-muted/40 transition-colors border border-transparent hover:border-border/60">
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/50" style={{ color, background: `color-mix(in oklab, ${color} 15%, transparent)` }}>
-                              <CategoryIcon name={c.name} className="w-3.5 h-3.5" />
+                        <button
+                          type="button"
+                          onClick={() => setOpenCat(c)}
+                          className="group w-full rounded-md px-1 py-1.5 text-left transition-colors hover:bg-muted/40"
+                        >
+                          <div className="mb-1 flex items-center justify-between gap-3 text-sm">
+                            <span className="flex min-w-0 items-center gap-2">
+                              <span className="shrink-0 text-base leading-none">{c.icon || "💸"}</span>
+                              <span className="truncate font-medium text-foreground">{c.name}</span>
+                              <span className="shrink-0 text-xs text-muted-foreground">({c.count})</span>
                             </span>
-                            <span className="flex-1 truncate text-sm font-medium text-foreground">{c.name}</span>
-                            <DeltaBadge current={c.value} previous={prevCatMaps.expMap.get(c.name)} kind="expense" />
-                            <span className="text-xs tabular-nums font-semibold text-foreground">{brl(c.value)}</span>
+                            <span className="shrink-0 text-right text-xs font-semibold tabular-nums text-foreground">
+                              {brl(c.value)} <span className="font-normal text-muted-foreground">· {pct.toFixed(1)}%</span>
+                            </span>
                           </div>
-                          <div className="flex items-center gap-2 mt-1 pl-9">
-                            <div className="flex-1 h-1.5 rounded-full bg-muted/80 overflow-hidden">
-                              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
-                            </div>
-                            <span className="text-[10px] tabular-nums text-muted-foreground w-8 text-right">{pct.toFixed(0)}%</span>
+                          <div className="h-2 overflow-hidden rounded-full bg-muted">
+                            <div
+                              className="h-full rounded-full bg-destructive transition-all duration-500 group-hover:opacity-80"
+                              style={{ width: `${pct}%` }}
+                            />
                           </div>
                         </button>
                       </li>
@@ -1054,20 +1064,26 @@ function Dashboard() {
                       const pct = total > 0 ? (c.value / total) * 100 : 0;
                       return (
                         <li key={c.name}>
-                          <button type="button" onClick={() => setOpenCat(c as any)} className="w-full text-left rounded-lg px-2 py-1.5 hover:bg-muted/40 transition-colors border border-transparent hover:border-border/60">
-                            <div className="flex items-center gap-2 text-sm">
-                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/50" style={{ color, background: `color-mix(in oklab, ${color} 15%, transparent)` }}>
-                                <CategoryIcon name={c.name} className="w-3.5 h-3.5" />
+                          <button
+                            type="button"
+                            onClick={() => setOpenCat(c as any)}
+                            className="group w-full rounded-md px-1 py-1.5 text-left transition-colors hover:bg-muted/40"
+                          >
+                            <div className="mb-1 flex items-center justify-between gap-3 text-sm">
+                              <span className="flex min-w-0 items-center gap-2">
+                                <span className="shrink-0 text-base leading-none">{c.icon || "💰"}</span>
+                                <span className="truncate font-medium text-foreground">{c.name}</span>
+                                <span className="shrink-0 text-xs text-muted-foreground">({c.count})</span>
                               </span>
-                              <span className="flex-1 truncate text-sm font-medium text-foreground">{c.name}</span>
-                              <DeltaBadge current={c.value} previous={prevCatMaps.incMap.get(c.name)} kind="income" />
-                              <span className="text-xs tabular-nums font-semibold text-foreground">{brl(c.value)}</span>
+                              <span className="shrink-0 text-right text-xs font-semibold tabular-nums text-foreground">
+                                {brl(c.value)} <span className="font-normal text-muted-foreground">· {pct.toFixed(1)}%</span>
+                              </span>
                             </div>
-                            <div className="flex items-center gap-2 mt-1 pl-9">
-                              <div className="flex-1 h-1.5 rounded-full bg-muted/80 overflow-hidden">
-                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
-                              </div>
-                              <span className="text-[10px] tabular-nums text-muted-foreground w-8 text-right">{pct.toFixed(0)}%</span>
+                            <div className="h-2 overflow-hidden rounded-full bg-muted">
+                              <div
+                                className="h-full rounded-full bg-success transition-all duration-500 group-hover:opacity-80"
+                                style={{ width: `${pct}%` }}
+                              />
                             </div>
                           </button>
                         </li>
