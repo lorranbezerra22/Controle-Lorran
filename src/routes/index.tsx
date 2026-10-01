@@ -2,7 +2,33 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ProtectedShell } from "@/components/ProtectedShell";
 import { useTransactions, useInstallments, useCards, useInvalidate, usePeople, useCategories, useAccounts } from "@/lib/queries";
 import { brl, fmtDate, monthLabel } from "@/lib/format";
-import { TrendingUp, TrendingDown, Wallet, CreditCard, ChevronDown, ChevronRight, Eye, EyeOff, Users, Activity, Sparkles, AlertTriangle } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+  CreditCard,
+  ChevronDown,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Users,
+  Activity,
+  Sparkles,
+  AlertTriangle,
+  ShoppingBag,
+  Utensils,
+  Car,
+  Home,
+  HeartPulse,
+  GraduationCap,
+  Plane,
+  ShoppingCart,
+  Zap,
+  BriefcaseBusiness,
+  WalletCards,
+  MoreHorizontal,
+  type LucideIcon,
+} from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +75,25 @@ function colorFromString(s: string): string {
   let h = 0;
   for (let i = 0; i < (s || "").length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
   return `oklch(0.68 0.18 ${h % 360})`;
+}
+
+function CategoryIcon({ name, className = "w-4 h-4" }: { name?: string | null; className?: string }) {
+  const value = (name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+  let Icon: LucideIcon = MoreHorizontal;
+  if (/mercado|supermerc|compras|shopping/.test(value)) Icon = ShoppingCart;
+  else if (/aliment|restaurante|comida|lanch|jantar|cafe/.test(value)) Icon = Utensils;
+  else if (/transporte|combust|gasolina|uber|carro|veiculo/.test(value)) Icon = Car;
+  else if (/casa|moradia|aluguel|condominio|lar/.test(value)) Icon = Home;
+  else if (/saude|farmacia|medic/.test(value)) Icon = HeartPulse;
+  else if (/educa|escola|curso|faculdade/.test(value)) Icon = GraduationCap;
+  else if (/viagem|turismo|passagem|ferias/.test(value)) Icon = Plane;
+  else if (/energia|luz|agua|internet|telefone/.test(value)) Icon = Zap;
+  else if (/trabalho|salario|renda|profissional/.test(value)) Icon = BriefcaseBusiness;
+  else if (/cartao|fatura|banco|finance/.test(value)) Icon = WalletCards;
+  else if (/roupa|vestuario|acessor/.test(value)) Icon = ShoppingBag;
+
+  return <Icon className={className} aria-hidden="true" />;
 }
 
 const isRefundConfirmed = (installment: any) =>
@@ -154,9 +199,9 @@ function Dashboard() {
     const hasLor = sel.includes("lorran");
     const hasTay = sel.includes("tayane");
     const hasFam = sel.some((s) => s === "familia");
-    
+
     const pNorm = norm(person || "");
-    
+
     // Se a pessoa do lançamento é Família, calculamos a participação
     if (isFamilia(person)) {
       let f = 0;
@@ -167,7 +212,7 @@ function Dashboard() {
       if (hasFam && !hasLor && !hasTay) f += 1;
       return Math.min(1, f);
     }
-    
+
 
 
 
@@ -216,9 +261,9 @@ function Dashboard() {
       return amount > 0 && (i.status === "paid" || Number(i.paid_amount || 0) > 0);
     })
     .reduce((s: number, i: any) => s + Number(i.amount) * personFactor(costPersonInst(i)), 0);
-  
+
   const saldoCalculado = receitasPagasAll - despesasPagasAll - parcelasPagasAll;
-  
+
 
   // O saldo real deve descontar tudo que saiu. Parcelas totalmente pagas já foram descontadas em parcelasPagasAll.
   // Pagamentos parciais de parcelas "pending" precisam ser somados ao que saiu.
@@ -267,7 +312,7 @@ function Dashboard() {
     const factor = personFactor(costPersonInst(i));
     if (factor === 0) return s;
     const amount = Number(i.amount);
-    
+
     // Parcelas positivas pagas não entram no restante.
     if (i.status === "paid") return s;
 
@@ -281,9 +326,9 @@ function Dashboard() {
 
     if (factor === 1) return s + Math.max(0, amount - paidAmount);
 
-    const pName = personFilter.toLowerCase() === "lorran" || personFilter2.toLowerCase() === "lorran" ? "Lorran" : 
+    const pName = personFilter.toLowerCase() === "lorran" || personFilter2.toLowerCase() === "lorran" ? "Lorran" :
                  (personFilter.toLowerCase() === "tayane" || personFilter2.toLowerCase() === "tayane" ? "Tayane" : null);
-    
+
     if (pName) {
       const part = (i.participacoes || []).find((p: any) => p.person === pName);
       const personPaid = Number(part?.amount || 0);
@@ -335,7 +380,7 @@ function Dashboard() {
   const peopleAnalytics = useMemo(() => {
     const tot: Record<string, { tx: number; card: number; restante: number }> = {};
     const ensure = (p: string) => (tot[p] = tot[p] ?? { tx: 0, card: 0, restante: 0 });
-    
+
     const addVal = (rawPerson: string, amount: number, status: string, type: "tx" | "card", paidBy: string | null = null, description: string = "", categoryId: string | null = null, metadata: any = null, paidAmount: number = 0, participacoes: any[] = []) => {
       let p = (rawPerson || "").trim();
       if (!p) return;
@@ -367,18 +412,18 @@ function Dashboard() {
           ensure("Tayane")[type] += quota;
           return;
         }
-        
+
         // Priorizar nova tabela de participações, fallback para metadata legado
         const parts = participacoes && participacoes.length > 0 ? participacoes : (metadata?.partial_payments || []);
-        
+
         const paidByLorran = parts.filter((pa: any) => norm(pa.person) === "lorran").reduce((s: number, pa: any) => s + Number(pa.amount), 0);
         const paidByTayane = parts.filter((pa: any) => norm(pa.person) === "tayane").reduce((s: number, pa: any) => s + Number(pa.amount), 0);
-        
+
         // Lorran
         ensure("Lorran")[type] += quota;
         const lorranPaid = isPaid ? quota : Math.min(quota, paidByLorran);
         ensure("Lorran").restante += Math.max(0, quota - lorranPaid);
-        
+
         // Tayane
         ensure("Tayane")[type] += quota;
         const tayanePaid = isPaid ? quota : Math.min(quota, paidByTayane);
@@ -400,7 +445,7 @@ function Dashboard() {
       if (t.kind !== "expense" || t.card_installment_id || t.category_id === "0494a63e-6737-4a3c-8778-67ce5f96a0a1") return;
       addVal(t.person || "", Number(t.amount), t.status, "tx", t.paid_by, t.description || "", t.category_id);
     });
-    
+
     monthInst.forEach((i: any) => {
       addVal(i.cartao_compras?.person || "", Number(i.amount), i.status, "card", i.paid_by, i.cartao_compras?.description || "", i.category_id, i.metadata, Number(i.paid_amount || 0), i.participacoes);
     });
@@ -809,17 +854,17 @@ function Dashboard() {
                     const paidAmount = Number(i.paid_amount || 0);
                     // O restante para a pessoa deve ser proporcional à sua cota
                     const personQuota = amount * factor;
-                    
+
                     // Descobrir quanto esta pessoa especificamente já pagou
                     // Se personFactor for 1, ela é a única responsável
                     if (factor === 1) {
                       return s + Math.max(0, amount - paidAmount);
                     }
-                    
+
                     // Se for Família (factor 0.5), precisamos ver a participação individual
-                    const pName = personFilter.toLowerCase() === "lorran" || personFilter2.toLowerCase() === "lorran" ? "Lorran" : 
+                    const pName = personFilter.toLowerCase() === "lorran" || personFilter2.toLowerCase() === "lorran" ? "Lorran" :
                                  (personFilter.toLowerCase() === "tayane" || personFilter2.toLowerCase() === "tayane" ? "Tayane" : null);
-                    
+
                     if (pName) {
                       const part = (i.participacoes || []).find((p: any) => p.person === pName);
                       const personPaid = Number(part?.amount || 0);
@@ -971,7 +1016,9 @@ function Dashboard() {
                       <li key={c.name}>
                         <button type="button" onClick={() => setOpenCat(c)} className="w-full text-left rounded-lg px-2 py-1.5 hover:bg-muted/40 transition-colors border border-transparent hover:border-border/60">
                           <div className="flex items-center gap-2 text-sm">
-                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/50 text-sm" style={{ background: `color-mix(in oklab, ${color} 15%, transparent)` }}>{c.icon ?? "•"}</span>
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/50" style={{ color, background: `color-mix(in oklab, ${color} 15%, transparent)` }}>
+                              <CategoryIcon name={c.name} className="w-3.5 h-3.5" />
+                            </span>
                             <span className="flex-1 truncate text-sm font-medium text-foreground">{c.name}</span>
                             <DeltaBadge current={c.value} previous={prevCatMaps.expMap.get(c.name)} kind="expense" />
                             <span className="text-xs tabular-nums font-semibold text-foreground">{brl(c.value)}</span>
@@ -1009,7 +1056,9 @@ function Dashboard() {
                         <li key={c.name}>
                           <button type="button" onClick={() => setOpenCat(c as any)} className="w-full text-left rounded-lg px-2 py-1.5 hover:bg-muted/40 transition-colors border border-transparent hover:border-border/60">
                             <div className="flex items-center gap-2 text-sm">
-                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/50 text-sm" style={{ background: `color-mix(in oklab, ${color} 15%, transparent)` }}>{c.icon ?? "•"}</span>
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/50" style={{ color, background: `color-mix(in oklab, ${color} 15%, transparent)` }}>
+                                <CategoryIcon name={c.name} className="w-3.5 h-3.5" />
+                              </span>
                               <span className="flex-1 truncate text-sm font-medium text-foreground">{c.name}</span>
                               <DeltaBadge current={c.value} previous={prevCatMaps.incMap.get(c.name)} kind="income" />
                               <span className="text-xs tabular-nums font-semibold text-foreground">{brl(c.value)}</span>
@@ -1178,8 +1227,8 @@ function Dashboard() {
             <DialogHeader className="space-y-1">
               <DialogTitle className="flex items-center gap-3 text-lg">
                 {openCat && (
-                  <span className="w-9 h-9 rounded-lg flex items-center justify-center border border-border/50 text-base" style={{ background: `color-mix(in oklab, ${colorFromString(openCat.icon || openCat.name)} 15%, transparent)` }}>
-                    {openCat.icon ?? "•"}
+                  <span className="w-9 h-9 rounded-lg flex items-center justify-center border border-border/50" style={{ color: colorFromString(openCat.name), background: `color-mix(in oklab, ${colorFromString(openCat.name)} 15%, transparent)` }}>
+                    <CategoryIcon name={openCat.name} className="w-4 h-4" />
                   </span>
                 )}
                 <span>{openCat?.name}</span>
@@ -1401,7 +1450,7 @@ function computePaidRest(targetName: string, monthTx: any[], monthInst: any[], a
       // Usar nova tabela de participações se disponível, fallback para paid_amount legado
       const parts = i.participacoes || [];
       const myPaid = parts.filter((p: any) => isTarget(p.person) && p.status === "paid").reduce((s: number, p: any) => s + Number(p.amount), 0);
-      
+
       // Se for família, e estamos olhando Lorran/Tayane, eles podem ter antecipado a parte deles
       if (isItemFamilia && splitsFamilia && myPaid > 0) {
         paidAmt += myPaid;
