@@ -885,8 +885,8 @@ function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 [&>div:first-child]:hidden">
-        <div className="relative hidden rounded-2xl border border-border overflow-hidden bg-gradient-to-br from-card via-card to-card/40" style={{ boxShadow: "var(--shadow-elegant)" }}>
+      <div className="grid lg:grid-cols-3 gap-4">
+        <div className="relative rounded-2xl border border-border overflow-hidden bg-gradient-to-br from-card via-card to-card/40" style={{ boxShadow: "var(--shadow-elegant)" }}>
           <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, var(--foreground) 1px, transparent 0)", backgroundSize: "22px 22px" }} />
           <div className="relative px-5 py-4 border-b border-border/60 flex items-start justify-between flex-wrap gap-3">
             <div>
@@ -952,18 +952,18 @@ function Dashboard() {
           <div className="relative px-5 py-4 border-b border-border/60">
             <div className="flex items-center gap-2 mb-1">
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              <span className="text-[10px] uppercase tracking-[0.2em] text-primary">Categorias</span>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-primary">Breakdown</span>
             </div>
-            <h3 className="text-sm font-semibold flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Receitas e despesas por categoria</h3>
+            <h3 className="text-sm font-semibold flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Despesas por categoria</h3>
           </div>
-          <div className="relative p-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+          <div className="relative p-4">
             {catData.length === 0 ? (
               <div className="text-sm text-muted-foreground text-center py-12">Sem dados neste período</div>
             ) : (() => {
               const sorted = [...catData].sort((a, b) => b.value - a.value);
               const total = sorted.reduce((s, c) => s + c.value, 0);
               return (
-                <ul className="space-y-1.5 max-h-[280px] overflow-y-auto pr-1 rounded-xl border border-border/60 bg-background/30 p-3">
+                <ul className="space-y-1.5 max-h-[280px] overflow-y-auto pr-1">
                   {sorted.map((c) => {
                     const pct = total > 0 ? (c.value / total) * 100 : 0;
                     const color = colorFromString(c.icon || c.name);
@@ -990,7 +990,7 @@ function Dashboard() {
               );
             })()}
 
-            <div className="mt-0 rounded-xl border border-border/60 bg-background/30 p-3">
+            <div className="mt-5 pt-4 border-t border-border/60">
               <div className="flex items-center gap-2 mb-3">
                 <span className="w-1 h-1 rounded-full" style={{ background: "oklch(0.72 0.18 155)" }} />
                 <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Receitas por categoria</div>
