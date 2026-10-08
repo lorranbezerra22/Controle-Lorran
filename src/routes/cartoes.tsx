@@ -1117,7 +1117,19 @@ function CartoesPage() {
               <span>
                 Restante:{" "}
                 <strong className="text-warning">
-                  {brl(monthInst.reduce((sum: number, i: any) => sum + getInstallmentPaymentState(i).remaining, 0))}
+                  {brl(
+                    Math.max(
+                      0,
+                      monthInst.reduce(
+                        (sum: number, i: any) => sum + getInstallmentPaymentState(i).total,
+                        0,
+                      ) -
+                        monthInst.reduce(
+                          (sum: number, i: any) => sum + getInstallmentPaymentState(i).paid,
+                          0,
+                        ),
+                    ),
+                  )}
                 </strong>
               </span>
             </div>
