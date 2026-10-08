@@ -19,28 +19,11 @@ function ymd(d: Date) {
 }
 
 function installmentIsPaid(installment: any) {
-  if (installment?.status === "paid") return true;
+  // Estornos são créditos aplicados diretamente na fatura, não valores
+  // que precisam ser pagos. Por isso, nunca devem aparecer no sino.
+  if (Number(installment?.amount || 0) < 0) return true;
 
-  // Estornos são valores negativos e podem ser confirmados pelo
-  // metadata mesmo quando o status da parcela não foi atualizado.
-  if (Number(installment?.amount || 0) >= 0) return false;
-
-  const metadata = installment?.metadata;
-  const parsedMetadata =
-    typeof metadata === "string"
-      ? (() => {
-          try {
-            return JSON.parse(metadata);
-          } catch {
-            return {};
-          }
-        })()
-      : metadata || {};
-
-  return (
-    parsedMetadata.refund_confirmed === true ||
-    parsedMetadata.refund_confirmed === "true"
-  );
+  return installment?.status === "paid";
 }
 
 export function NotificationBell({ transactions, installments, cards }: NotificationBellProps) {
