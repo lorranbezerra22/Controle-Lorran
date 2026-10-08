@@ -169,9 +169,37 @@ export const Route = createFileRoute("/cartoes")({
 
 const isRefund = (installment: any) => Number(installment?.amount || 0) < 0;
 
-const isRefundConfirmed = (installment: any) =>
-  isRefund(installment) &&
-  Boolean((installment?.metadata as any)?.refund_confirmed);
+const getInstallmentMetadata = (installment: any) => {
+  const metadata = installment?.metadata;
+
+  if (!metadata) return {};
+
+  if (typeof metadata === "string") {
+    try {
+      return JSON.parse(metadata);
+    } catch {
+      return {};
+    }
+  }
+
+  return metadata;
+};
+
+const isRefundConfirmed = (installment: any) => {
+  if (!isRefund(installment)) return false;
+
+  const metadata = getInstallmentMetadata(installment);
+
+  // O estorno continua fora do valor pago da pessoa/parcela.
+  // O status "paid" é usado apenas como confirmação operacional de
+  // que o crédito já caiu na fatura. Isso também reconhece estornos
+  // antigos que foram confirmados antes de refund_confirmed existir.
+  return (
+    metadata.refund_confirmed === true ||
+    metadata.refund_confirmed === "true" ||
+    installment?.status === "paid"
+  );
+};
 
 const isRefundTransaction = (transaction: any) => {
   const description = normalizeName(transaction?.description || "");
