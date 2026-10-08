@@ -1227,16 +1227,7 @@ function CartoesPage() {
               <DialogTrigger asChild><Button size="sm" className="rounded-full shadow-md" disabled={cards.length === 0}><Plus className="w-4 h-4 mr-1" /> Nova compra</Button></DialogTrigger>
               <DialogContent className="max-h-[85vh] overflow-y-auto">
                 <DialogHeader><DialogTitle>Nova compra no cartão</DialogTitle></DialogHeader>
-                <details className="group rounded-lg border border-amber-500/30 bg-amber-500/10 text-xs text-amber-200">
-                  <summary className="flex items-center justify-between gap-2 px-3 py-2 cursor-pointer list-none font-semibold select-none">
-                    <span>💡 Dica: registrando estornos</span>
-                    <svg className="w-4 h-4 transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
-                  </summary>
-                  <div className="px-3 pb-3 space-y-1 border-t border-amber-500/20 pt-2">
-                    <div>Recebeu um estorno que já abateu na fatura? Lance aqui com <b>valor negativo</b> (ex: −300), <b>mesma categoria</b> da compra original e <b>data do mês da fatura</b> em que o crédito apareceu.</div>
-                    <div>Não precisa quitar parcelas futuras — o valor negativo já abate na categoria e no total da fatura automaticamente.</div>
-                  </div>
-                </details>
+
                 <PurchaseForm cards={cards} cats={cats} onDone={() => { setNewPurchaseOpen(false); invalidate("installments"); }} />
               </DialogContent>
             </Dialog>
