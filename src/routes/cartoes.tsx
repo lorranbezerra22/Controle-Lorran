@@ -301,7 +301,7 @@ function CartoesPage() {
   const { data: allTransactions = [] } = useTransactions();
   const [newCardOpen, setNewCardOpen] = useState(false);
   const [newPurchaseOpen, setNewPurchaseOpen] = useState(false);
-  const [newRefundOpen, setNewRefundOpen] = useState(false);
+
   const [editingPurchase, setEditingPurchase] = useState<any>(null);
   const [partialPayOpen, setPartialPayOpen] = useState<any>(null);
   const [removePaymentOpen, setRemovePaymentOpen] = useState<any>(null);
@@ -1203,25 +1203,6 @@ function CartoesPage() {
               </DialogContent>
             </Dialog>
 
-            <Dialog open={newRefundOpen} onOpenChange={setNewRefundOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="rounded-full" disabled={cards.length === 0}>
-                  <Undo2 className="w-4 h-4 mr-1" /> Registrar estorno
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-h-[85vh] overflow-y-auto">
-                <DialogHeader><DialogTitle>Registrar estorno na fatura</DialogTitle></DialogHeader>
-                <RefundForm
-                  cards={cards}
-                  installments={inst}
-                  cats={cats}
-                  onDone={() => {
-                    setNewRefundOpen(false);
-                    invalidate("installments");
-                  }}
-                />
-              </DialogContent>
-            </Dialog>
 
             <Dialog open={newPurchaseOpen} onOpenChange={setNewPurchaseOpen}>
               <DialogTrigger asChild><Button size="sm" className="rounded-full shadow-md" disabled={cards.length === 0}><Plus className="w-4 h-4 mr-1" /> Nova compra</Button></DialogTrigger>
@@ -3021,6 +3002,12 @@ function PurchaseForm({ cards, cats, onDone }: any) {
           </Select>
         </div>
       )}
+
+      <NegativePurchasePreview
+        amount={Number(form.total_amount || 0)}
+        categoryId={form.category_id}
+        person={form.person}
+      />
       {(() => {
         const card = cards.find((c: any) => c.id === form.card_id);
         const brands = card?.metadata?.brands || [];
