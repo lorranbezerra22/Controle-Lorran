@@ -167,8 +167,10 @@ export const Route = createFileRoute("/cartoes")({
   head: () => ({ meta: [{ title: "Cartões — Gestão Família" }] }),
 });
 
+const isRefund = (installment: any) => Number(installment?.amount || 0) < 0;
+
 const isRefundConfirmed = (installment: any) =>
-  Number(installment?.amount || 0) < 0 &&
+  isRefund(installment) &&
   Boolean((installment?.metadata as any)?.refund_confirmed);
 
 const normalizeResponsibility = (installment: any) => {
@@ -208,18 +210,15 @@ const getInstallmentPaymentState = (installment: any) => {
   const total = Number(installment.amount || 0);
   const rawPaid = Number(installment.paid_amount || 0);
   const isPaid = installment.status === "paid";
-  const isRefund = total < 0;
 
-  // Estorno já foi aplicado no valor original da fatura. Confirmá-lo
-  // não é um pagamento e não deve alimentar "pago", "restante" ou saldo.
-  // O valor negativo continua sendo exibido apenas no total da fatura.
-  if (isRefund) {
+  // Estorno nunca é pagamento. A confirmação apenas registra que o
+  // reembolso foi recebido; ele continua aparecendo como "Em aberto"
+  // para preservar o abatimento e os custos da fatura.
+  if (total < 0) {
     return {
       total,
       paid: 0,
       remaining: 0,
-      // Estornos não são pagamentos. Mesmo depois da confirmação,
-      // continuam em aberto para não alterar os custos ao filtrar a fatura.
       hasPaid: false,
       hasPending: true,
     };
@@ -242,12 +241,15 @@ const getInstallmentPaymentState = (installment: any) => {
 const getStatusFilteredAmount = (installment: any, statusFilter: "all" | "paid" | "pending") => {
   const payment = getInstallmentPaymentState(installment);
 
-  if (statusFilter === "paid") return payment.paid;
+  // Estorno não é pagamento: não aparece em "Pagos".
+  if (statusFilter === "paid") {
+    return isRefund(installment) ? 0 : payment.paid;
+  }
 
-  // Estornos continuam visíveis em “Em aberto” mesmo após a confirmação.
-  // O valor negativo precisa permanecer na exibição para não distorcer os custos.
+  // O crédito negativo permanece em "Em aberto", inclusive confirmado,
+  // para continuar abatendo a fatura e manter os custos corretos.
   if (statusFilter === "pending") {
-    return payment.total < 0 ? payment.total : payment.remaining;
+    return isRefund(installment) ? payment.total : payment.remaining;
   }
 
   return payment.total;
@@ -337,8 +339,11 @@ function CartoesPage() {
       if (brandFilter !== "all" && i.cartao_compras?.brand !== brandFilter) return false;
       if (categoryFilter !== "all" && i.cartao_compras?.category_id !== categoryFilter) return false;
       const payment = getInstallmentPaymentState(i);
-      if (statusFilter === "paid" && !payment.hasPaid) return false;
-      if (statusFilter === "pending" && !payment.hasPending) return false;
+
+      // Estornos permanecem em "Em aberto" mesmo após a confirmação.
+      // Eles não podem entrar no filtro "Pagos".
+      if (statusFilter === "paid" && (isRefund(i) || !payment.hasPaid)) return false;
+      if (statusFilter === "pending" && !isRefund(i) && !payment.hasPending) return false;
       if (!matchPerson(i.cartao_compras?.person ?? "")) return false;
       const pd = i.cartao_compras?.purchase_date as string | undefined;
       if (purchaseFrom && (!pd || pd < purchaseFrom)) return false;
@@ -528,7 +533,7 @@ function CartoesPage() {
 
       // O lançamento negativo já reduz a fatura, mas só reduz o
       // restante depois que o recebimento do estorno for confirmado.
-      const refundOnly = payment.total < 0;
+      const refundOnly = isRefund(i);
 
       const person = (i.cartao_compras?.person || "").toLowerCase().trim();
       const filter = personFilter !== "all" ? personFilter.toLowerCase().trim() : "all";
@@ -601,7 +606,7 @@ function CartoesPage() {
 
         // Estornos nunca entram no restante. O valor negativo já foi lançado
         // na fatura e na categoria quando o estorno foi registrado.
-        if (payment.total < 0) {
+          if (isRefund(i)) {
           valueForRestante = 0;
         }
 
@@ -618,7 +623,7 @@ function CartoesPage() {
       // O estorno negativo já reduz o restante assim que é lançado.
       // A confirmação apenas registra o recebimento e não deve aplicar
       // o mesmo abatimento uma segunda vez.
-      if (refundAmount >= 0) return;
+      if (!isRefund(i)) return;
 
       const person = (i.cartao_compras?.person || "").toLowerCase().trim();
       const filter = personFilter !== "all" ? personFilter.toLowerCase().trim() : "all";
