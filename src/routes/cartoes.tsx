@@ -2184,7 +2184,7 @@ function CardResponsibilityForm({
   // substitui as cotas desta parcela; ele não altera a regra global.
   const total = Math.max(0, Number(installment.amount || 0));
   const initial = normalizeResponsibility(installment);
-  const [rows, setRows] = useState(() =>
+  const [rows, setRows] = useState<{ person: string; amount: string }[]>(() =>
     initial.length > 0
       ? initial.map((item: any) => ({
           person: item.person,
@@ -5032,6 +5032,7 @@ function RemovePaymentForm({ installment, allTransactions, onDone, transactionId
 
 
 function EditPaidForm({ installment, onDone }: { installment: any, onDone: () => void }) {
+  const invalidate = useInvalidate();
   const [newPaidAmount, setNewPaidAmount] = useState(String(installment.paid_amount || 0));
   const [saving, setSaving] = useState(false);
   const { data: accounts = [] } = useAccounts();
