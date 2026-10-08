@@ -690,8 +690,17 @@ function CartoesPage() {
         // Usa também os lançamentos vinculados para corrigir parcelas antigas
         // cujo paid_amount ficou desatualizado após um pagamento parcial.
         const linkedPaidAmount = allTransactions
-          .filter((transaction: any) => transaction.card_installment_id === i.id)
-          .reduce((sum: number, transaction: any) => sum + Number(transaction.amount || 0), 0);
+          .filter(
+            (transaction: any) =>
+              transaction.card_installment_id === i.id &&
+              transaction.kind === "expense" &&
+              Number(transaction.amount || 0) > 0,
+          )
+          .reduce(
+            (sum: number, transaction: any) =>
+              sum + Number(transaction.amount || 0),
+            0,
+          );
         const currentPaidAmount = isEstorno
           ? 0
           : Math.min(
@@ -718,22 +727,32 @@ function CartoesPage() {
             )
           );
 
-        // Garante que "sem crédito em conta" também remova eventual crédito
-        // criado anteriormente para esta mesma parcela.
-        if (skipAccountCredit) {
+        // Estorno nunca deve ser tratado como despesa/pagamento da parcela.
+        // Remove qualquer lançamento antigo vinculado ao estorno antes de
+        // registrar a confirmação atual. Isso também desfaz valores que
+        // tenham sido debitados indevidamente das contas da Família.
+        if (isEstorno) {
+          const { error: refundCleanupError } = await supabase
+            .from("transacoes")
+            .delete()
+            .eq("card_installment_id", i.id);
+
+          if (refundCleanupError) throw refundCleanupError;
+        } else if (skipAccountCredit) {
           const { error: creditCleanupError } = await supabase
             .from("transacoes")
             .delete()
             .eq("card_installment_id", i.id);
+
           if (creditCleanupError) throw creditCleanupError;
         }
 
-        const splits = skipAccountCredit
+        const splits = skipAccountCredit || isEstorno
           ? []
           : buildPaymentSplits(
               accounts,
               originalPerson,
-              isEstorno ? -amountToRegister : amountToRegister,
+              amountToRegister,
               paidByOverride,
               accountsOverride,
             );
@@ -1372,7 +1391,12 @@ function CartoesPage() {
               disabled={monthInst.length === 0 || monthInst.every((i: any) => i.status === "paid" || Number(i.amount) < 0)}
               onClick={async () => {
                 // Estornos (valores negativos) abatem a fatura automaticamente — nunca entram no pagamento em lote.
-                const pending = monthInst.filter((i: any) => i.status !== "paid" && Number(i.amount) >= 0);
+                const pending = monthInst.filter(
+                  (i: any) =>
+                    Number(i.amount || 0) >= 0 &&
+                    i.status !== "paid" &&
+                    !isRefund(i),
+                );
                 if (pending.length === 0) return;
 
                 if (!confirm(`Pagar todas as ${pending.length} parcelas deste mês? Isso irá abater o saldo total das suas contas.`)) return;
