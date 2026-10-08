@@ -1234,16 +1234,14 @@ function CartoesPage() {
                   {brl(
                     Math.max(
                       0,
-                      monthInst.reduce((sum: number, i: any) => {
-                        const amount = Number(i.amount) || 0;
-                        const state = getInstallmentPaymentState(i);
-
-                        // Valores negativos são reembolsos/créditos e devem
-                        // reduzir o total restante, nunca aumentar o valor pago.
-                        if (amount < 0) return sum - Math.abs(amount);
-
-                        return sum + Math.max(0, amount - Math.max(0, state.paid));
-                      }, 0),
+                      monthInst.reduce(
+                        (sum: number, i: any) => sum + getInstallmentPaymentState(i).total,
+                        0,
+                      ) -
+                        monthInst.reduce(
+                          (sum: number, i: any) => sum + getInstallmentPaymentState(i).paid,
+                          0,
+                        ),
                     ),
                   )}
                 </strong>
