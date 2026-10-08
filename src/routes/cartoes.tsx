@@ -301,6 +301,7 @@ function CartoesPage() {
   const { data: allTransactions = [] } = useTransactions();
   const [newCardOpen, setNewCardOpen] = useState(false);
   const [newPurchaseOpen, setNewPurchaseOpen] = useState(false);
+  const [newRefundOpen, setNewRefundOpen] = useState(false);
   const [editingPurchase, setEditingPurchase] = useState<any>(null);
   const [partialPayOpen, setPartialPayOpen] = useState<any>(null);
   const [removePaymentOpen, setRemovePaymentOpen] = useState<any>(null);
@@ -1199,6 +1200,26 @@ function CartoesPage() {
               <DialogContent>
                 <DialogHeader><DialogTitle>Novo cartão</DialogTitle></DialogHeader>
                 <CardForm onDone={() => { setNewCardOpen(false); invalidate("cards"); }} />
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={newRefundOpen} onOpenChange={setNewRefundOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="rounded-full" disabled={cards.length === 0}>
+                  <Undo2 className="w-4 h-4 mr-1" /> Registrar estorno
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-h-[85vh] overflow-y-auto">
+                <DialogHeader><DialogTitle>Registrar estorno na fatura</DialogTitle></DialogHeader>
+                <RefundForm
+                  cards={cards}
+                  installments={inst}
+                  cats={cats}
+                  onDone={() => {
+                    setNewRefundOpen(false);
+                    invalidate("installments");
+                  }}
+                />
               </DialogContent>
             </Dialog>
 
@@ -2557,6 +2578,186 @@ function RefundHelper({ amount, rawAmount, selectedCategoryId, cats, person, pur
 }
 
 
+function RefundForm({
+  cards,
+  installments,
+  cats,
+  onDone,
+}: {
+  cards: any[];
+  installments: any[];
+  cats: any[];
+  onDone: () => void;
+}) {
+  const today = todayLocalISO();
+  const [installmentId, setInstallmentId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [refundDate, setRefundDate] = useState(today);
+  const [saving, setSaving] = useState(false);
+
+  const refundableInstallments = installments
+    .filter((installment: any) => Number(installment.amount || 0) > 0)
+    .sort((a: any, b: any) => {
+      const dateA = a.cartao_compras?.purchase_date || a.due_at || "";
+      const dateB = b.cartao_compras?.purchase_date || b.due_at || "";
+      return dateB.localeCompare(dateA);
+    });
+
+  const selectedInstallment = refundableInstallments.find(
+    (installment: any) => installment.id === installmentId,
+  );
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const refundAmount = Number(amount);
+    if (!selectedInstallment) {
+      toast.error("Selecione a compra que foi reembolsada.");
+      return;
+    }
+
+    if (!Number.isFinite(refundAmount) || refundAmount <= 0) {
+      toast.error("Informe um valor de estorno válido.");
+      return;
+    }
+
+    const originalAmount = Number(selectedInstallment.amount || 0);
+    if (refundAmount > originalAmount + 0.01) {
+      toast.error(`O estorno não pode ser maior que ${brl(originalAmount)}.`);
+      return;
+    }
+
+    if (!__tryLock()) return;
+    setSaving(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      const originalPurchase = selectedInstallment.cartao_compras;
+      const description = `Estorno: ${originalPurchase?.description || "Compra do cartão"}`;
+
+      const { data: purchase, error: purchaseError } = await supabase
+        .from("cartao_compras")
+        .insert({
+          user_id: user.id,
+          card_id: selectedInstallment.card_id,
+          description,
+          purchase_date: refundDate,
+          total_amount: -refundAmount,
+          installments_count: 1,
+          category_id: originalPurchase?.category_id || null,
+          person: originalPurchase?.person || null,
+          brand: originalPurchase?.brand || null,
+        } as any)
+        .select()
+        .single();
+
+      if (purchaseError) throw purchaseError;
+
+      const { error: installmentError } = await supabase
+        .from("cartao_parcelas")
+        .insert({
+          user_id: user.id,
+          purchase_id: purchase.id,
+          card_id: selectedInstallment.card_id,
+          installment_number: 1,
+          amount: -refundAmount,
+          due_at: refundDate,
+          status: "paid",
+          paid_amount: 0,
+          metadata: {
+            refund_confirmed: true,
+            refund_confirmed_at: new Date().toISOString(),
+            refund_of_installment_id: selectedInstallment.id,
+            refund_of_purchase_id: selectedInstallment.purchase_id,
+          },
+        } as any);
+
+      if (installmentError) throw installmentError;
+
+      toast.success(`Estorno de ${brl(refundAmount)} registrado na fatura.`);
+      onDone();
+    } catch (error: any) {
+      toast.error(error.message || "Não foi possível registrar o estorno.");
+    } finally {
+      setSaving(false);
+      __release();
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <div className="rounded-xl border border-warning/30 bg-warning/5 p-3 text-sm">
+        Selecione a compra reembolsada. O valor será lançado como crédito
+        diretamente na fatura, sem movimentar as contas e sem entrar na divisão
+        da Família.
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Compra reembolsada</Label>
+        <Select value={installmentId} onValueChange={setInstallmentId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione o lançamento original" />
+          </SelectTrigger>
+          <SelectContent>
+            {refundableInstallments.map((installment: any) => (
+              <SelectItem key={installment.id} value={installment.id}>
+                {installment.cartao_compras?.description || "Compra"}
+                {" · "}
+                {brl(Number(installment.amount || 0))}
+                {" · "}
+                {installment.cartao_compras?.person || "Sem pessoa"}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {selectedInstallment && (
+        <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+          <div className="flex justify-between gap-3">
+            <span>Cartão</span>
+            <strong className="text-foreground">
+              {selectedInstallment.cartoes?.name || "Cartão"}
+            </strong>
+          </div>
+          <div className="mt-1 flex justify-between gap-3">
+            <span>Valor da parcela</span>
+            <strong className="text-foreground">
+              {brl(Number(selectedInstallment.amount || 0))}
+            </strong>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label>Valor reembolsado</Label>
+          <Input
+            type="number"
+            min="0.01"
+            step="0.01"
+            max={selectedInstallment ? Number(selectedInstallment.amount || 0) : undefined}
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            placeholder="0,00"
+            required
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Data em que caiu na fatura</Label>
+          <DatePicker value={refundDate} onChange={setRefundDate} />
+        </div>
+      </div>
+
+      <Button type="submit" className="w-full" disabled={saving || !selectedInstallment}>
+        {saving ? "Registrando…" : "Confirmar estorno na fatura"}
+      </Button>
+    </form>
+  );
+}
+
 function PurchaseForm({ cards, cats, onDone }: any) {
   const today = todayLocalISO();
   const { data: people = [] } = usePeople();
@@ -2574,11 +2775,11 @@ function PurchaseForm({ cards, cats, onDone }: any) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const isRefund = Number(form.total_amount) < 0;
-    if (isRefund && !splitMode && (!form.person || form.person === "—")) {
-      toast.error("Em estornos, selecione a pessoa que receberá o reembolso.");
+    if (Number(form.total_amount) < 0) {
+      toast.error("Use “Registrar estorno” para vincular o reembolso à compra original.");
       return;
     }
+
     const parsed = cardPurchaseSchema.safeParse({
       description: form.description,
       total_amount: form.total_amount,
