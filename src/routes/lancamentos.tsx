@@ -144,6 +144,12 @@ function LancamentosPage() {
   }, [selM, selY]);
 
   const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const isRefund = (t: any) => Number(t.amount) < 0;
+  const matchesStatus = (t: any) =>
+    statusFilter === "all" ||
+    (statusFilter === "pending" && isRefund(t)) ||
+    t.status === statusFilter;
+
   const matchPerson = (rawPerson?: string | null) => {
     const selected = Array.from(new Set([personFilter, personFilter2].filter((s) => s && s !== "all")));
     if (selected.length === 0) return true;
@@ -165,7 +171,7 @@ function LancamentosPage() {
       if (selY !== "all" && d.getFullYear() !== selY) return false;
       if (selM !== "all" && d.getMonth() !== selM) return false;
       if (filter !== "all" && t.kind !== filter) return false;
-      if (statusFilter !== "all" && t.status !== statusFilter) return false;
+      if (!matchesStatus(t)) return false;
       if (fixedFilter === "fixed" && !t.is_fixed) return false;
       if (fixedFilter === "variable" && t.is_fixed) return false;
       if (sourceFilter === "card" && !t.card_installment_id) return false;
@@ -205,7 +211,7 @@ function LancamentosPage() {
 
   const filtered = tx.filter((t: any) => {
     if (filter !== "all" && t.kind !== filter) return false;
-    if (statusFilter !== "all" && t.status !== statusFilter) return false;
+    if (!matchesStatus(t)) return false;
     if (fixedFilter === "fixed" && !t.is_fixed) return false;
     if (fixedFilter === "variable" && t.is_fixed) return false;
     if (sourceFilter === "card" && !t.card_installment_id) return false;
