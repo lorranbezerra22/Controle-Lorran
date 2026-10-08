@@ -1433,18 +1433,22 @@ function computePaidRest(targetName: string, monthTx: any[], monthInst: any[], a
     if (i.category_id === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a") return;
     const v = Number(i.amount);
 
-    // O estorno negativo já abate a fatura e a categoria no lançamento.
-    // Não deve aparecer como pago nem como restante após a confirmação.
+    // O estorno negativo é um crédito da fatura e deve reduzir
+    // imediatamente o restante, mesmo enquanto estiver pendente.
+    // Ele nunca entra como valor pago e não gera débito em conta.
     if (v < 0) {
-      // Estorno pendente não reduz o restante. Após a confirmação,
-      // ele libera o crédito correspondente para a pessoa.
-      if (isRefundConfirmed(i)) {
-        const itemPerson = (i.cartao_compras?.person || "").trim();
-        const isItemFamilia = norm(itemPerson) === "familia";
-        if (isNameFamilia && isItemFamilia) rest -= Math.abs(v);
-        else if (!isNameFamilia && isItemFamilia && splitsFamilia) rest -= Math.abs(v) / 2;
-        else if (!isNameFamilia && isTarget(itemPerson)) rest -= Math.abs(v);
+      const itemPerson = (i.cartao_compras?.person || "").trim();
+      const isItemFamilia = norm(itemPerson) === "familia";
+      const credit = Math.abs(v);
+
+      if (isNameFamilia && isItemFamilia) {
+        rest -= credit;
+      } else if (!isNameFamilia && isItemFamilia && splitsFamilia) {
+        rest -= credit / 2;
+      } else if (!isNameFamilia && isTarget(itemPerson)) {
+        rest -= credit;
       }
+
       return;
     }
 
