@@ -3003,11 +3003,6 @@ function PurchaseForm({ cards, cats, onDone }: any) {
         </div>
       )}
 
-      <NegativePurchasePreview
-        amount={Number(form.total_amount || 0)}
-        categoryId={form.category_id}
-        person={form.person}
-      />
       {(() => {
         const card = cards.find((c: any) => c.id === form.card_id);
         const brands = card?.metadata?.brands || [];
