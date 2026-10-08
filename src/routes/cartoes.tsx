@@ -710,7 +710,17 @@ function CartoesPage() {
 
   const getPaymentSplits = (person: string, amount: number, paidByOverride?: string | null) => buildPaymentSplits(accounts, person, amount, paidByOverride);
 
-  const togglePaid = async (i: any, notes?: string, paidByOverride?: string | null, accountsOverride?: { accountId?: string | null, accountTayaneId?: string | null }, creditToAccount = true) => {
+  const togglePaid = async (
+    i: any,
+    notes?: string,
+    paidByOverride?: string | null,
+    accountsOverride?: {
+      accountId?: string | null;
+      accountTayaneId?: string | null;
+    },
+    creditToAccount = true,
+    paymentAmountOverride?: number,
+  ) => {
     const isEstorno = Number(i.amount) < 0;
     const isPaying = isEstorno
       ? !isRefundConfirmed(i)
@@ -752,7 +762,12 @@ function CartoesPage() {
             );
         const amountToRegister = isEstorno
           ? installmentTotal
-          : Math.max(0, installmentTotal - currentPaidAmount);
+          : paymentAmountOverride !== undefined
+            ? Math.min(
+                installmentTotal,
+                Math.max(0, Number(paymentAmountOverride)),
+              )
+            : Math.max(0, installmentTotal - currentPaidAmount);
 
         // 1. Criar lançamento financeiro (débito para despesa, CRÉDITO para estorno)
         // O estorno (amount negativo) gera uma transação 'income' para repor o saldo na conta
@@ -842,17 +857,24 @@ function CartoesPage() {
             .eq("installment_id", i.id);
 
           if (refundParticipationError) throw refundParticipationError;
-        } else {
+        } else if (amountToRegister > 0.01) {
           const { error: partError } = await supabase.from("participacoes_parcelas").upsert({
             user_id: user.id,
             installment_id: i.id,
             person: costPerson,
-            amount: Math.abs(amount),
+            amount: Number(amountToRegister.toFixed(2)),
             status: "paid",
             paid_at: new Date().toISOString()
           } as any, { onConflict: "installment_id,person" });
 
           if (partError) throw partError;
+        } else {
+          const { error: emptyParticipationError } = await supabase
+            .from("participacoes_parcelas")
+            .delete()
+            .eq("installment_id", i.id);
+
+          if (emptyParticipationError) throw emptyParticipationError;
         }
 
         const installmentUpdate = isEstorno
@@ -1443,21 +1465,125 @@ function CartoesPage() {
               variant="outline"
               disabled={monthInst.length === 0 || monthInst.every((i: any) => i.status === "paid" || Number(i.amount) < 0)}
               onClick={async () => {
-                // Estornos (valores negativos) abatem a fatura automaticamente — nunca entram no pagamento em lote.
+                // Estornos são créditos da fatura. Eles não geram transações
+                // próprias, mas precisam reduzir os débitos positivos antes
+                // que o pagamento em lote crie as despesas das contas.
                 const pending = monthInst.filter(
                   (i: any) =>
                     Number(i.amount || 0) >= 0 &&
                     i.status !== "paid" &&
                     !isRefund(i),
                 );
+
                 if (pending.length === 0) return;
 
-                if (!confirm(`Pagar todas as ${pending.length} parcelas deste mês? Isso irá abater o saldo total das suas contas.`)) return;
+                const refundCredit = inst
+                  .filter((i: any) => {
+                    const d = new Date(i.due_at + "T00:00:00");
 
+                    if (
+                      d.getFullYear() !== year ||
+                      d.getMonth() !== monthN - 1
+                    ) {
+                      return false;
+                    }
+
+                    if (Number(i.amount || 0) >= 0 || !isRefund(i)) {
+                      return false;
+                    }
+
+                    if (cardFilter !== "all" && i.card_id !== cardFilter) {
+                      return false;
+                    }
+
+                    if (
+                      brandFilter !== "all" &&
+                      i.cartao_compras?.brand !== brandFilter
+                    ) {
+                      return false;
+                    }
+
+                    if (
+                      categoryFilter !== "all" &&
+                      i.cartao_compras?.category_id !== categoryFilter
+                    ) {
+                      return false;
+                    }
+
+                    if (!matchPerson(i.cartao_compras?.person ?? "")) {
+                      return false;
+                    }
+
+                    const purchaseDate = i.cartao_compras
+                      ?.purchase_date as string | undefined;
+
+                    if (
+                      purchaseFrom &&
+                      (!purchaseDate || purchaseDate < purchaseFrom)
+                    ) {
+                      return false;
+                    }
+
+                    if (
+                      purchaseTo &&
+                      (!purchaseDate || purchaseDate > purchaseTo)
+                    ) {
+                      return false;
+                    }
+
+                    return true;
+                  })
+                  .reduce(
+                    (sum: number, i: any) =>
+                      sum + Math.abs(Number(i.amount || 0)),
+                    0,
+                  );
+
+                const netPending = pending.reduce(
+                  (sum: number, i: any) => sum + Number(i.amount || 0),
+                  0,
+                );
+
+                const netAmount = Math.max(0, netPending - refundCredit);
+
+                if (
+                  !confirm(
+                    `Pagar ${pending.length} parcelas deste mês? Valor bruto: ${brl(
+                      netPending,
+                    )}. Estornos aplicados: ${brl(
+                      refundCredit,
+                    )}. Valor líquido debitado das contas: ${brl(netAmount)}.`,
+                  )
+                ) {
+                  return;
+                }
+
+                let remainingRefund = refundCredit;
                 let successCount = 0;
+
                 for (const i of pending) {
                   try {
-                    await togglePaid(i);
+                    const installmentAmount = Number(i.amount || 0);
+                    const creditApplied = Math.min(
+                      installmentAmount,
+                      remainingRefund,
+                    );
+                    const amountToDebit = Number(
+                      (installmentAmount - creditApplied).toFixed(2),
+                    );
+
+                    await togglePaid(
+                      i,
+                      undefined,
+                      undefined,
+                      undefined,
+                      true,
+                      amountToDebit,
+                    );
+
+                    remainingRefund = Number(
+                      (remainingRefund - creditApplied).toFixed(2),
+                    );
                     successCount++;
                   } catch (e) {
                     console.error(e);
@@ -1465,8 +1591,14 @@ function CartoesPage() {
                 }
 
                 if (successCount > 0) {
-                  toast.success(`${successCount} parcelas pagas com sucesso.`);
+                  toast.success(
+                    `${successCount} parcelas pagas. Estornos de ${brl(
+                      refundCredit,
+                    )} aplicados ao valor da fatura.`,
+                  );
                   invalidate("installments");
+                  invalidate("accounts");
+                  invalidate("transactions");
                 }
               }}
             ><Check className="w-4 h-4 mr-1" /> Pagar fatura</Button>
