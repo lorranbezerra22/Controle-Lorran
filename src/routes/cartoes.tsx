@@ -2866,6 +2866,39 @@ function PurchaseForm({ cards, cats, onDone }: any) {
         <div className="space-y-1.5"><Label>Valor total</Label><Input type="number" step="0.01" value={form.total_amount} onChange={e => setForm({ ...form, total_amount: e.target.value })} required /></div>
         <div className="space-y-1.5"><Label>Parcelas</Label><Input type="number" min={1} max={36} value={form.installments_count} onChange={e => setForm({ ...form, installments_count: Number(e.target.value) })} required /></div>
       </div>
+
+      {Number(form.total_amount) < 0 && (
+        <div className="space-y-3 rounded-xl border border-success/30 bg-success/5 p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-success">Crédito de estorno</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Este valor será abatido da fatura, sem gerar despesa ou alterar o saldo das contas.
+              </p>
+            </div>
+            <strong className="text-lg tabular-nums text-success">
+              {brl(Math.abs(Number(form.total_amount) || 0))}
+            </strong>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-[11px] text-muted-foreground">
+              <span>Estornado</span>
+              <span className="font-semibold text-success">
+                {brl(Math.abs(Number(form.total_amount) || 0))}
+              </span>
+            </div>
+            <Progress value={100} className="h-2 [&>div]:bg-success" />
+            <div className="flex justify-between text-[11px] text-muted-foreground">
+              <span>Falta confirmar na fatura</span>
+              <span className="font-semibold text-warning">
+                {brl(Math.abs(Number(form.total_amount) || 0))}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-2">
         <button
           type="button"
