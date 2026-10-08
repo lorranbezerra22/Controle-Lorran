@@ -352,7 +352,9 @@ function CartoesPage() {
       // Estornos permanecem em "Em aberto" mesmo após a confirmação.
       // Eles não podem entrar no filtro "Pagos".
       if (statusFilter === "paid" && (isRefund(i) || !payment.hasPaid)) return false;
-      if (statusFilter === "pending" && !isRefund(i) && !payment.hasPending) return false;
+      // Estornos são créditos já aplicados à fatura e não devem aparecer
+      // em "Em aberto" nem ser incluídos no pagamento em lote.
+      if (statusFilter === "pending" && (isRefund(i) || !payment.hasPending)) return false;
       if (!matchPerson(i.cartao_compras?.person ?? "")) return false;
       const pd = i.cartao_compras?.purchase_date as string | undefined;
       if (purchaseFrom && (!pd || pd < purchaseFrom)) return false;
@@ -464,8 +466,8 @@ function CartoesPage() {
       if (categoryFilter !== "all" && i.cartao_compras?.category_id !== categoryFilter) return false;
 
       const payment = getInstallmentPaymentState(i);
-      if (statusFilter === "paid" && !payment.hasPaid) return false;
-      if (statusFilter === "pending" && !payment.hasPending) return false;
+      if (statusFilter === "paid" && (isRefund(i) || !payment.hasPaid)) return false;
+      if (statusFilter === "pending" && (isRefund(i) || !payment.hasPending)) return false;
 
       const purchaseDate = i.cartao_compras?.purchase_date as string | undefined;
       if (purchaseFrom && (!purchaseDate || purchaseDate < purchaseFrom)) return false;
@@ -501,8 +503,8 @@ function CartoesPage() {
       if (categoryFilter !== "all" && i.cartao_compras?.category_id !== categoryFilter) return false;
 
       const payment = getInstallmentPaymentState(i);
-      if (statusFilter === "paid" && !payment.hasPaid) return false;
-      if (statusFilter === "pending" && !payment.hasPending) return false;
+      if (statusFilter === "paid" && (isRefund(i) || !payment.hasPaid)) return false;
+      if (statusFilter === "pending" && (isRefund(i) || !payment.hasPending)) return false;
       if (!matchPerson(i.cartao_compras?.person ?? "")) return false;
 
       const purchaseDate = i.cartao_compras?.purchase_date as string | undefined;
@@ -538,8 +540,8 @@ function CartoesPage() {
       if (categoryFilter !== "all" && i.cartao_compras?.category_id !== categoryFilter) return false;
 
       const payment = getInstallmentPaymentState(i);
-      if (statusFilter === "paid" && !payment.hasPaid) return false;
-      if (statusFilter === "pending" && !payment.hasPending) return false;
+      if (statusFilter === "paid" && (isRefund(i) || !payment.hasPaid)) return false;
+      if (statusFilter === "pending" && (isRefund(i) || !payment.hasPending)) return false;
       if (!matchPerson(i.cartao_compras?.person ?? "")) return false;
 
       const purchaseDate = i.cartao_compras?.purchase_date as string | undefined;
@@ -574,8 +576,8 @@ function CartoesPage() {
       if (brandFilter !== "all" && i.cartao_compras?.brand !== brandFilter) return false;
 
       const payment = getInstallmentPaymentState(i);
-      if (statusFilter === "paid" && !payment.hasPaid) return false;
-      if (statusFilter === "pending" && !payment.hasPending) return false;
+      if (statusFilter === "paid" && (isRefund(i) || !payment.hasPaid)) return false;
+      if (statusFilter === "pending" && (isRefund(i) || !payment.hasPending)) return false;
       if (!matchPerson(i.cartao_compras?.person ?? "")) return false;
 
       const purchaseDate = i.cartao_compras?.purchase_date as string | undefined;
