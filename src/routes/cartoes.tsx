@@ -400,29 +400,112 @@ function CartoesPage() {
   const cardOptions = useMemo(() => {
     const relevant = inst.filter((i: any) => {
       const d = new Date(i.due_at + "T00:00:00");
-      return d.getFullYear() === year && d.getMonth() === monthN - 1;
+      if (d.getFullYear() !== year || d.getMonth() !== monthN - 1) return false;
+      if (brandFilter !== "all" && i.cartao_compras?.brand !== brandFilter) return false;
+      if (categoryFilter !== "all" && i.cartao_compras?.category_id !== categoryFilter) return false;
+
+      const payment = getInstallmentPaymentState(i);
+      if (statusFilter === "paid" && !payment.hasPaid) return false;
+      if (statusFilter === "pending" && !payment.hasPending) return false;
+      if (!matchPerson(i.cartao_compras?.person ?? "")) return false;
+
+      const purchaseDate = i.cartao_compras?.purchase_date as string | undefined;
+      if (purchaseFrom && (!purchaseDate || purchaseDate < purchaseFrom)) return false;
+      if (purchaseTo && (!purchaseDate || purchaseDate > purchaseTo)) return false;
+
+      return true;
     });
+
     const cardIds = new Set(relevant.map((i: any) => i.card_id));
-    return cards.filter(c => cardIds.has(c.id)).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-  }, [inst, year, monthN, cards]);
+    return cards
+      .filter((c: any) => cardIds.has(c.id))
+      .sort((a: any, b: any) => a.name.localeCompare(b.name, "pt-BR"));
+  }, [
+    inst,
+    year,
+    monthN,
+    brandFilter,
+    categoryFilter,
+    statusFilter,
+    personFilter,
+    personFilter2,
+    purchaseFrom,
+    purchaseTo,
+    cards,
+  ]);
 
   const brandOptions = useMemo(() => {
     const relevant = inst.filter((i: any) => {
       const d = new Date(i.due_at + "T00:00:00");
-      return d.getFullYear() === year && d.getMonth() === monthN - 1;
+      if (d.getFullYear() !== year || d.getMonth() !== monthN - 1) return false;
+      if (cardFilter !== "all" && i.card_id !== cardFilter) return false;
+      if (categoryFilter !== "all" && i.cartao_compras?.category_id !== categoryFilter) return false;
+
+      const payment = getInstallmentPaymentState(i);
+      if (statusFilter === "paid" && !payment.hasPaid) return false;
+      if (statusFilter === "pending" && !payment.hasPending) return false;
+      if (!matchPerson(i.cartao_compras?.person ?? "")) return false;
+
+      const purchaseDate = i.cartao_compras?.purchase_date as string | undefined;
+      if (purchaseFrom && (!purchaseDate || purchaseDate < purchaseFrom)) return false;
+      if (purchaseTo && (!purchaseDate || purchaseDate > purchaseTo)) return false;
+
+      return Boolean(i.cartao_compras?.brand);
     });
+
     const brands = new Set(relevant.map((i: any) => i.cartao_compras?.brand).filter(Boolean));
-    return Array.from(brands).sort((a: any, b: any) => String(a).localeCompare(String(b), "pt-BR"));
-  }, [inst, year, monthN]);
+    return Array.from(brands).sort((a: any, b: any) =>
+      String(a).localeCompare(String(b), "pt-BR"),
+    );
+  }, [
+    inst,
+    year,
+    monthN,
+    cardFilter,
+    categoryFilter,
+    statusFilter,
+    personFilter,
+    personFilter2,
+    purchaseFrom,
+    purchaseTo,
+  ]);
 
   const categoryOptions = useMemo(() => {
     const relevant = inst.filter((i: any) => {
       const d = new Date(i.due_at + "T00:00:00");
-      return d.getFullYear() === year && d.getMonth() === monthN - 1;
+      if (d.getFullYear() !== year || d.getMonth() !== monthN - 1) return false;
+      if (cardFilter !== "all" && i.card_id !== cardFilter) return false;
+      if (brandFilter !== "all" && i.cartao_compras?.brand !== brandFilter) return false;
+
+      const payment = getInstallmentPaymentState(i);
+      if (statusFilter === "paid" && !payment.hasPaid) return false;
+      if (statusFilter === "pending" && !payment.hasPending) return false;
+      if (!matchPerson(i.cartao_compras?.person ?? "")) return false;
+
+      const purchaseDate = i.cartao_compras?.purchase_date as string | undefined;
+      if (purchaseFrom && (!purchaseDate || purchaseDate < purchaseFrom)) return false;
+      if (purchaseTo && (!purchaseDate || purchaseDate > purchaseTo)) return false;
+
+      return Boolean(i.cartao_compras?.category_id);
     });
+
     const catIds = new Set(relevant.map((i: any) => i.cartao_compras?.category_id));
-    return cats.filter(c => catIds.has(c.id)).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-  }, [inst, year, monthN, cats]);
+    return cats
+      .filter((c: any) => catIds.has(c.id))
+      .sort((a: any, b: any) => a.name.localeCompare(b.name, "pt-BR"));
+  }, [
+    inst,
+    year,
+    monthN,
+    cardFilter,
+    brandFilter,
+    statusFilter,
+    personFilter,
+    personFilter2,
+    purchaseFrom,
+    purchaseTo,
+    cats,
+  ]);
 
 
   const totals = useMemo(() => {
