@@ -319,7 +319,8 @@ function Dashboard() {
     // Estorno pendente ainda não libera saldo para pagamento.
     // O valor negativo já está refletido na fatura, mas a confirmação
     // é necessária para reduzir o restante.
-    if (amount < 0) return s;
+    // Reembolsos reduzem diretamente o valor restante da fatura.
+    if (amount < 0) return s - Math.abs(amount) * factor;
 
     const paidAmount = Number(i.paid_amount || 0);
     const personQuota = amount * factor;
