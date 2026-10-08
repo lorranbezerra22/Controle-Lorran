@@ -2712,6 +2712,7 @@ function RefundForm({
 function PurchaseForm({ cards, cats, onDone }: any) {
   const today = todayLocalISO();
   const { data: people = [] } = usePeople();
+  const { data: existingInstallments = [] } = useInstallments();
   const [form, setForm] = useState({ card_id: cards[0]?.id ?? "", description: "", purchase_date: today, total_amount: "", installments_count: 1, category_id: "", person: "", brand: "" });
   const [splitMode, setSplitMode] = useState(false);
   const [splitPeople, setSplitPeople] = useState<string[]>([]);
@@ -2719,6 +2720,63 @@ function PurchaseForm({ cards, cats, onDone }: any) {
   const [splitAmounts, setSplitAmounts] = useState<Record<string, string>>({});
   const [splitCategoryIds, setSplitCategoryIds] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+
+  const refundPreview = useMemo(() => {
+    const refundAmount = Math.abs(Number(form.total_amount) || 0);
+    if (Number(form.total_amount) >= 0 || !form.category_id || refundAmount <= 0) {
+      return null;
+    }
+
+    const card = cards.find((item: any) => item.id === form.card_id);
+    if (!card) return null;
+
+    const purchaseDate = new Date(`${form.purchase_date}T00:00:00`);
+    let invoiceYear = purchaseDate.getFullYear();
+    let invoiceMonth = purchaseDate.getMonth();
+
+    if (purchaseDate.getDate() >= Number(card.closing_day || 1)) {
+      invoiceMonth += 1;
+    }
+
+    if (Number(card.due_day || 10) < Number(card.closing_day || 1)) {
+      invoiceMonth += 1;
+    }
+
+    const invoiceDate = new Date(invoiceYear, invoiceMonth, 1);
+    invoiceYear = invoiceDate.getFullYear();
+    invoiceMonth = invoiceDate.getMonth();
+
+    const categoryTotal = existingInstallments
+      .filter((installment: any) => {
+        const dueDate = new Date(`${installment.due_at}T00:00:00`);
+
+        return (
+          installment.card_id === form.card_id &&
+          dueDate.getFullYear() === invoiceYear &&
+          dueDate.getMonth() === invoiceMonth &&
+          installment.cartao_compras?.category_id === form.category_id &&
+          Number(installment.amount || 0) > 0
+        );
+      })
+      .reduce(
+        (total: number, installment: any) =>
+          total + Number(installment.amount || 0),
+        0,
+      );
+
+    return {
+      categoryTotal,
+      remaining: categoryTotal - refundAmount,
+      invoiceLabel: `${invoiceYear}-${String(invoiceMonth + 1).padStart(2, "0")}`,
+    };
+  }, [
+    cards,
+    existingInstallments,
+    form.card_id,
+    form.category_id,
+    form.purchase_date,
+    form.total_amount,
+  ]);
 
   const togglePerson = (name: string) => {
     setSplitPeople((prev) => prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name]);
@@ -3033,6 +3091,78 @@ function PurchaseForm({ cards, cats, onDone }: any) {
             <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
             <SelectContent>{cats.filter((c: any) => c.kind === "expense").map((c: any) => <SelectItem key={c.id} value={c.id}>{c.icon ? `${c.icon} ` : ""}{c.name}</SelectItem>)}</SelectContent>
           </Select>
+        </div>
+      )}
+
+      {refundPreview && (
+        <div className="space-y-3 rounded-xl border border-warning/40 bg-warning/5 p-3 text-xs">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold text-warning">Crédito de estorno</p>
+              <p className="mt-1 text-muted-foreground">
+                O crédito será aplicado à categoria escolhida na fatura de{" "}
+                {refundPreview.invoiceLabel}.
+              </p>
+            </div>
+            <strong className="shrink-0 text-base tabular-nums text-success">
+              {brl(Math.abs(Number(form.total_amount)))}
+            </strong>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span>Valor atual da categoria</span>
+              <strong className="tabular-nums text-foreground">
+                {brl(refundPreview.categoryTotal)}
+              </strong>
+            </div>
+
+            <Progress
+              value={
+                refundPreview.categoryTotal > 0
+                  ? Math.min(
+                      100,
+                      (Math.abs(Number(form.total_amount)) /
+                        refundPreview.categoryTotal) *
+                        100,
+                    )
+                  : 0
+              }
+              className="h-2 [&>div]:bg-success"
+            />
+
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Após abater o estorno</span>
+              <strong
+                className={`tabular-nums ${
+                  refundPreview.remaining < 0
+                    ? "text-destructive"
+                    : "text-success"
+                }`}
+              >
+                {brl(refundPreview.remaining)}
+              </strong>
+            </div>
+          </div>
+
+          {refundPreview.categoryTotal <= 0 ? (
+            <p className="text-warning">
+              Ainda não há valores nessa categoria para abater nesta fatura.
+            </p>
+          ) : refundPreview.remaining < 0 ? (
+            <p className="text-destructive">
+              O estorno excede o valor atual da categoria em{" "}
+              <strong>{brl(Math.abs(refundPreview.remaining))}</strong>.
+            </p>
+          ) : (
+            <p className="text-muted-foreground">
+              Ainda faltará confirmar o recebimento de{" "}
+              <strong className="text-warning">
+                {brl(Math.abs(Number(form.total_amount)))}
+              </strong>{" "}
+              na fatura.
+            </p>
+          )}
         </div>
       )}
 
