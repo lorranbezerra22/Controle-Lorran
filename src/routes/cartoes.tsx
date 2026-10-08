@@ -218,25 +218,27 @@ const responsibilityForPerson = (installment: any, person: string) => {
 const getInstallmentPaymentState = (installment: any) => {
   const total = Number(installment.amount || 0);
   const rawPaid = Number(installment.paid_amount || 0);
+  const isRefundInstallment = total < 0;
+  const refundConfirmed = isRefundConfirmed(installment);
   const isPaid = installment.status === "paid";
 
-  // Estorno nunca é pagamento. A confirmação apenas registra que o
-  // reembolso foi recebido; ele continua aparecendo como "Em aberto"
-  // para preservar o abatimento e os custos da fatura.
-  if (total < 0) {
+  // Um estorno confirmado é identificado como concluído, mas continua
+  // sendo apenas um crédito da fatura: não gera despesa, participação ou
+  // débito nas contas de Lorran/Tayane.
+  if (isRefundInstallment) {
     return {
       total,
-      paid: 0,
+      paid: refundConfirmed || isPaid ? total : 0,
       remaining: 0,
-      hasPaid: false,
-      hasPending: true,
+      hasPaid: refundConfirmed || isPaid,
+      hasPending: !refundConfirmed && !isPaid,
     };
   }
 
   const paid = isPaid && rawPaid <= 0
     ? total
     : Math.min(total, Math.max(0, rawPaid));
-  const remaining = isPaid ? 0 : Number((total - paid).toFixed(2));
+  const remaining = Number((total - paid).toFixed(2));
 
   return {
     total,
@@ -250,15 +252,22 @@ const getInstallmentPaymentState = (installment: any) => {
 const getStatusFilteredAmount = (installment: any, statusFilter: "all" | "paid" | "pending") => {
   const payment = getInstallmentPaymentState(installment);
 
-  // Estorno não é pagamento: não aparece em "Pagos".
+  // Estorno confirmado aparece como concluído, mas preserva o valor
+  // negativo para continuar abatendo o total da fatura.
   if (statusFilter === "paid") {
-    return isRefund(installment) ? 0 : payment.paid;
+    return isRefund(installment)
+      ? (isRefundConfirmed(installment) || installment.status === "paid"
+        ? payment.total
+        : 0)
+      : payment.paid;
   }
 
-  // O crédito negativo permanece em "Em aberto", inclusive confirmado,
-  // para continuar abatendo a fatura e manter os custos corretos.
+  // Estornos ainda não confirmados permanecem em aberto. Depois da
+  // confirmação, deixam de aparecer neste filtro.
   if (statusFilter === "pending") {
-    return isRefund(installment) ? payment.total : payment.remaining;
+    return isRefund(installment) && !isRefundConfirmed(installment)
+      ? payment.total
+      : payment.remaining;
   }
 
   return payment.total;
@@ -349,12 +358,8 @@ function CartoesPage() {
       if (categoryFilter !== "all" && i.cartao_compras?.category_id !== categoryFilter) return false;
       const payment = getInstallmentPaymentState(i);
 
-      // Estornos permanecem em "Em aberto" mesmo após a confirmação.
-      // Eles não podem entrar no filtro "Pagos".
-      if (statusFilter === "paid" && (isRefund(i) || !payment.hasPaid)) return false;
-      // Estornos são créditos já aplicados à fatura e não devem aparecer
-      // em "Em aberto" nem ser incluídos no pagamento em lote.
-      if (statusFilter === "pending" && (isRefund(i) || !payment.hasPending)) return false;
+      if (statusFilter === "paid" && !payment.hasPaid) return false;
+      if (statusFilter === "pending" && !payment.hasPending) return false;
       if (!matchPerson(i.cartao_compras?.person ?? "")) return false;
       const pd = i.cartao_compras?.purchase_date as string | undefined;
       if (purchaseFrom && (!pd || pd < purchaseFrom)) return false;
@@ -615,8 +620,8 @@ function CartoesPage() {
       const m = (map[effectiveCardId] = map[effectiveCardId] ?? { fatura: 0, restante: 0, brandTotals: {} });
       const payment = getInstallmentPaymentState(i);
 
-      // O lançamento negativo já reduz a fatura, mas só reduz o
-      // restante depois que o recebimento do estorno for confirmado.
+      // O lançamento negativo reduz a fatura. O restante das parcelas
+      // positivas é reduzido pelo crédito somente no pagamento da fatura.
       const refundOnly = isRefund(i);
 
       const person = (i.cartao_compras?.person || "").toLowerCase().trim();
@@ -877,26 +882,33 @@ function CartoesPage() {
           if (emptyParticipationError) throw emptyParticipationError;
         }
 
-        const installmentUpdate = isEstorno
-          ? {
-              // Estorno nunca é pagamento. Ele permanece pendente apenas
-              // para fins de exibição e não altera a cota de ninguém.
-              status: "pending",
-              paid_amount: 0,
-              paid_by: null,
-              metadata: {
+      const installmentUpdate = isEstorno
+        ? {
+            // A confirmação do estorno é marcada como concluída. O valor
+            // negativo continua abatendo a fatura, mas não é registrado
+            // como pagamento nem como participação de pessoa.
+            status: "paid",
+            paid_amount: 0,
+            paid_by: null,
+            metadata: {
                 ...((i.metadata as any) || {}),
                 refund_confirmed: true,
                 refund_confirmed_at: new Date().toISOString(),
               },
             }
           : {
-              status: "paid",
               paid_amount: Math.min(
                 installmentTotal,
                 currentPaidAmount + amountToRegister,
               ),
-              paid_by: paidByOverride || null,
+              status:
+                currentPaidAmount + amountToRegister >= installmentTotal - 0.01
+                  ? "paid"
+                  : "pending",
+              paid_by:
+                currentPaidAmount + amountToRegister >= installmentTotal - 0.01
+                  ? paidByOverride || null
+                  : i.paid_by || null,
             };
 
         const { error } = await supabase
@@ -1471,8 +1483,8 @@ function CartoesPage() {
                 const pending = monthInst.filter(
                   (i: any) =>
                     Number(i.amount || 0) >= 0 &&
-                    i.status !== "paid" &&
-                    !isRefund(i),
+                    !isRefund(i) &&
+                    getInstallmentPaymentState(i).hasPending,
                 );
 
                 if (pending.length === 0) return;
@@ -1488,7 +1500,11 @@ function CartoesPage() {
                       return false;
                     }
 
-                    if (Number(i.amount || 0) >= 0 || !isRefund(i)) {
+                    if (
+                      Number(i.amount || 0) >= 0 ||
+                      !isRefund(i) ||
+                      !isRefundConfirmed(i)
+                    ) {
                       return false;
                     }
 
