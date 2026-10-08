@@ -378,38 +378,39 @@ function CartoesPage() {
     return () => window.removeEventListener('open-partial-pay', handleOpen as any);
   }, []);
 
-  // Corrige dados antigos em que um estorno foi registrado como despesa
-  // do cartão. Isso evita que o valor seja considerado pago e que 50% seja
-  // debitado da conta de Lorran e 50% da conta de Tayane.
+  // Corrige dados antigos em que um estorno foi registrado como pagamento.
+  // Isso é importante porque uma transação de despesa vinculada ao estorno
+  // reduz o saldo da conta e também aumenta artificialmente o valor pago da
+  // Família, dividindo o estorno entre Lorran e Tayane.
   const refundRepairDone = useRef(false);
 
   useEffect(() => {
-    if (refundRepairDone.current || inst.length === 0 || allTransactions.length === 0) {
-      return;
-    }
+    if (refundRepairDone.current || inst.length === 0) return;
 
     const invalidRefundPayments = inst.filter((installment: any) => {
       if (!isRefund(installment)) return false;
 
-      return allTransactions.some(
+      const hasExpenseTransaction = allTransactions.some(
         (transaction: any) =>
           transaction.card_installment_id === installment.id &&
           transaction.kind === "expense",
       );
+
+      const hasParticipation = Array.isArray(installment.participacoes)
+        && installment.participacoes.length > 0;
+
+      return hasExpenseTransaction || hasParticipation || Number(installment.paid_amount || 0) !== 0;
     });
 
-    if (invalidRefundPayments.length === 0) {
-      refundRepairDone.current = true;
-      return;
-    }
-
     refundRepairDone.current = true;
+
+    if (invalidRefundPayments.length === 0) return;
 
     const repairRefundPayments = async () => {
       try {
         for (const installment of invalidRefundPayments) {
-          // A exclusão da transação dispara a restauração automática
-          // do saldo da conta que havia sido debitada.
+          // Excluir uma despesa vinculada dispara o trigger que devolve
+          // automaticamente o valor debitado à conta de origem.
           const { error: transactionError } = await supabase
             .from("transacoes")
             .delete()
@@ -418,9 +419,7 @@ function CartoesPage() {
 
           if (transactionError) throw transactionError;
 
-          // Estorno nunca gera participação de pagamento. Em Família,
-          // removemos o registro para não aumentar artificialmente a cota
-          // paga de Lorran ou Tayane.
+          // O estorno nunca é pagamento e nunca participa da divisão 50/50.
           const { error: participationError } = await supabase
             .from("participacoes_parcelas")
             .delete()
@@ -433,6 +432,7 @@ function CartoesPage() {
             .update({
               status: "pending",
               paid_amount: 0,
+              paid_by: null,
             } as any)
             .eq("id", installment.id);
 
@@ -442,7 +442,7 @@ function CartoesPage() {
         invalidate("installments");
         invalidate("accounts");
         invalidate("transactions");
-        toast.success("Estorno corrigido. O saldo das contas foi restaurado.");
+        toast.success("Estorno corrigido. O valor debitado foi devolvido à conta.");
       } catch (error: any) {
         refundRepairDone.current = false;
         toast.error(error.message || "Não foi possível restaurar o saldo do estorno.");
@@ -697,56 +697,12 @@ function CartoesPage() {
       }
     });
 
-    // Um estorno confirmado funciona como crédito contra o restante da
-    // fatura. Ele não é um pagamento e não altera paid_amount, contas ou
-    // participações; apenas libera o valor que já foi abatido na fatura.
-    monthInst.forEach((i: any) => {
-      const refundAmount = Number(i.amount || 0);
-      // O estorno negativo já reduz o restante assim que é lançado.
-      // A confirmação apenas registra o recebimento e não deve aplicar
-      // o mesmo abatimento uma segunda vez.
-      if (!isRefund(i)) return;
-
-      const person = (i.cartao_compras?.person || "").toLowerCase().trim();
-      const filter = personFilter !== "all" ? personFilter.toLowerCase().trim() : "all";
-      const filter2 = personFilter2 !== "all" ? personFilter2.toLowerCase().trim() : "all";
-      const isFam = person === "familia";
-
-      const matchesFilter =
-        filter === "all" ||
-        person === filter ||
-        (isFam && (filter === "lorran" || filter === "tayane")) ||
-        person === filter2 ||
-        (isFam && (filter2 === "lorran" || filter2 === "tayane"));
-
-      if (!matchesFilter) return;
-
-      const factor =
-        isFam && filter !== "all" && filter2 !== "all"
-          ? 0.5
-          : isFam && (filter === "lorran" || filter === "tayane" || filter2 === "lorran" || filter2 === "tayane")
-            ? 0.5
-            : 1;
-
-      const credit = Math.abs(refundAmount) * factor;
-      const target = map[i.card_id];
-      if (!target) return;
-
-      target.restante = Math.max(0, target.restante - credit);
-
-      const metadata = i.cartoes?.metadata as {
-        brand?: string;
-        brands?: Array<{ brand?: string; last_digits?: string }>;
-      } | undefined;
-      const brand = i.cartao_compras?.brand || metadata?.brand || "Cartão";
-      const brandTotal = target.brandTotals[brand];
-      if (brandTotal) {
-        brandTotal.restante = Math.max(0, brandTotal.restante - credit);
-      }
-    });
-
+    // O valor negativo já foi somado à fatura no primeiro loop e não pode
+    // ser abatido novamente do restante. Antes, este segundo loop aplicava
+    // o estorno uma segunda vez e fazia a divisão da Família ficar
+    // inconsistente, especialmente após "Pagar fatura".
     return map;
-  }, [monthInst, personFilter, personFilter2, statusFilter]);
+  }, [monthInst, personFilter, personFilter2]);
 
 
 
