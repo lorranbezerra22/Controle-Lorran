@@ -9,69 +9,29 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SolucaoFinanceiraRouteImport } from './routes/solucao-financeira'
-import { Route as MilhasRouteImport } from './routes/milhas'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as LancamentosRouteImport } from './routes/lancamentos'
-import { Route as ImportarRouteImport } from './routes/importar'
-import { Route as FinanceiroRouteImport } from './routes/financeiro'
-import { Route as ContaRouteImport } from './routes/conta'
-import { Route as CartoesRouteImport } from './routes/cartoes'
-import { Route as BaseRouteImport } from './routes/base'
-import { Route as AnotacoesRouteImport } from './routes/anotacoes'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AnotacoesRouteImport } from './routes/anotacoes'
+import { Route as BaseRouteImport } from './routes/base'
+import { Route as CartoesRouteImport } from './routes/cartoes'
+import { Route as ContaRouteImport } from './routes/conta'
+import { Route as FinanceiroRouteImport } from './routes/financeiro'
+import { Route as ImportarRouteImport } from './routes/importar'
+import { Route as LancamentosRouteImport } from './routes/lancamentos'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as MilhasRouteImport } from './routes/milhas'
+import { Route as SolucaoFinanceiraRouteImport } from './routes/solucao-financeira'
 import { Route as MilhasIndexRouteImport } from './routes/milhas.index'
-import { Route as MilhasResgatesRouteImport } from './routes/milhas.resgates'
-import { Route as MilhasRegistrosRouteImport } from './routes/milhas.registros'
-import { Route as MilhasProgramasRouteImport } from './routes/milhas.programas'
-import { Route as MilhasPlanejamentoRouteImport } from './routes/milhas.planejamento'
-import { Route as MilhasGanhosRouteImport } from './routes/milhas.ganhos'
-import { Route as MilhasConfigRouteImport } from './routes/milhas.config'
 import { Route as MilhasComparacaoRouteImport } from './routes/milhas.comparacao'
+import { Route as MilhasConfigRouteImport } from './routes/milhas.config'
+import { Route as MilhasGanhosRouteImport } from './routes/milhas.ganhos'
+import { Route as MilhasPlanejamentoRouteImport } from './routes/milhas.planejamento'
+import { Route as MilhasProgramasRouteImport } from './routes/milhas.programas'
+import { Route as MilhasRegistrosRouteImport } from './routes/milhas.registros'
+import { Route as MilhasResgatesRouteImport } from './routes/milhas.resgates'
 
-const SolucaoFinanceiraRoute = SolucaoFinanceiraRouteImport.update({
-  id: '/solucao-financeira',
-  path: '/solucao-financeira',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MilhasRoute = MilhasRouteImport.update({
-  id: '/milhas',
-  path: '/milhas',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LancamentosRoute = LancamentosRouteImport.update({
-  id: '/lancamentos',
-  path: '/lancamentos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ImportarRoute = ImportarRouteImport.update({
-  id: '/importar',
-  path: '/importar',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FinanceiroRoute = FinanceiroRouteImport.update({
-  id: '/financeiro',
-  path: '/financeiro',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContaRoute = ContaRouteImport.update({
-  id: '/conta',
-  path: '/conta',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CartoesRoute = CartoesRouteImport.update({
-  id: '/cartoes',
-  path: '/cartoes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BaseRoute = BaseRouteImport.update({
-  id: '/base',
-  path: '/base',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AnotacoesRoute = AnotacoesRouteImport.update({
@@ -79,9 +39,49 @@ const AnotacoesRoute = AnotacoesRouteImport.update({
   path: '/anotacoes',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const BaseRoute = BaseRouteImport.update({
+  id: '/base',
+  path: '/base',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CartoesRoute = CartoesRouteImport.update({
+  id: '/cartoes',
+  path: '/cartoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContaRoute = ContaRouteImport.update({
+  id: '/conta',
+  path: '/conta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinanceiroRoute = FinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImportarRoute = ImportarRouteImport.update({
+  id: '/importar',
+  path: '/importar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LancamentosRoute = LancamentosRouteImport.update({
+  id: '/lancamentos',
+  path: '/lancamentos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MilhasRoute = MilhasRouteImport.update({
+  id: '/milhas',
+  path: '/milhas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SolucaoFinanceiraRoute = SolucaoFinanceiraRouteImport.update({
+  id: '/solucao-financeira',
+  path: '/solucao-financeira',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MilhasIndexRoute = MilhasIndexRouteImport.update({
@@ -89,29 +89,9 @@ const MilhasIndexRoute = MilhasIndexRouteImport.update({
   path: '/',
   getParentRoute: () => MilhasRoute,
 } as any)
-const MilhasResgatesRoute = MilhasResgatesRouteImport.update({
-  id: '/resgates',
-  path: '/resgates',
-  getParentRoute: () => MilhasRoute,
-} as any)
-const MilhasRegistrosRoute = MilhasRegistrosRouteImport.update({
-  id: '/registros',
-  path: '/registros',
-  getParentRoute: () => MilhasRoute,
-} as any)
-const MilhasProgramasRoute = MilhasProgramasRouteImport.update({
-  id: '/programas',
-  path: '/programas',
-  getParentRoute: () => MilhasRoute,
-} as any)
-const MilhasPlanejamentoRoute = MilhasPlanejamentoRouteImport.update({
-  id: '/planejamento',
-  path: '/planejamento',
-  getParentRoute: () => MilhasRoute,
-} as any)
-const MilhasGanhosRoute = MilhasGanhosRouteImport.update({
-  id: '/ganhos',
-  path: '/ganhos',
+const MilhasComparacaoRoute = MilhasComparacaoRouteImport.update({
+  id: '/comparacao',
+  path: '/comparacao',
   getParentRoute: () => MilhasRoute,
 } as any)
 const MilhasConfigRoute = MilhasConfigRouteImport.update({
@@ -119,9 +99,29 @@ const MilhasConfigRoute = MilhasConfigRouteImport.update({
   path: '/config',
   getParentRoute: () => MilhasRoute,
 } as any)
-const MilhasComparacaoRoute = MilhasComparacaoRouteImport.update({
-  id: '/comparacao',
-  path: '/comparacao',
+const MilhasGanhosRoute = MilhasGanhosRouteImport.update({
+  id: '/ganhos',
+  path: '/ganhos',
+  getParentRoute: () => MilhasRoute,
+} as any)
+const MilhasPlanejamentoRoute = MilhasPlanejamentoRouteImport.update({
+  id: '/planejamento',
+  path: '/planejamento',
+  getParentRoute: () => MilhasRoute,
+} as any)
+const MilhasProgramasRoute = MilhasProgramasRouteImport.update({
+  id: '/programas',
+  path: '/programas',
+  getParentRoute: () => MilhasRoute,
+} as any)
+const MilhasRegistrosRoute = MilhasRegistrosRouteImport.update({
+  id: '/registros',
+  path: '/registros',
+  getParentRoute: () => MilhasRoute,
+} as any)
+const MilhasResgatesRoute = MilhasResgatesRouteImport.update({
+  id: '/resgates',
+  path: '/resgates',
   getParentRoute: () => MilhasRoute,
 } as any)
 
@@ -269,67 +269,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/solucao-financeira': {
-      id: '/solucao-financeira'
-      path: '/solucao-financeira'
-      fullPath: '/solucao-financeira'
-      preLoaderRoute: typeof SolucaoFinanceiraRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/milhas': {
-      id: '/milhas'
-      path: '/milhas'
-      fullPath: '/milhas'
-      preLoaderRoute: typeof MilhasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lancamentos': {
-      id: '/lancamentos'
-      path: '/lancamentos'
-      fullPath: '/lancamentos'
-      preLoaderRoute: typeof LancamentosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/importar': {
-      id: '/importar'
-      path: '/importar'
-      fullPath: '/importar'
-      preLoaderRoute: typeof ImportarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/financeiro': {
-      id: '/financeiro'
-      path: '/financeiro'
-      fullPath: '/financeiro'
-      preLoaderRoute: typeof FinanceiroRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/conta': {
-      id: '/conta'
-      path: '/conta'
-      fullPath: '/conta'
-      preLoaderRoute: typeof ContaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cartoes': {
-      id: '/cartoes'
-      path: '/cartoes'
-      fullPath: '/cartoes'
-      preLoaderRoute: typeof CartoesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/base': {
-      id: '/base'
-      path: '/base'
-      fullPath: '/base'
-      preLoaderRoute: typeof BaseRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/anotacoes': {
@@ -339,11 +283,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnotacoesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/base': {
+      id: '/base'
+      path: '/base'
+      fullPath: '/base'
+      preLoaderRoute: typeof BaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cartoes': {
+      id: '/cartoes'
+      path: '/cartoes'
+      fullPath: '/cartoes'
+      preLoaderRoute: typeof CartoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/conta': {
+      id: '/conta'
+      path: '/conta'
+      fullPath: '/conta'
+      preLoaderRoute: typeof ContaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/financeiro': {
+      id: '/financeiro'
+      path: '/financeiro'
+      fullPath: '/financeiro'
+      preLoaderRoute: typeof FinanceiroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/importar': {
+      id: '/importar'
+      path: '/importar'
+      fullPath: '/importar'
+      preLoaderRoute: typeof ImportarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lancamentos': {
+      id: '/lancamentos'
+      path: '/lancamentos'
+      fullPath: '/lancamentos'
+      preLoaderRoute: typeof LancamentosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/milhas': {
+      id: '/milhas'
+      path: '/milhas'
+      fullPath: '/milhas'
+      preLoaderRoute: typeof MilhasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solucao-financeira': {
+      id: '/solucao-financeira'
+      path: '/solucao-financeira'
+      fullPath: '/solucao-financeira'
+      preLoaderRoute: typeof SolucaoFinanceiraRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/milhas/': {
@@ -353,39 +353,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MilhasIndexRouteImport
       parentRoute: typeof MilhasRoute
     }
-    '/milhas/resgates': {
-      id: '/milhas/resgates'
-      path: '/resgates'
-      fullPath: '/milhas/resgates'
-      preLoaderRoute: typeof MilhasResgatesRouteImport
-      parentRoute: typeof MilhasRoute
-    }
-    '/milhas/registros': {
-      id: '/milhas/registros'
-      path: '/registros'
-      fullPath: '/milhas/registros'
-      preLoaderRoute: typeof MilhasRegistrosRouteImport
-      parentRoute: typeof MilhasRoute
-    }
-    '/milhas/programas': {
-      id: '/milhas/programas'
-      path: '/programas'
-      fullPath: '/milhas/programas'
-      preLoaderRoute: typeof MilhasProgramasRouteImport
-      parentRoute: typeof MilhasRoute
-    }
-    '/milhas/planejamento': {
-      id: '/milhas/planejamento'
-      path: '/planejamento'
-      fullPath: '/milhas/planejamento'
-      preLoaderRoute: typeof MilhasPlanejamentoRouteImport
-      parentRoute: typeof MilhasRoute
-    }
-    '/milhas/ganhos': {
-      id: '/milhas/ganhos'
-      path: '/ganhos'
-      fullPath: '/milhas/ganhos'
-      preLoaderRoute: typeof MilhasGanhosRouteImport
+    '/milhas/comparacao': {
+      id: '/milhas/comparacao'
+      path: '/comparacao'
+      fullPath: '/milhas/comparacao'
+      preLoaderRoute: typeof MilhasComparacaoRouteImport
       parentRoute: typeof MilhasRoute
     }
     '/milhas/config': {
@@ -395,11 +367,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MilhasConfigRouteImport
       parentRoute: typeof MilhasRoute
     }
-    '/milhas/comparacao': {
-      id: '/milhas/comparacao'
-      path: '/comparacao'
-      fullPath: '/milhas/comparacao'
-      preLoaderRoute: typeof MilhasComparacaoRouteImport
+    '/milhas/ganhos': {
+      id: '/milhas/ganhos'
+      path: '/ganhos'
+      fullPath: '/milhas/ganhos'
+      preLoaderRoute: typeof MilhasGanhosRouteImport
+      parentRoute: typeof MilhasRoute
+    }
+    '/milhas/planejamento': {
+      id: '/milhas/planejamento'
+      path: '/planejamento'
+      fullPath: '/milhas/planejamento'
+      preLoaderRoute: typeof MilhasPlanejamentoRouteImport
+      parentRoute: typeof MilhasRoute
+    }
+    '/milhas/programas': {
+      id: '/milhas/programas'
+      path: '/programas'
+      fullPath: '/milhas/programas'
+      preLoaderRoute: typeof MilhasProgramasRouteImport
+      parentRoute: typeof MilhasRoute
+    }
+    '/milhas/registros': {
+      id: '/milhas/registros'
+      path: '/registros'
+      fullPath: '/milhas/registros'
+      preLoaderRoute: typeof MilhasRegistrosRouteImport
+      parentRoute: typeof MilhasRoute
+    }
+    '/milhas/resgates': {
+      id: '/milhas/resgates'
+      path: '/resgates'
+      fullPath: '/milhas/resgates'
+      preLoaderRoute: typeof MilhasResgatesRouteImport
       parentRoute: typeof MilhasRoute
     }
   }
