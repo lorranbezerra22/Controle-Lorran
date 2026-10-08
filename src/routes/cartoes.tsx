@@ -2439,8 +2439,6 @@ function CardResponsibilityForm({
 }
 
 function RefundHelper({ amount, rawAmount, selectedCategoryId, cats, person, purchaseDate, card, onPick }: { amount: number; rawAmount?: string; selectedCategoryId: string; cats: any[]; person?: string; purchaseDate?: string; card?: any; onPick: (id: string) => void }) {
-  return null;
-
   const { data: inst = [] } = useInstallments();
   const rawIsNegative = typeof rawAmount === "string" && rawAmount.trim().startsWith("-");
   const isRefund = amount < 0 || rawIsNegative;
@@ -2491,37 +2489,16 @@ function RefundHelper({ amount, rawAmount, selectedCategoryId, cats, person, pur
   const selRemaining = selSaldo - abs;
   const insufficient = selectedCategoryId && abs > 0 && selRemaining < 0;
   const headerLabel = abs > 0 ? brl(amount) : "valor a definir";
-  // Teto do reembolso = soma da categoria "Estorno" da fatura ANTERIOR (filtrada por pessoa).
-  const prevYm = (() => {
-    const [yy, mm] = ym.split("-").map(Number);
-    const d = new Date(yy, mm - 2, 1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  })();
-  const estornoCatIds = new Set(
-    cats.filter((c: any) => /estorno/i.test(c.name || "")).map((c: any) => c.id)
-  );
-  let refundCap = 0;
-  for (const i of inst as any[]) {
-    const d = String(i.due_at || "").slice(0, 7);
-    if (d !== prevYm) continue;
-    const cid = i.cartao_compras?.category_id;
-    if (!cid || !estornoCatIds.has(cid)) continue;
-    const p = i.cartao_compras?.person;
-    let val = Math.abs(Number(i.amount));
-    if (person && person !== "—") {
-      if (p === person) {
-        // full
-      } else if (p === "Família") {
-        val = val / 2;
-      } else {
-        continue;
-      }
-    }
-    refundCap += val;
-  }
-
-
-  const capRemaining = refundCap - abs;
+  // O limite de referência é o total já lançado nessa categoria e nessa fatura.
+  // Assim o usuário acompanha quanto do custo original já foi compensado,
+  // sem depender de uma categoria específica chamada "Estorno".
+  const refundCap = selectedCategoryId
+    ? Math.max(0, Number(sums.get(selectedCategoryId) || 0))
+    : 0;
+  const capRemaining = Math.max(0, refundCap - abs);
+  const refundedPercent = refundCap > 0
+    ? Math.min(100, (abs / refundCap) * 100)
+    : 0;
   const overCap = abs > 0 && abs > refundCap;
   return (
     <div className="rounded-lg border border-warning/40 bg-warning/5 p-3 space-y-1.5 text-xs">
