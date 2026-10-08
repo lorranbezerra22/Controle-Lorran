@@ -1101,7 +1101,26 @@ function CartoesPage() {
         <div className="p-4 flex items-center justify-between flex-wrap gap-3 border-b border-border">
           <div className="flex items-center gap-3 flex-wrap">
             <h2 className="font-semibold">Fatura por mês</h2>
-            <span className="text-sm text-muted-foreground">Total: <strong className="text-foreground">{brl(monthInst.reduce((s: number, i: any) => s + getStatusFilteredAmount(i, statusFilter), 0))}</strong></span>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+              <span>
+                Total:{" "}
+                <strong className="text-foreground">
+                  {brl(monthInst.reduce((sum: number, i: any) => sum + getInstallmentPaymentState(i).total, 0))}
+                </strong>
+              </span>
+              <span>
+                Pago:{" "}
+                <strong className="text-success">
+                  {brl(monthInst.reduce((sum: number, i: any) => sum + getInstallmentPaymentState(i).paid, 0))}
+                </strong>
+              </span>
+              <span>
+                Restante:{" "}
+                <strong className="text-warning">
+                  {brl(monthInst.reduce((sum: number, i: any) => sum + getInstallmentPaymentState(i).remaining, 0))}
+                </strong>
+              </span>
+            </div>
           </div>
           <div className="flex items-end gap-3 flex-wrap">
             {(() => { const activeCls = "border-primary ring-2 ring-primary/30 bg-primary/5"; const nowD = new Date(); const nextD = new Date(nowD.getFullYear(), nowD.getMonth() + 1, 1); const monthActive = true; const yearActive = true; return (
