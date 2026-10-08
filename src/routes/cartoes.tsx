@@ -173,6 +173,15 @@ const isRefundConfirmed = (installment: any) =>
   isRefund(installment) &&
   Boolean((installment?.metadata as any)?.refund_confirmed);
 
+const isRefundTransaction = (transaction: any) => {
+  const description = normalizeName(transaction?.description || "");
+  return (
+    description.includes("estorno") ||
+    description.includes("reembolso") ||
+    description.includes("refund")
+  );
+};
+
 const normalizeResponsibility = (installment: any) => {
   const total = Math.max(0, Number(installment?.amount || 0));
   const metadata = (installment?.metadata as any) || {};
@@ -568,12 +577,12 @@ function CartoesPage() {
             valueForRestante = 0;
           } else if (filter === "lorran" || filter2 === "lorran") {
             const myPaid = paidByLorran;
-            const myRemaining = i.status === "paid" ? 0 : quota - myPaid;
+            const myRemaining = i.status === "paid" ? 0 : Math.max(0, quota - myPaid);
             valueForTotal = quota;
             valueForRestante = myRemaining;
           } else if (filter === "tayane" || filter2 === "tayane") {
             const myPaid = paidByTayane;
-            const myRemaining = i.status === "paid" ? 0 : quota - myPaid;
+            const myRemaining = i.status === "paid" ? 0 : Math.max(0, quota - myPaid);
             valueForTotal = quota;
             valueForRestante = myRemaining;
           }
@@ -694,7 +703,10 @@ function CartoesPage() {
             (transaction: any) =>
               transaction.card_installment_id === i.id &&
               transaction.kind === "expense" &&
-              Number(transaction.amount || 0) > 0,
+              Number(transaction.amount || 0) > 0 &&
+              // Um lançamento de estorno nunca pode compor o valor
+              // efetivamente pago da parcela, inclusive em Família.
+              !isRefundTransaction(transaction),
           )
           .reduce(
             (sum: number, transaction: any) =>
@@ -956,6 +968,14 @@ function CartoesPage() {
   const removePaymentDirectly = async (installment: any, transaction: any) => {
     if (!transaction?.id || transaction.isVirtual) {
       toast.error("Não foi possível identificar o lançamento.");
+      return;
+    }
+
+    // Estorno não é pagamento da parcela e não pode ser removido como se
+    // fosse uma antecipação. Isso evita recalcular a cota da Família e
+    // debitar/estornar novamente as contas de Lorran e Tayane.
+    if (isRefundTransaction(transaction)) {
+      toast.error("Lançamentos de estorno não alteram o valor pago da parcela.");
       return;
     }
 
@@ -1690,11 +1710,17 @@ function CartoesPage() {
                   const total = Number(showProgressInfo.amount || 0);
                   const isEstornoInfo = total < 0;
                   const estornoPaid = isRefundConfirmed(showProgressInfo);
-                  const linkedPaid = relatedTrans.reduce(
-                    (sum: number, transaction: any) =>
-                      sum + Number(transaction.amount || 0),
-                    0,
-                  );
+                  const linkedPaid = relatedTrans
+                    .filter(
+                      (transaction: any) =>
+                        transaction.kind !== "income" &&
+                        !isRefundTransaction(transaction),
+                    )
+                    .reduce(
+                      (sum: number, transaction: any) =>
+                        sum + Number(transaction.amount || 0),
+                      0,
+                    );
                   const paid = isEstornoInfo
                     ? (estornoPaid ? Math.abs(total) : 0)
                     : Math.min(
