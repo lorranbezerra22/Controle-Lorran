@@ -632,6 +632,8 @@ function CartoesPage() {
 
   const totals = useMemo(() => {
     const map: Record<string, { fatura: number; restante: number; brandTotals: Record<string, { fatura: number; restante: number }> }> = {};
+    const refundCredits: Record<string, number> = {};
+    const refundBrandCredits: Record<string, number> = {};
     const isFamilia = (s: string) => (s || "").toLowerCase().trim() === "familia";
 
     monthInst.forEach((i: any) => {
@@ -642,6 +644,11 @@ function CartoesPage() {
       // O lançamento negativo reduz a fatura. O restante das parcelas
       // positivas é reduzido pelo crédito somente no pagamento da fatura.
       const refundOnly = isRefund(i);
+
+      if (refundOnly) {
+        const refundAmount = Math.abs(Number(i.amount || 0));
+        refundCredits[effectiveCardId] = (refundCredits[effectiveCardId] || 0) + refundAmount;
+      }
 
       const person = (i.cartao_compras?.person || "").toLowerCase().trim();
       const filter = personFilter !== "all" ? personFilter.toLowerCase().trim() : "all";
@@ -714,23 +721,32 @@ function CartoesPage() {
 
         const b = i.cartao_compras?.brand || fallbackBrand;
         m.brandTotals[b] = m.brandTotals[b] ?? { fatura: 0, restante: 0 };
-        m.brandTotals[b].fatura += valueForTotal;
 
-        // Estornos nunca entram no restante. O valor negativo já foi lançado
-        // na fatura e na categoria quando o estorno foi registrado.
-          if (isRefund(i)) {
+        if (isRefund(i)) {
+          const refundAmount = Math.abs(Number(i.amount || 0));
+          refundBrandCredits[`${effectiveCardId}:${b}`] =
+            (refundBrandCredits[`${effectiveCardId}:${b}`] || 0) + refundAmount;
           valueForRestante = 0;
         }
 
+        m.brandTotals[b].fatura += valueForTotal;
         m.restante += Math.max(0, valueForRestante);
         m.brandTotals[b].restante += Math.max(0, valueForRestante);
       }
     });
 
-    // O valor negativo já foi somado à fatura no primeiro loop e não pode
-    // ser abatido novamente do restante. Antes, este segundo loop aplicava
-    // o estorno uma segunda vez e fazia a divisão da Família ficar
-    // inconsistente, especialmente após "Pagar fatura".
+    Object.entries(refundCredits).forEach(([cardId, credit]) => {
+      const cardTotal = map[cardId];
+      if (!cardTotal) return;
+
+      cardTotal.restante = Math.max(0, cardTotal.restante - credit);
+
+      Object.entries(cardTotal.brandTotals).forEach(([brand, brandTotal]) => {
+        const brandCredit = refundBrandCredits[`${cardId}:${brand}`] || 0;
+        brandTotal.restante = Math.max(0, brandTotal.restante - brandCredit);
+      });
+    });
+
     return map;
   }, [monthInst, personFilter, personFilter2]);
 
@@ -2746,23 +2762,34 @@ function PurchaseForm({ cards, cats, onDone }: any) {
     invoiceYear = invoiceDate.getFullYear();
     invoiceMonth = invoiceDate.getMonth();
 
-    const categoryTotal = existingInstallments
-      .filter((installment: any) => {
-        const dueDate = new Date(`${installment.due_at}T00:00:00`);
+    const categoryRows = existingInstallments.filter((installment: any) => {
+      const dueDate = new Date(`${installment.due_at}T00:00:00`);
 
-        return (
-          installment.card_id === form.card_id &&
-          dueDate.getFullYear() === invoiceYear &&
-          dueDate.getMonth() === invoiceMonth &&
-          installment.cartao_compras?.category_id === form.category_id &&
-          Number(installment.amount || 0) > 0
-        );
-      })
+      return (
+        installment.card_id === form.card_id &&
+        dueDate.getFullYear() === invoiceYear &&
+        dueDate.getMonth() === invoiceMonth &&
+        installment.cartao_compras?.category_id === form.category_id
+      );
+    });
+
+    const categoryGross = categoryRows
+      .filter((installment: any) => Number(installment.amount || 0) > 0)
       .reduce(
         (total: number, installment: any) =>
           total + Number(installment.amount || 0),
         0,
       );
+
+    const categoryRefunds = categoryRows
+      .filter((installment: any) => Number(installment.amount || 0) < 0)
+      .reduce(
+        (total: number, installment: any) =>
+          total + Math.abs(Number(installment.amount || 0)),
+        0,
+      );
+
+    const categoryTotal = Math.max(0, categoryGross - categoryRefunds);
 
     return {
       categoryTotal,
@@ -2948,9 +2975,9 @@ function PurchaseForm({ cards, cats, onDone }: any) {
             </div>
             <Progress value={100} className="h-2 [&>div]:bg-success" />
             <div className="flex justify-between text-[11px] text-muted-foreground">
-              <span>Falta confirmar na fatura</span>
-              <span className="font-semibold text-warning">
-                {brl(Math.abs(Number(form.total_amount) || 0))}
+              <span>Após abater este estorno</span>
+              <span className="font-semibold text-success">
+                {brl(Math.max(0, refundPreview.remaining))}
               </span>
             </div>
           </div>
