@@ -2439,6 +2439,8 @@ function CardResponsibilityForm({
 }
 
 function RefundHelper({ amount, rawAmount, selectedCategoryId, cats, person, purchaseDate, card, onPick }: { amount: number; rawAmount?: string; selectedCategoryId: string; cats: any[]; person?: string; purchaseDate?: string; card?: any; onPick: (id: string) => void }) {
+  return null;
+
   const { data: inst = [] } = useInstallments();
   const rawIsNegative = typeof rawAmount === "string" && rawAmount.trim().startsWith("-");
   const isRefund = amount < 0 || rawIsNegative;
@@ -2766,11 +2768,6 @@ function PurchaseForm({ cards, cats, onDone }: any) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (Number(form.total_amount) < 0) {
-      toast.error("Use “Registrar estorno” para vincular o reembolso à compra original.");
-      return;
-    }
-
     const parsed = cardPurchaseSchema.safeParse({
       description: form.description,
       total_amount: form.total_amount,
@@ -2780,6 +2777,16 @@ function PurchaseForm({ cards, cats, onDone }: any) {
     });
     if (!parsed.success) { toast.error(firstZodError(parsed.error)); return; }
 
+    if (Number(form.total_amount) < 0 && splitMode) {
+      toast.error("Para registrar um estorno, desative a divisão entre pessoas.");
+      return;
+    }
+
+    if (Number(form.total_amount) < 0 && Number(form.installments_count) !== 1) {
+      toast.error("O estorno deve ser lançado em uma única parcela.");
+      return;
+    }
+
     if (!__tryLock()) return;
     setSaving(true);
     try {
@@ -2787,7 +2794,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
       if (!card) throw new Error("Selecione um cartão");
       const { data: { user } } = await supabase.auth.getUser();
       const total = Number(form.total_amount);
-      const n = Number(form.installments_count);
+      const n = total < 0 ? 1 : Number(form.installments_count);
 
       // Lista de (pessoa, valor) para criar 1 compra por pessoa
       let splits: Array<{ person: string | null; amount: number; categoryId: string }>;
