@@ -18,6 +18,31 @@ function ymd(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
+function installmentIsPaid(installment: any) {
+  if (installment?.status === "paid") return true;
+
+  // Estornos são valores negativos e podem ser confirmados pelo
+  // metadata mesmo quando o status da parcela não foi atualizado.
+  if (Number(installment?.amount || 0) >= 0) return false;
+
+  const metadata = installment?.metadata;
+  const parsedMetadata =
+    typeof metadata === "string"
+      ? (() => {
+          try {
+            return JSON.parse(metadata);
+          } catch {
+            return {};
+          }
+        })()
+      : metadata || {};
+
+  return (
+    parsedMetadata.refund_confirmed === true ||
+    parsedMetadata.refund_confirmed === "true"
+  );
+}
+
 export function NotificationBell({ transactions, installments, cards }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const [recurringVersion, setRecurringVersion] = useState(0);
@@ -48,7 +73,11 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
       (t: any) => t.status === "pending" && t.due_at >= monthStart && t.due_at <= monthEnd && t.due_at <= today,
     );
     const overdueInst = (installments || []).filter(
-      (i: any) => i.status !== "paid" && i.due_at >= monthStart && i.due_at <= monthEnd && i.due_at <= today,
+      (i: any) =>
+        !installmentIsPaid(i) &&
+        i.due_at >= monthStart &&
+        i.due_at <= monthEnd &&
+        i.due_at <= today,
     );
 
     const lastDay = new Date(y, m + 1, 0).getDate();
@@ -60,7 +89,11 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
         const diff = Math.round((dueDate.getTime() - new Date(y, m, now.getDate()).getTime()) / 86400000);
         if (diff > 5) return null;
         const hasPending = (installments || []).some(
-          (i: any) => i.card_id === c.id && i.status !== "paid" && i.due_at >= monthStart && i.due_at <= monthEnd,
+          (i: any) =>
+            i.card_id === c.id &&
+            !installmentIsPaid(i) &&
+            i.due_at >= monthStart &&
+            i.due_at <= monthEnd,
         );
         if (!hasPending) return null;
         return { card: c, dueDate, diff };
