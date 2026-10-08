@@ -222,16 +222,16 @@ const getInstallmentPaymentState = (installment: any) => {
   const refundConfirmed = isRefundConfirmed(installment);
   const isPaid = installment.status === "paid";
 
-  // Um estorno confirmado é identificado como concluído, mas continua
-  // sendo apenas um crédito da fatura: não gera despesa, participação ou
-  // débito nas contas de Lorran/Tayane.
+  // Estornos permanecem exclusivamente como valores negativos da fatura.
+  // Mesmo quando confirmados e marcados como "paid" no banco, eles nunca
+  // contam como pagamento da parcela, da pessoa ou da Família.
   if (isRefundInstallment) {
     return {
       total,
-      paid: refundConfirmed || isPaid ? total : 0,
+      paid: 0,
       remaining: 0,
-      hasPaid: refundConfirmed || isPaid,
-      hasPending: !refundConfirmed && !isPaid,
+      hasPaid: false,
+      hasPending: false,
     };
   }
 
@@ -252,22 +252,12 @@ const getInstallmentPaymentState = (installment: any) => {
 const getStatusFilteredAmount = (installment: any, statusFilter: "all" | "paid" | "pending") => {
   const payment = getInstallmentPaymentState(installment);
 
-  // Estorno confirmado aparece como concluído, mas preserva o valor
-  // negativo para continuar abatendo o total da fatura.
-  if (statusFilter === "paid") {
-    return isRefund(installment)
-      ? (isRefundConfirmed(installment) || installment.status === "paid"
-        ? payment.total
-        : 0)
-      : payment.paid;
-  }
-
-  // Estornos ainda não confirmados permanecem em aberto. Depois da
-  // confirmação, deixam de aparecer neste filtro.
-  if (statusFilter === "pending") {
-    return isRefund(installment) && !isRefundConfirmed(installment)
-      ? payment.total
-      : payment.remaining;
+  // Estornos nunca são pagamentos. Eles aparecem somente no valor geral
+  // da fatura, mantendo o valor negativo que abate o total do cartão.
+  if (statusFilter === "paid" || statusFilter === "pending") {
+    return isRefund(installment) ? 0 : (
+      statusFilter === "paid" ? payment.paid : payment.remaining
+    );
   }
 
   return payment.total;
@@ -471,8 +461,8 @@ function CartoesPage() {
       if (categoryFilter !== "all" && i.cartao_compras?.category_id !== categoryFilter) return false;
 
       const payment = getInstallmentPaymentState(i);
-      if (statusFilter === "paid" && (isRefund(i) || !payment.hasPaid)) return false;
-      if (statusFilter === "pending" && (isRefund(i) || !payment.hasPending)) return false;
+      if (statusFilter === "paid" && !payment.hasPaid) return false;
+      if (statusFilter === "pending" && !payment.hasPending) return false;
 
       const purchaseDate = i.cartao_compras?.purchase_date as string | undefined;
       if (purchaseFrom && (!purchaseDate || purchaseDate < purchaseFrom)) return false;
@@ -508,8 +498,8 @@ function CartoesPage() {
       if (categoryFilter !== "all" && i.cartao_compras?.category_id !== categoryFilter) return false;
 
       const payment = getInstallmentPaymentState(i);
-      if (statusFilter === "paid" && (isRefund(i) || !payment.hasPaid)) return false;
-      if (statusFilter === "pending" && (isRefund(i) || !payment.hasPending)) return false;
+      if (statusFilter === "paid" && !payment.hasPaid) return false;
+      if (statusFilter === "pending" && !payment.hasPending) return false;
       if (!matchPerson(i.cartao_compras?.person ?? "")) return false;
 
       const purchaseDate = i.cartao_compras?.purchase_date as string | undefined;
@@ -545,8 +535,8 @@ function CartoesPage() {
       if (categoryFilter !== "all" && i.cartao_compras?.category_id !== categoryFilter) return false;
 
       const payment = getInstallmentPaymentState(i);
-      if (statusFilter === "paid" && (isRefund(i) || !payment.hasPaid)) return false;
-      if (statusFilter === "pending" && (isRefund(i) || !payment.hasPending)) return false;
+      if (statusFilter === "paid" && !payment.hasPaid) return false;
+      if (statusFilter === "pending" && !payment.hasPending) return false;
       if (!matchPerson(i.cartao_compras?.person ?? "")) return false;
 
       const purchaseDate = i.cartao_compras?.purchase_date as string | undefined;
@@ -581,8 +571,8 @@ function CartoesPage() {
       if (brandFilter !== "all" && i.cartao_compras?.brand !== brandFilter) return false;
 
       const payment = getInstallmentPaymentState(i);
-      if (statusFilter === "paid" && (isRefund(i) || !payment.hasPaid)) return false;
-      if (statusFilter === "pending" && (isRefund(i) || !payment.hasPending)) return false;
+      if (statusFilter === "paid" && !payment.hasPaid) return false;
+      if (statusFilter === "pending" && !payment.hasPending) return false;
       if (!matchPerson(i.cartao_compras?.person ?? "")) return false;
 
       const purchaseDate = i.cartao_compras?.purchase_date as string | undefined;
@@ -637,7 +627,7 @@ function CartoesPage() {
         let valueForRestante = refundOnly ? 0 : payment.remaining;
 
         if (isFam && (filter !== "all" || filter2 !== "all")) {
-          const parts = i.participacoes || [];
+          const parts = isRefund(i) ? [] : (i.participacoes || []);
           const paidByLorran = parts.filter((p: any) => normalizeName(p.person) === "lorran").reduce((s: number, p: any) => s + Number(p.amount), 0);
           const paidByTayane = parts.filter((p: any) => normalizeName(p.person) === "tayane").reduce((s: number, p: any) => s + Number(p.amount), 0);
 
@@ -648,12 +638,16 @@ function CartoesPage() {
                 ? "Tayane"
                 : "";
 
-          const quota = selectedPerson
-            ? responsibilityForPerson(i, selectedPerson)
-            : payment.total / 2;
+          const quota = isRefund(i)
+            ? 0
+            : selectedPerson
+              ? responsibilityForPerson(i, selectedPerson)
+              : payment.total / 2;
 
           if (refundOnly) {
-            // Mantém o estorno no total líquido da fatura, mas nunca no restante.
+            // O estorno permanece apenas como crédito negativo da fatura.
+            // Não entra como valor pago nem como responsabilidade individual.
+            valueForTotal = payment.total;
             valueForRestante = 0;
           } else if (filter === "lorran" || filter2 === "lorran") {
             const myPaid = paidByLorran;
