@@ -218,8 +218,10 @@ const getInstallmentPaymentState = (installment: any) => {
       total,
       paid: 0,
       remaining: 0,
-      hasPaid: isRefundConfirmed(installment),
-      hasPending: !isRefundConfirmed(installment),
+      // Estornos não são pagamentos. Mesmo depois da confirmação,
+      // continuam em aberto para não alterar os custos ao filtrar a fatura.
+      hasPaid: false,
+      hasPending: true,
     };
   }
 
@@ -239,8 +241,15 @@ const getInstallmentPaymentState = (installment: any) => {
 
 const getStatusFilteredAmount = (installment: any, statusFilter: "all" | "paid" | "pending") => {
   const payment = getInstallmentPaymentState(installment);
+
   if (statusFilter === "paid") return payment.paid;
-  if (statusFilter === "pending") return payment.remaining;
+
+  // Estornos continuam visíveis em “Em aberto” mesmo após a confirmação.
+  // O valor negativo precisa permanecer na exibição para não distorcer os custos.
+  if (statusFilter === "pending") {
+    return payment.total < 0 ? payment.total : payment.remaining;
+  }
+
   return payment.total;
 };
 
