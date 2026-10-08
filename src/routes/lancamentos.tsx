@@ -161,11 +161,37 @@ function LancamentosPage() {
   const personOptions = useMemo(() => {
     const dFilter = (t: any) => {
       const d = new Date(t.due_at + "T00:00:00");
-      return (selY === "all" || d.getFullYear() === selY) && (selM === "all" || d.getMonth() === selM);
+
+      if (selY !== "all" && d.getFullYear() !== selY) return false;
+      if (selM !== "all" && d.getMonth() !== selM) return false;
+      if (filter !== "all" && t.kind !== filter) return false;
+      if (statusFilter !== "all" && t.status !== statusFilter) return false;
+      if (fixedFilter === "fixed" && !t.is_fixed) return false;
+      if (fixedFilter === "variable" && t.is_fixed) return false;
+      if (sourceFilter === "card" && !t.card_installment_id) return false;
+      if (sourceFilter === "manual" && t.card_installment_id) return false;
+      if (categoryFilter !== "all" && t.category_id !== categoryFilter) return false;
+      if (search.trim() && !(t.description || "").toLowerCase().includes(search.toLowerCase())) return false;
+
+      return Boolean(t.person);
     };
+
     const names = new Set(tx.filter(dFilter).map((t: any) => t.person).filter(Boolean));
-    return Array.from(names).sort((a: any, b: any) => String(a).localeCompare(String(b), "pt-BR"));
-  }, [tx, selM, selY]);
+
+    return Array.from(names).sort((a: any, b: any) =>
+      String(a).localeCompare(String(b), "pt-BR"),
+    );
+  }, [
+    tx,
+    selM,
+    selY,
+    filter,
+    statusFilter,
+    fixedFilter,
+    sourceFilter,
+    categoryFilter,
+    search,
+  ]);
 
   const categoryOptions = useMemo(() => {
     const dFilter = (t: any) => {

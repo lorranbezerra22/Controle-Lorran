@@ -357,14 +357,45 @@ function CartoesPage() {
 
 
   const personOptions = useMemo(() => {
-    // Pessoas que aparecem nas compras desse mês/ano
+    // Exibe somente as pessoas presentes nos resultados dos demais filtros.
+    // Os próprios filtros de pessoa são ignorados aqui para não esconder
+    // outras opções ao adicionar uma segunda pessoa.
     const relevant = inst.filter((i: any) => {
       const d = new Date(i.due_at + "T00:00:00");
-      return d.getFullYear() === year && d.getMonth() === monthN - 1;
+      if (d.getFullYear() !== year || d.getMonth() !== monthN - 1) return false;
+      if (cardFilter !== "all" && i.card_id !== cardFilter) return false;
+      if (brandFilter !== "all" && i.cartao_compras?.brand !== brandFilter) return false;
+      if (categoryFilter !== "all" && i.cartao_compras?.category_id !== categoryFilter) return false;
+
+      const payment = getInstallmentPaymentState(i);
+      if (statusFilter === "paid" && !payment.hasPaid) return false;
+      if (statusFilter === "pending" && !payment.hasPending) return false;
+
+      const purchaseDate = i.cartao_compras?.purchase_date as string | undefined;
+      if (purchaseFrom && (!purchaseDate || purchaseDate < purchaseFrom)) return false;
+      if (purchaseTo && (!purchaseDate || purchaseDate > purchaseTo)) return false;
+
+      return Boolean(i.cartao_compras?.person);
     });
-    const names = new Set(relevant.map((i: any) => i.cartao_compras?.person).filter(Boolean));
-    return Array.from(names).sort((a: any, b: any) => String(a).localeCompare(String(b), "pt-BR"));
-  }, [inst, year, monthN]);
+
+    const names = new Set(
+      relevant.map((i: any) => i.cartao_compras?.person).filter(Boolean),
+    );
+
+    return Array.from(names).sort((a: any, b: any) =>
+      String(a).localeCompare(String(b), "pt-BR"),
+    );
+  }, [
+    inst,
+    year,
+    monthN,
+    cardFilter,
+    brandFilter,
+    categoryFilter,
+    statusFilter,
+    purchaseFrom,
+    purchaseTo,
+  ]);
 
   const cardOptions = useMemo(() => {
     const relevant = inst.filter((i: any) => {
