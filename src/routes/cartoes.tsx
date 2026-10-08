@@ -378,6 +378,79 @@ function CartoesPage() {
     return () => window.removeEventListener('open-partial-pay', handleOpen as any);
   }, []);
 
+  // Corrige dados antigos em que um estorno foi registrado como despesa
+  // do cartão. Isso evita que o valor seja considerado pago e que 50% seja
+  // debitado da conta de Lorran e 50% da conta de Tayane.
+  const refundRepairDone = useRef(false);
+
+  useEffect(() => {
+    if (refundRepairDone.current || inst.length === 0 || allTransactions.length === 0) {
+      return;
+    }
+
+    const invalidRefundPayments = inst.filter((installment: any) => {
+      if (!isRefund(installment)) return false;
+
+      return allTransactions.some(
+        (transaction: any) =>
+          transaction.card_installment_id === installment.id &&
+          transaction.kind === "expense",
+      );
+    });
+
+    if (invalidRefundPayments.length === 0) {
+      refundRepairDone.current = true;
+      return;
+    }
+
+    refundRepairDone.current = true;
+
+    const repairRefundPayments = async () => {
+      try {
+        for (const installment of invalidRefundPayments) {
+          // A exclusão da transação dispara a restauração automática
+          // do saldo da conta que havia sido debitada.
+          const { error: transactionError } = await supabase
+            .from("transacoes")
+            .delete()
+            .eq("card_installment_id", installment.id)
+            .eq("kind", "expense");
+
+          if (transactionError) throw transactionError;
+
+          // Estorno nunca gera participação de pagamento. Em Família,
+          // removemos o registro para não aumentar artificialmente a cota
+          // paga de Lorran ou Tayane.
+          const { error: participationError } = await supabase
+            .from("participacoes_parcelas")
+            .delete()
+            .eq("installment_id", installment.id);
+
+          if (participationError) throw participationError;
+
+          const { error: installmentError } = await supabase
+            .from("cartao_parcelas")
+            .update({
+              status: "pending",
+              paid_amount: 0,
+            } as any)
+            .eq("id", installment.id);
+
+          if (installmentError) throw installmentError;
+        }
+
+        invalidate("installments");
+        invalidate("accounts");
+        invalidate("transactions");
+        toast.success("Estorno corrigido. O saldo das contas foi restaurado.");
+      } catch (error: any) {
+        refundRepairDone.current = false;
+        toast.error(error.message || "Não foi possível restaurar o saldo do estorno.");
+      }
+    };
+
+    void repairRefundPayments();
+  }, [inst, allTransactions, invalidate]);
 
   const personOptions = useMemo(() => {
     // Exibe somente as pessoas presentes nos resultados dos demais filtros.
@@ -803,6 +876,8 @@ function CartoesPage() {
         // Confirmar o recebimento é somente um marcador operacional:
         // não altera fatura, categoria, contas ou participações.
         if (isEstorno) {
+          // Estorno não é pagamento da parcela e nunca pode gerar
+          // participação para Lorran, Tayane ou Família.
           const { error: refundParticipationError } = await supabase
             .from("participacoes_parcelas")
             .delete()
@@ -824,8 +899,8 @@ function CartoesPage() {
 
         const installmentUpdate = isEstorno
           ? {
-              // O estorno já foi considerado no lançamento negativo.
-              // A confirmação não deve alterar status, fatura, categoria ou pago.
+              // Estorno nunca é pagamento. Ele permanece pendente apenas
+              // para fins de exibição e não altera a cota de ninguém.
               status: "pending",
               paid_amount: 0,
               paid_by: null,
