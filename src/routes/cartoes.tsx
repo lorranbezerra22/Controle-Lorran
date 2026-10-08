@@ -277,15 +277,31 @@ const getInstallmentPaymentState = (installment: any) => {
   };
 };
 
+const matchesStatusFilter = (
+  installment: any,
+  statusFilter: "all" | "paid" | "pending",
+) => {
+  // O estorno precisa continuar visível nos dois filtros:
+  // "Pagos" representa a confirmação do crédito e "Em aberto"
+  // representa o valor negativo ainda abatendo a fatura.
+  if (isRefund(installment)) return true;
+
+  const payment = getInstallmentPaymentState(installment);
+
+  if (statusFilter === "paid") return payment.hasPaid;
+  if (statusFilter === "pending") return payment.hasPending;
+  return true;
+};
+
 const getStatusFilteredAmount = (installment: any, statusFilter: "all" | "paid" | "pending") => {
   const payment = getInstallmentPaymentState(installment);
 
-  // Estornos nunca são pagamentos. Eles aparecem somente no valor geral
-  // da fatura, mantendo o valor negativo que abate o total do cartão.
+  if (isRefund(installment)) {
+    return payment.total;
+  }
+
   if (statusFilter === "paid" || statusFilter === "pending") {
-    return isRefund(installment) ? 0 : (
-      statusFilter === "paid" ? payment.paid : payment.remaining
-    );
+    return statusFilter === "paid" ? payment.paid : payment.remaining;
   }
 
   return payment.total;
@@ -377,8 +393,7 @@ function CartoesPage() {
       if (categoryFilter !== "all" && i.cartao_compras?.category_id !== categoryFilter) return false;
       const payment = getInstallmentPaymentState(i);
 
-      if (statusFilter === "paid" && !payment.hasPaid) return false;
-      if (statusFilter === "pending" && !payment.hasPending) return false;
+      if (!matchesStatusFilter(i, statusFilter)) return false;
       if (!matchPerson(i.cartao_compras?.person ?? "")) return false;
       const pd = i.cartao_compras?.purchase_date as string | undefined;
       if (purchaseFrom && (!pd || pd < purchaseFrom)) return false;
@@ -490,8 +505,7 @@ function CartoesPage() {
       if (categoryFilter !== "all" && i.cartao_compras?.category_id !== categoryFilter) return false;
 
       const payment = getInstallmentPaymentState(i);
-      if (statusFilter === "paid" && !payment.hasPaid) return false;
-      if (statusFilter === "pending" && !payment.hasPending) return false;
+      if (!matchesStatusFilter(i, statusFilter)) return false;
 
       const purchaseDate = i.cartao_compras?.purchase_date as string | undefined;
       if (purchaseFrom && (!purchaseDate || purchaseDate < purchaseFrom)) return false;
@@ -527,8 +541,7 @@ function CartoesPage() {
       if (categoryFilter !== "all" && i.cartao_compras?.category_id !== categoryFilter) return false;
 
       const payment = getInstallmentPaymentState(i);
-      if (statusFilter === "paid" && !payment.hasPaid) return false;
-      if (statusFilter === "pending" && !payment.hasPending) return false;
+      if (!matchesStatusFilter(i, statusFilter)) return false;
       if (!matchPerson(i.cartao_compras?.person ?? "")) return false;
 
       const purchaseDate = i.cartao_compras?.purchase_date as string | undefined;
@@ -564,8 +577,7 @@ function CartoesPage() {
       if (categoryFilter !== "all" && i.cartao_compras?.category_id !== categoryFilter) return false;
 
       const payment = getInstallmentPaymentState(i);
-      if (statusFilter === "paid" && !payment.hasPaid) return false;
-      if (statusFilter === "pending" && !payment.hasPending) return false;
+      if (!matchesStatusFilter(i, statusFilter)) return false;
       if (!matchPerson(i.cartao_compras?.person ?? "")) return false;
 
       const purchaseDate = i.cartao_compras?.purchase_date as string | undefined;
@@ -600,8 +612,7 @@ function CartoesPage() {
       if (brandFilter !== "all" && i.cartao_compras?.brand !== brandFilter) return false;
 
       const payment = getInstallmentPaymentState(i);
-      if (statusFilter === "paid" && !payment.hasPaid) return false;
-      if (statusFilter === "pending" && !payment.hasPending) return false;
+      if (!matchesStatusFilter(i, statusFilter)) return false;
       if (!matchPerson(i.cartao_compras?.person ?? "")) return false;
 
       const purchaseDate = i.cartao_compras?.purchase_date as string | undefined;
