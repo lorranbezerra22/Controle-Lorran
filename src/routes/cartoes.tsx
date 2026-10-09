@@ -1666,126 +1666,51 @@ function CartoesPage() {
                 // Estornos são créditos da fatura. Eles não geram transações
                 // próprias, mas precisam reduzir os débitos positivos antes
                 // que o pagamento em lote crie as despesas das contas.
-                const pending = monthInst.filter(
-                  (i: any) =>
-                    Number(i.amount || 0) >= 0 &&
-                    !isRefund(i) &&
-                    getInstallmentPaymentState(i).hasPending,
-                );
+                // O restante de cada parcela já considera os estornos
+                // lançados na mesma fatura/categoria. Não subtraia o crédito
+                // novamente no pagamento em lote, pois isso causa pagamento
+                // acima do saldo e pode deixar a fatura negativa.
+                const pending = monthInst
+                  .filter(
+                    (i: any) =>
+                      Number(i.amount || 0) >= 0 &&
+                      !isRefund(i) &&
+                      getEffectiveInstallmentRemaining(i, inst) > 0.01,
+                  )
+                  .map((i: any) => ({
+                    installment: i,
+                    remaining: getEffectiveInstallmentRemaining(i, inst),
+                  }));
 
                 if (pending.length === 0) return;
 
-                const refundCredit = inst
-                  .filter((i: any) => {
-                    const d = new Date(i.due_at + "T00:00:00");
-
-                    if (
-                      d.getFullYear() !== year ||
-                      d.getMonth() !== monthN - 1
-                    ) {
-                      return false;
-                    }
-
-                    if (
-                      Number(i.amount || 0) >= 0 ||
-                      !isRefund(i) ||
-                      !isRefundConfirmed(i)
-                    ) {
-                      return false;
-                    }
-
-                    if (cardFilter !== "all" && i.card_id !== cardFilter) {
-                      return false;
-                    }
-
-                    if (
-                      brandFilter !== "all" &&
-                      i.cartao_compras?.brand !== brandFilter
-                    ) {
-                      return false;
-                    }
-
-                    if (
-                      categoryFilter !== "all" &&
-                      i.cartao_compras?.category_id !== categoryFilter
-                    ) {
-                      return false;
-                    }
-
-                    if (!matchPerson(i.cartao_compras?.person ?? "")) {
-                      return false;
-                    }
-
-                    const purchaseDate = i.cartao_compras
-                      ?.purchase_date as string | undefined;
-
-                    if (
-                      purchaseFrom &&
-                      (!purchaseDate || purchaseDate < purchaseFrom)
-                    ) {
-                      return false;
-                    }
-
-                    if (
-                      purchaseTo &&
-                      (!purchaseDate || purchaseDate > purchaseTo)
-                    ) {
-                      return false;
-                    }
-
-                    return true;
-                  })
-                  .reduce(
-                    (sum: number, i: any) =>
-                      sum + Math.abs(Number(i.amount || 0)),
-                    0,
-                  );
-
                 const netPending = pending.reduce(
-                  (sum: number, i: any) => sum + Number(i.amount || 0),
+                  (sum: number, item: any) => sum + item.remaining,
                   0,
                 );
 
-                const netAmount = Math.max(0, netPending - refundCredit);
-
                 if (
                   !confirm(
-                    `Pagar ${pending.length} parcelas deste mês? Valor bruto: ${brl(
+                    `Pagar ${pending.length} parcelas deste mês? Valor líquido debitado das contas: ${brl(
                       netPending,
-                    )}. Estornos aplicados: ${brl(
-                      refundCredit,
-                    )}. Valor líquido debitado das contas: ${brl(netAmount)}.`,
+                    )}.`,
                   )
                 ) {
                   return;
                 }
 
-                let remainingRefund = refundCredit;
                 let successCount = 0;
 
-                for (const i of pending) {
+                for (const item of pending) {
                   try {
-                    const installmentAmount = Number(i.amount || 0);
-                    const creditApplied = Math.min(
-                      installmentAmount,
-                      remainingRefund,
-                    );
-                    const amountToDebit = Number(
-                      (installmentAmount - creditApplied).toFixed(2),
-                    );
-
                     await togglePaid(
-                      i,
+                      item.installment,
                       undefined,
                       undefined,
                       undefined,
                       true,
-                      amountToDebit,
+                      item.remaining,
                       true,
-                    );
-
-                    remainingRefund = Number(
-                      (remainingRefund - creditApplied).toFixed(2),
                     );
                     successCount++;
                   } catch (e) {
