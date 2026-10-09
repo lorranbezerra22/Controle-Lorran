@@ -3086,36 +3086,114 @@ function PurchaseForm({ cards, cats, onDone }: any) {
         <div className="space-y-1.5"><Label>Parcelas</Label><Input type="number" min={1} max={36} value={form.installments_count} onChange={e => setForm({ ...form, installments_count: Number(e.target.value) })} required /></div>
       </div>
 
-      {Number(form.total_amount) < 0 && (
-        <div className="space-y-3 rounded-xl border border-success/30 bg-success/5 p-3">
+      {refundPreview && (
+        <div className="space-y-4 rounded-xl border border-success/30 bg-success/5 p-4">
           <div className="flex items-start justify-between gap-3">
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-semibold text-success">Crédito de estorno</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Este valor será abatido da fatura, sem gerar despesa ou alterar o saldo das contas.
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                O valor será abatido automaticamente da fatura de{" "}
+                <strong className="text-foreground">{refundPreview.invoiceLabel}</strong>,
+                sem gerar despesa ou alterar o saldo das contas.
               </p>
             </div>
-            <strong className="text-lg tabular-nums text-success">
+            <strong className="shrink-0 text-lg tabular-nums text-success">
               {brl(Math.abs(Number(form.total_amount) || 0))}
             </strong>
           </div>
 
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-[11px] text-muted-foreground">
-              <span>Estornado</span>
+          <div className="space-y-2 rounded-lg border border-success/20 bg-background/40 p-3">
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>Crédito aplicado</span>
               <span className="font-semibold text-success">
                 {brl(Math.abs(Number(form.total_amount) || 0))}
               </span>
             </div>
             <Progress value={100} className="h-2 [&>div]:bg-success" />
-            <div className="flex justify-between text-[11px] text-muted-foreground">
-              <span>Após abater este estorno</span>
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>Saldo após o estorno</span>
               <span className="font-semibold text-success">
-                {refundPreview
+                {form.category_id
                   ? brl(Math.max(0, refundPreview.remaining))
-                  : "Selecione uma categoria"}
+                  : "Escolha uma categoria"}
               </span>
             </div>
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-warning/35 bg-warning/5 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-warning">
+                  Onde aplicar o estorno?
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  Escolha uma categoria da fatura. A lista já considera a pessoa selecionada.
+                </p>
+              </div>
+              <strong className="shrink-0 text-base tabular-nums text-success">
+                {brl(Math.abs(Number(form.total_amount) || 0))}
+              </strong>
+            </div>
+
+            {refundCategoryOptions.length === 0 ? (
+              <p className="rounded-lg border border-warning/20 bg-background/40 p-3 text-xs text-warning">
+                Ainda não há categorias com valores nessa fatura para abater.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {refundCategoryOptions.map((category: any) => {
+                  const selected = form.category_id === category.id;
+                  const remaining = category.balance - Math.abs(Number(form.total_amount));
+
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() =>
+                        setForm((current) => ({
+                          ...current,
+                          category_id: category.id,
+                        }))
+                      }
+                      className={`rounded-full border px-2.5 py-1 text-left text-xs transition-colors ${
+                        selected
+                          ? "border-primary bg-primary/15 text-primary"
+                          : "border-border bg-background hover:bg-muted"
+                      }`}
+                    >
+                      {category.icon ? `${category.icon} ` : ""}
+                      {category.name} ·{" "}
+                      <span className="tabular-nums">{brl(category.balance)}</span>
+                      <span
+                        className={`tabular-nums ${
+                          remaining < 0 ? "text-destructive" : "text-success"
+                        }`}
+                      >
+                        {" → "}
+                        {brl(remaining)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {form.category_id && (
+              <div className="rounded-lg border border-border/60 bg-background/50 p-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Categoria selecionada</span>
+                  <strong className="text-foreground">
+                    {cats.find((category: any) => category.id === form.category_id)?.name || "Categoria"}
+                  </strong>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-muted-foreground">Após abater este estorno</span>
+                  <strong className="tabular-nums text-success">
+                    {brl(refundPreview.remaining)}
+                  </strong>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -3257,102 +3335,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
         </div>
       )}
 
-      {refundPreview && (
-        <div className="space-y-3 rounded-xl border border-warning/40 bg-warning/5 p-3 text-xs">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="font-semibold text-warning">Escolha onde aplicar o estorno</p>
-              <p className="mt-1 text-muted-foreground">
-                Categorias da fatura de {refundPreview.invoiceLabel}, considerando a pessoa selecionada.
-              </p>
-            </div>
-            <strong className="shrink-0 text-base tabular-nums text-success">
-              {brl(Math.abs(Number(form.total_amount)))}
-            </strong>
-          </div>
 
-          {refundCategoryOptions.length === 0 ? (
-            <p className="text-warning">
-              Ainda não há categorias com valores nessa fatura para abater.
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {refundCategoryOptions.map((category: any) => {
-                const selected = form.category_id === category.id;
-                const remaining = category.balance - Math.abs(Number(form.total_amount));
-
-                return (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() =>
-                      setForm((current) => ({
-                        ...current,
-                        category_id: category.id,
-                      }))
-                    }
-                    className={`rounded-md border px-2 py-1 text-left transition-colors ${
-                      selected
-                        ? "border-primary bg-primary/15 text-primary"
-                        : "border-border bg-background hover:bg-muted"
-                    }`}
-                  >
-                    {category.icon ? `${category.icon} ` : ""}
-                    {category.name} ·{" "}
-                    <span className="tabular-nums">{brl(category.balance)}</span>
-                    <span
-                      className={`tabular-nums ${
-                        remaining < 0 ? "text-destructive" : "text-success"
-                      }`}
-                    >
-                      {" → "}
-                      {brl(remaining)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {form.category_id && (
-            <div className="space-y-2 rounded-lg border border-border/60 bg-background/40 p-2.5">
-              <div className="flex items-center justify-between text-muted-foreground">
-                <span>Valor atual da categoria</span>
-                <strong className="tabular-nums text-foreground">
-                  {brl(refundPreview.categoryTotal)}
-                </strong>
-              </div>
-
-              <Progress
-                value={
-                  refundPreview.categoryTotal > 0
-                    ? Math.min(
-                        100,
-                        (Math.abs(Number(form.total_amount)) /
-                          refundPreview.categoryTotal) *
-                          100,
-                      )
-                    : 0
-                }
-                className="h-2 [&>div]:bg-success"
-              />
-
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Após abater o estorno</span>
-                <strong
-                  className={`tabular-nums ${
-                    refundPreview.remaining < 0
-                      ? "text-destructive"
-                      : "text-success"
-                  }`}
-                >
-                  {brl(refundPreview.remaining)}
-                </strong>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {(() => {
         const card = cards.find((c: any) => c.id === form.card_id);
