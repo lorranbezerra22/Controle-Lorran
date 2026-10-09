@@ -307,6 +307,73 @@ const getStatusFilteredAmount = (installment: any, statusFilter: "all" | "paid" 
   return payment.total;
 };
 
+const getRefundCreditForInstallment = (
+  installment: any,
+  installments: any[],
+) => {
+  if (!installment || isRefund(installment)) return 0;
+
+  const dueMonth = String(installment.due_at || "").slice(0, 7);
+  const person = normalizeName(installment.cartao_compras?.person || "");
+  const categoryId = installment.cartao_compras?.category_id;
+
+  const sameInvoice = installments.filter((item: any) => {
+    if (item.card_id !== installment.card_id) return false;
+    if (String(item.due_at || "").slice(0, 7) !== dueMonth) return false;
+    if (normalizeName(item.cartao_compras?.person || "") !== person) return false;
+    if ((item.cartao_compras?.category_id || null) !== (categoryId || null)) return false;
+    return true;
+  });
+
+  const refunds = sameInvoice
+    .filter((item: any) => isRefund(item))
+    .reduce((sum: number, item: any) => sum + Math.abs(Number(item.amount || 0)), 0);
+
+  if (refunds <= 0) return 0;
+
+  const pendingPositive = sameInvoice
+    .filter(
+      (item: any) =>
+        !isRefund(item) &&
+        getInstallmentPaymentState(item).hasPending,
+    )
+    .sort((a: any, b: any) => {
+      const dateA = a.cartao_compras?.purchase_date || a.due_at || "";
+      const dateB = b.cartao_compras?.purchase_date || b.due_at || "";
+      return dateA.localeCompare(dateB) ||
+        Number(a.installment_number || 0) - Number(b.installment_number || 0);
+    });
+
+  let remainingCredit = refunds;
+
+  for (const item of pendingPositive) {
+    const remaining = getInstallmentPaymentState(item).remaining;
+    const applied = Math.min(remaining, remainingCredit);
+
+    if (item.id === installment.id) return Number(applied.toFixed(2));
+
+    remainingCredit = Number((remainingCredit - applied).toFixed(2));
+    if (remainingCredit <= 0.01) break;
+  }
+
+  return 0;
+};
+
+const getEffectiveInstallmentRemaining = (
+  installment: any,
+  installments: any[],
+) => {
+  if (isRefund(installment)) return 0;
+
+  const payment = getInstallmentPaymentState(installment);
+  const credit = getRefundCreditForInstallment(installment, installments);
+
+  return Math.max(
+    0,
+    Number((payment.remaining - credit).toFixed(2)),
+  );
+};
+
 function CartoesPage() {
   const { data: cards = [] } = useCards();
   const { data: inst = [] } = useInstallments();
@@ -764,6 +831,15 @@ function CartoesPage() {
 
 
   const getPaymentSplits = (person: string, amount: number, paidByOverride?: string | null) => buildPaymentSplits(accounts, person, amount, paidByOverride);
+
+  const openPaymentForInstallment = (installment: any) => {
+    setPartialPayOpen(withEffectiveRemaining(installment));
+  };
+
+  const withEffectiveRemaining = (installment: any) => ({
+    ...installment,
+    _effectiveRemaining: getEffectiveInstallmentRemaining(installment, inst),
+  });
 
   const togglePaid = async (
     i: any,
@@ -1816,7 +1892,7 @@ function CartoesPage() {
                           // Todas as parcelas usam o mesmo menu de ação.
                           // O histórico também exibe as opções de pagamento,
                           // ajuste de responsabilidade e cancelamento quando aplicável.
-                          setShowProgressInfo(i);
+                          setShowProgressInfo(withEffectiveRemaining(i));
                         }}
                         onContextMenu={(e) => {
                           e.preventDefault();
@@ -1884,13 +1960,14 @@ function CartoesPage() {
               key={`${partialPayOpen.id}-${partialPayOpen._paymentMode || (partialPayOpen._quickPay ? "total" : partialPayOpen._anticipateAmount !== undefined ? "anticipate" : "menu")}`}
               installment={partialPayOpen}
               initialAmount={partialPayOpen?._anticipateAmount}
-              onFullPay={async (notes, paidBy, accountsOverride, creditToAccount) => {
+              onFullPay={async (notes, paidBy, accountsOverride, creditToAccount, amountOverride) => {
                 await togglePaid(
                   partialPayOpen,
                   notes,
                   paidBy,
                   accountsOverride,
                   creditToAccount,
+                  amountOverride,
                 );
                 setPartialPayOpen(null);
                 setShowProgressInfo(null);
@@ -2024,7 +2101,9 @@ function CartoesPage() {
                       );
                   const remaining = isEstornoInfo
                     ? 0
-                    : Math.max(0, Number((Math.abs(total) - paid).toFixed(2)));
+                    : showProgressInfo._effectiveRemaining !== undefined
+                      ? Number(showProgressInfo._effectiveRemaining)
+                      : Math.max(0, Number((Math.abs(total) - paid).toFixed(2)));
                   const progress = isEstornoInfo
                     ? (estornoPaid ? 100 : 0)
                     : (total > 0 ? Math.min(100, (paid / total) * 100) : 0);
@@ -4166,6 +4245,7 @@ function AnticipatePayForm({
       accountTayaneId?: string | null;
     },
     creditToAccount?: boolean,
+    amountOverride?: number,
   ) => void;
   onDone: () => void;
   onBackToHistory?: () => void;
@@ -4200,7 +4280,9 @@ function AnticipatePayForm({
   const isRefund = installmentAmount < 0;
   const currentRemaining = isRefund
     ? 0
-    : Math.max(0, installmentAmount - Number(installment.paid_amount || 0));
+    : installment._effectiveRemaining !== undefined
+      ? Number(installment._effectiveRemaining)
+      : Math.max(0, installmentAmount - Number(installment.paid_amount || 0));
   const defaultAmount = isRefund ? Math.abs(installmentAmount) : currentRemaining;
 
   const [payAmount, setPayAmount] = useState(
@@ -4297,8 +4379,14 @@ function AnticipatePayForm({
       return toast.error(`O valor máximo restante da parcela é ${brl(totalRemaining)}.`);
     }
 
-    if (Math.abs(amountToPay - originalAmount) < 0.01 && !isFamilia) {
-      onFullPay(notes, overrideActive ? paidBy : null, accountsOverride);
+    if (Math.abs(amountToPay - currentRemaining) < 0.01 && !isFamilia) {
+      onFullPay(
+        notes,
+        overrideActive ? paidBy : null,
+        accountsOverride,
+        true,
+        currentRemaining,
+      );
       return;
     }
 
@@ -4611,7 +4699,16 @@ function AnticipatePayForm({
 
   if (payMode === "total") {
     return (
-      <form onSubmit={(e) => { e.preventDefault(); onFullPay(notes, overrideActive ? paidBy : null, { accountId: selectedAccountId, accountTayaneId: selectedAccountTayaneId }); }} className="space-y-4">
+      <form onSubmit={(e) => {
+      e.preventDefault();
+      onFullPay(
+        notes,
+        overrideActive ? paidBy : null,
+        { accountId: selectedAccountId, accountTayaneId: selectedAccountTayaneId },
+        true,
+        currentRemaining,
+      );
+    }} className="space-y-4">
         <div className="bg-muted/50 p-3 rounded-lg border border-border space-y-1">
           <div className="text-xs text-muted-foreground uppercase">Pagamento Total</div>
           <div className="text-lg font-bold">{brl(Number(installment.amount || 0))}</div>
@@ -4716,7 +4813,9 @@ function AnticipatePayForm({
     );
   }
 
-  const totalRemaining = Math.max(0, Number(installment.amount) - Number(installment.paid_amount || 0));
+  const totalRemaining = installment._effectiveRemaining !== undefined
+    ? Number(installment._effectiveRemaining)
+    : Math.max(0, Number(installment.amount) - Number(installment.paid_amount || 0));
   const currentPersonParticipation = (installment.participacoes || []).find(
     (participation: any) =>
       normalizeName(participation.person) === normalizeName(paidBy),
