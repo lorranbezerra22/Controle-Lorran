@@ -1402,89 +1402,117 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
 
 
 function computePaidRest(targetName: string, monthTx: any[], monthInst: any[], adjMap: any) {
-  const norm = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const norm = (s: string) =>
+    (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   const isTarget = (p?: string | null) => norm(p || "") === norm(targetName);
   const isNameFamilia = norm(targetName) === "familia";
   const splitsFamilia = norm(targetName) === "lorran" || norm(targetName) === "tayane";
-  let rest = 0;
-  let paidAmt = 0;
 
-  monthTx.forEach(t => {
-    if (t.kind !== "expense" || t.card_installment_id || t.category_id === "0494a63e-6737-4a3c-8778-67ce5f96a0a1" || t.category_id === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a") return;
-    const shares = effectiveShares(t, adjMap);
-    shares.forEach(sh => {
-      const itemPerson = (sh.person || "").trim();
-      const isItemFamilia = norm(itemPerson) === "familia";
-      let myShare = 0;
-      if (isNameFamilia) {
-        if (isItemFamilia) myShare = sh.amount;
-      } else {
-        const isItemMe = isTarget(itemPerson);
-        if (isItemMe) myShare = sh.amount;
-        else if (isItemFamilia && splitsFamilia) myShare = sh.amount / 2;
-      }
-      if (myShare === 0) return;
-      if (t.status === "paid") paidAmt += myShare;
-      else rest += myShare;
-    });
-  });
+  // Mantemos os valores brutos separados dos créditos de estorno.
+  // Assim, um pagamento feito antes do reembolso não aparece maior que
+  // o valor líquido devido.
+  let totalDevido = 0;
+  let totalPago = 0;
+  let totalEstornado = 0;
 
-  monthInst.forEach(i => {
-    if (i.category_id === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a") return;
-    const v = Number(i.amount);
+  const addCharge = (amount: number, paid: number) => {
+    const value = Math.max(0, Number(amount) || 0);
+    if (value <= 0) return;
 
-    // O estorno negativo é um crédito da fatura e deve reduzir
-    // imediatamente o restante, mesmo enquanto estiver pendente.
-    // Ele nunca entra como valor pago e não gera débito em conta.
-    if (v < 0) {
-      const itemPerson = (i.cartao_compras?.person || "").trim();
-      const isItemFamilia = norm(itemPerson) === "familia";
-      const credit = Math.abs(v);
+    totalDevido += value;
+    totalPago += Math.min(value, Math.max(0, Number(paid) || 0));
+  };
 
-      if (isNameFamilia && isItemFamilia) {
-        rest -= credit;
-      } else if (!isNameFamilia && isItemFamilia && splitsFamilia) {
-        rest -= credit / 2;
-      } else if (!isNameFamilia && isTarget(itemPerson)) {
-        rest -= credit;
-      }
+  const addRefund = (amount: number) => {
+    const value = Math.abs(Number(amount) || 0);
+    if (value > 0) totalEstornado += value;
+  };
 
+  monthTx.forEach((t: any) => {
+    if (
+      t.kind !== "expense" ||
+      t.card_installment_id ||
+      t.category_id === "0494a63e-6737-4a3c-8778-67ce5f96a0a1" ||
+      t.category_id === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a"
+    ) {
       return;
     }
 
-    const itemPerson = (i.cartao_compras?.person || "").trim();
+    effectiveShares(t, adjMap).forEach((share) => {
+      const itemPerson = (share.person || "").trim();
+      const isItemFamilia = norm(itemPerson) === "familia";
+      let myShare = 0;
+
+      if (isNameFamilia) {
+        if (isItemFamilia) myShare = Number(share.amount) || 0;
+      } else if (isTarget(itemPerson)) {
+        myShare = Number(share.amount) || 0;
+      } else if (isItemFamilia && splitsFamilia) {
+        myShare = (Number(share.amount) || 0) / 2;
+      }
+
+      if (myShare < 0) {
+        addRefund(myShare);
+      } else if (myShare > 0) {
+        addCharge(myShare, t.status === "paid" ? myShare : 0);
+      }
+    });
+  });
+
+  monthInst.forEach((installment: any) => {
+    if (installment.category_id === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a") return;
+
+    const amount = Number(installment.amount) || 0;
+    const itemPerson = (installment.cartao_compras?.person || "").trim();
     const isItemFamilia = norm(itemPerson) === "familia";
+
+    if (amount < 0) {
+      if (
+        (isNameFamilia && isItemFamilia) ||
+        (!isNameFamilia && isTarget(itemPerson)) ||
+        (!isNameFamilia && isItemFamilia && splitsFamilia)
+      ) {
+        addRefund(isItemFamilia && splitsFamilia && !isNameFamilia ? amount / 2 : amount);
+      }
+      return;
+    }
+
     let factor = 0;
     if (isNameFamilia) {
       if (isItemFamilia) factor = 1;
-    } else {
-      const isItemMe = isTarget(itemPerson);
-      if (isItemMe) factor = 1;
-      else if (isItemFamilia && splitsFamilia) factor = 0.5;
+    } else if (isTarget(itemPerson)) {
+      factor = 1;
+    } else if (isItemFamilia && splitsFamilia) {
+      factor = 0.5;
     }
+
     if (factor === 0) return;
 
-    if (i.status === "paid") {
-      paidAmt += v * factor;
-    } else {
-      // Usar nova tabela de participações se disponível, fallback para paid_amount legado
-      const parts = i.participacoes || [];
-      const myPaid = parts.filter((p: any) => isTarget(p.person) && p.status === "paid").reduce((s: number, p: any) => s + Number(p.amount), 0);
+    const quota = amount * factor;
+    const parts = installment.participacoes || [];
+    const myPaid = parts
+      .filter((part: any) => isTarget(part.person) && part.status === "paid")
+      .reduce((sum: number, part: any) => sum + Number(part.amount || 0), 0);
 
-      // Se for família, e estamos olhando Lorran/Tayane, eles podem ter antecipado a parte deles
-      if (isItemFamilia && splitsFamilia && myPaid > 0) {
-        paidAmt += myPaid;
-        rest += (v * 0.5) - myPaid;
-      } else {
-        // Lógica legada ou fallback
-        const paid = Number(i.paid_amount || 0);
-        paidAmt += paid * factor;
-        rest += (v - paid) * factor;
-      }
-    }
+    const paid = installment.status === "paid"
+      ? quota
+      : isItemFamilia && splitsFamilia && myPaid > 0
+        ? myPaid
+        : Number(installment.paid_amount || 0) * factor;
+
+    addCharge(quota, paid);
   });
 
-  return { totalPago: paidAmt, totalRestante: Math.max(0, rest) };
+  // O estorno abate primeiro o valor que já foi pago. Se o pagamento
+  // ultrapassar o valor líquido, o painel mostra apenas o valor devido.
+  const valorLiquido = Math.max(0, totalDevido - totalEstornado);
+  const totalPagoExibido = Math.min(totalPago, valorLiquido);
+  const totalRestante = Math.max(0, valorLiquido - totalPago);
+
+  return {
+    totalPago: totalPagoExibido,
+    totalRestante,
+  };
 }
 
 function PersonCard({ name, value, monthInst, monthTx, adjMap, expanded = true, onToggle }: { name: string; value: number; monthInst: any[]; monthTx: any[]; adjMap: any; expanded?: boolean; onToggle?: () => void }) {
