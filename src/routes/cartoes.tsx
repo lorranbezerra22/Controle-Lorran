@@ -723,11 +723,6 @@ function CartoesPage() {
       // positivas é reduzido pelo crédito somente no pagamento da fatura.
       const refundOnly = isRefund(i);
 
-      if (refundOnly) {
-        const refundAmount = Math.abs(Number(i.amount || 0));
-        refundCredits[effectiveCardId] = (refundCredits[effectiveCardId] || 0) + refundAmount;
-      }
-
       const person = (i.cartao_compras?.person || "").toLowerCase().trim();
       const filter = personFilter !== "all" ? personFilter.toLowerCase().trim() : "all";
       const filter2 = personFilter2 !== "all" ? personFilter2.toLowerCase().trim() : "all";
@@ -737,8 +732,14 @@ function CartoesPage() {
       const matchesFilter = filter === "all" || person === filter || (isFam && filter === "lorran") || person === filter2 || (isFam && filter2 === "lorran") || (isFam && (filter === "tayane" || filter2 === "tayane"));
 
       if (matchesFilter) {
-        let valueForTotal = payment.total;
+        let valueForTotal = refundOnly ? 0 : payment.total;
         let valueForRestante = refundOnly ? 0 : payment.remaining;
+
+        if (refundOnly) {
+          const refundAmount = Math.abs(Number(i.amount || 0));
+          refundCredits[effectiveCardId] =
+            (refundCredits[effectiveCardId] || 0) + refundAmount;
+        }
 
         if (isFam && (filter !== "all" || filter2 !== "all")) {
           const parts = isRefund(i) ? [] : (i.participacoes || []);
@@ -759,9 +760,9 @@ function CartoesPage() {
               : payment.total / 2;
 
           if (refundOnly) {
-            // O estorno permanece apenas como crédito negativo da fatura.
-            // Não entra como valor pago nem como responsabilidade individual.
-            valueForTotal = payment.total;
+            // O estorno é aplicado como crédito, sem criar uma despesa
+            // nem transformar o total da fatura em valor negativo.
+            valueForTotal = 0;
             valueForRestante = 0;
           } else if (filter === "lorran" || filter2 === "lorran") {
             const myPaid = paidByLorran;
@@ -817,10 +818,14 @@ function CartoesPage() {
       const cardTotal = map[cardId];
       if (!cardTotal) return;
 
+      // O crédito nunca pode deixar a fatura negativa. Se a compra já foi
+      // paga, ele apenas reduz o valor líquido exibido da fatura.
+      cardTotal.fatura = Math.max(0, cardTotal.fatura - credit);
       cardTotal.restante = Math.max(0, cardTotal.restante - credit);
 
       Object.entries(cardTotal.brandTotals).forEach(([brand, brandTotal]) => {
         const brandCredit = refundBrandCredits[`${cardId}:${brand}`] || 0;
+        brandTotal.fatura = Math.max(0, brandTotal.fatura - brandCredit);
         brandTotal.restante = Math.max(0, brandTotal.restante - brandCredit);
       });
     });
@@ -1720,9 +1725,7 @@ function CartoesPage() {
 
                 if (successCount > 0) {
                   toast.success(
-                    `${successCount} parcelas pagas. Estornos de ${brl(
-                      refundCredit,
-                    )} aplicados ao valor da fatura.`,
+                    `${successCount} parcelas pagas. Os créditos de estorno foram aplicados ao valor líquido da fatura.`,
                   );
                   invalidate("installments");
                   invalidate("accounts");
