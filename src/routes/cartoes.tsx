@@ -3057,7 +3057,9 @@ function PurchaseForm({ cards, cats, onDone }: any) {
             <div className="flex justify-between text-[11px] text-muted-foreground">
               <span>Após abater este estorno</span>
               <span className="font-semibold text-success">
-                {brl(Math.max(0, refundPreview.remaining))}
+                {refundPreview
+                  ? brl(Math.max(0, refundPreview.remaining))
+                  : "Selecione uma categoria"}
               </span>
             </div>
           </div>
