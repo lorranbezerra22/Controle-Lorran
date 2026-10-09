@@ -2819,7 +2819,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
 
   const refundPreview = useMemo(() => {
     const refundAmount = Math.abs(Number(form.total_amount) || 0);
-    if (Number(form.total_amount) >= 0 || !form.category_id || refundAmount <= 0) {
+    if (Number(form.total_amount) >= 0 || refundAmount <= 0) {
       return null;
     }
 
@@ -2883,6 +2883,60 @@ function PurchaseForm({ cards, cats, onDone }: any) {
     form.category_id,
     form.purchase_date,
     form.total_amount,
+  ]);
+
+  const refundCategoryOptions = useMemo(() => {
+    if (!refundPreview) return [];
+
+    const [invoiceYear, invoiceMonth] = refundPreview.invoiceLabel
+      .split("-")
+      .map(Number);
+
+    const totals = new Map<string, number>();
+    const selectedPerson = normalizeName(form.person || "");
+
+    existingInstallments.forEach((installment: any) => {
+      const dueDate = new Date(`${installment.due_at}T00:00:00`);
+      if (
+        dueDate.getFullYear() !== invoiceYear ||
+        dueDate.getMonth() !== invoiceMonth - 1
+      ) {
+        return;
+      }
+
+      const categoryId = installment.cartao_compras?.category_id;
+      if (!categoryId) return;
+
+      const installmentPerson = normalizeName(
+        installment.cartao_compras?.person || "",
+      );
+
+      let multiplier = 1;
+      if (selectedPerson && selectedPerson !== "familia") {
+        if (installmentPerson === "familia") multiplier = 0.5;
+        else if (installmentPerson !== selectedPerson) return;
+      } else if (selectedPerson === "familia" && installmentPerson !== "familia") {
+        return;
+      }
+
+      const amount = Number(installment.amount || 0);
+      const current = totals.get(categoryId) || 0;
+      totals.set(categoryId, current + amount * multiplier);
+    });
+
+    return cats
+      .filter((category: any) => category.kind === "expense")
+      .map((category: any) => ({
+        ...category,
+        balance: Math.max(0, Number(totals.get(category.id) || 0)),
+      }))
+      .filter((category: any) => category.balance > 0.01)
+      .sort((a: any, b: any) => b.balance - a.balance);
+  }, [
+    cats,
+    existingInstallments,
+    form.person,
+    refundPreview,
   ]);
 
   const togglePerson = (name: string) => {
@@ -3193,7 +3247,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
           )}
         </motion.div>
       )}
-      {!splitMode && (
+      {!splitMode && Number(form.total_amount) >= 0 && (
         <div className="space-y-1.5">
           <Label>Categoria</Label>
           <Select value={form.category_id} onValueChange={v => setForm({ ...form, category_id: v })}>
@@ -3207,10 +3261,9 @@ function PurchaseForm({ cards, cats, onDone }: any) {
         <div className="space-y-3 rounded-xl border border-warning/40 bg-warning/5 p-3 text-xs">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="font-semibold text-warning">Crédito de estorno</p>
+              <p className="font-semibold text-warning">Escolha onde aplicar o estorno</p>
               <p className="mt-1 text-muted-foreground">
-                O crédito será aplicado à categoria escolhida na fatura de{" "}
-                {refundPreview.invoiceLabel}.
+                Categorias da fatura de {refundPreview.invoiceLabel}, considerando a pessoa selecionada.
               </p>
             </div>
             <strong className="shrink-0 text-base tabular-nums text-success">
@@ -3218,59 +3271,85 @@ function PurchaseForm({ cards, cats, onDone }: any) {
             </strong>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span>Valor atual da categoria</span>
-              <strong className="tabular-nums text-foreground">
-                {brl(refundPreview.categoryTotal)}
-              </strong>
-            </div>
-
-            <Progress
-              value={
-                refundPreview.categoryTotal > 0
-                  ? Math.min(
-                      100,
-                      (Math.abs(Number(form.total_amount)) /
-                        refundPreview.categoryTotal) *
-                        100,
-                    )
-                  : 0
-              }
-              className="h-2 [&>div]:bg-success"
-            />
-
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Após abater o estorno</span>
-              <strong
-                className={`tabular-nums ${
-                  refundPreview.remaining < 0
-                    ? "text-destructive"
-                    : "text-success"
-                }`}
-              >
-                {brl(refundPreview.remaining)}
-              </strong>
-            </div>
-          </div>
-
-          {refundPreview.categoryTotal <= 0 ? (
+          {refundCategoryOptions.length === 0 ? (
             <p className="text-warning">
-              Ainda não há valores nessa categoria para abater nesta fatura.
-            </p>
-          ) : refundPreview.remaining < 0 ? (
-            <p className="text-destructive">
-              O estorno excede o valor atual da categoria em{" "}
-              <strong>{brl(Math.abs(refundPreview.remaining))}</strong>.
+              Ainda não há categorias com valores nessa fatura para abater.
             </p>
           ) : (
-            <p className="text-muted-foreground">
-              Ainda faltará confirmar o recebimento de{" "}
-              <strong className="text-warning">
-                {brl(Math.abs(Number(form.total_amount)))}
-              </strong>{" "}
-              na fatura.
-            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {refundCategoryOptions.map((category: any) => {
+                const selected = form.category_id === category.id;
+                const remaining = category.balance - Math.abs(Number(form.total_amount));
+
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() =>
+                      setForm((current) => ({
+                        ...current,
+                        category_id: category.id,
+                      }))
+                    }
+                    className={`rounded-md border px-2 py-1 text-left transition-colors ${
+                      selected
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-border bg-background hover:bg-muted"
+                    }`}
+                  >
+                    {category.icon ? `${category.icon} ` : ""}
+                    {category.name} ·{" "}
+                    <span className="tabular-nums">{brl(category.balance)}</span>
+                    <span
+                      className={`tabular-nums ${
+                        remaining < 0 ? "text-destructive" : "text-success"
+                      }`}
+                    >
+                      {" → "}
+                      {brl(remaining)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {form.category_id && (
+            <div className="space-y-2 rounded-lg border border-border/60 bg-background/40 p-2.5">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span>Valor atual da categoria</span>
+                <strong className="tabular-nums text-foreground">
+                  {brl(refundPreview.categoryTotal)}
+                </strong>
+              </div>
+
+              <Progress
+                value={
+                  refundPreview.categoryTotal > 0
+                    ? Math.min(
+                        100,
+                        (Math.abs(Number(form.total_amount)) /
+                          refundPreview.categoryTotal) *
+                          100,
+                      )
+                    : 0
+                }
+                className="h-2 [&>div]:bg-success"
+              />
+
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Após abater o estorno</span>
+                <strong
+                  className={`tabular-nums ${
+                    refundPreview.remaining < 0
+                      ? "text-destructive"
+                      : "text-success"
+                  }`}
+                >
+                  {brl(refundPreview.remaining)}
+                </strong>
+              </div>
+            </div>
           )}
         </div>
       )}
