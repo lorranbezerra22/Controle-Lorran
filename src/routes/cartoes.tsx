@@ -1077,13 +1077,77 @@ function CartoesPage() {
     }
   };
 
-  const removeAll = async (i: any) => {
-    const { error } = await supabase.from("cartao_compras").delete().eq("id", i.purchase_id);
-    if (error) toast.error(error.message); else { invalidate("installments"); toast.success("Compra removida"); setDeleting(null); }
+  const removeRefundFinancialEntries = async (installmentId: string) => {
+    const { error: participationError } = await supabase
+      .from("participacoes_parcelas")
+      .delete()
+      .eq("installment_id", installmentId);
+
+    if (participationError) throw participationError;
+
+    // Excluir o lançamento de crédito antes de remover o estorno
+    // permite que o gatilho do banco devolva o valor à conta.
+    const { error: transactionError } = await supabase
+      .from("transacoes")
+      .delete()
+      .eq("card_installment_id", installmentId);
+
+    if (transactionError) throw transactionError;
   };
+
+  const removeAll = async (i: any) => {
+    try {
+      if (isRefund(i)) {
+        const { data: refundInstallments, error: refundQueryError } = await supabase
+          .from("cartao_parcelas")
+          .select("id")
+          .eq("purchase_id", i.purchase_id);
+
+        if (refundQueryError) throw refundQueryError;
+
+        for (const refund of refundInstallments ?? []) {
+          await removeRefundFinancialEntries(refund.id);
+        }
+      }
+
+      const { error } = await supabase
+        .from("cartao_compras")
+        .delete()
+        .eq("id", i.purchase_id);
+
+      if (error) throw error;
+
+      invalidate("installments");
+      invalidate("accounts");
+      invalidate("transactions");
+      toast.success(isRefund(i) ? "Estorno removido e valor devolvido à conta." : "Compra removida");
+      setDeleting(null);
+    } catch (error: any) {
+      toast.error(error.message || "Não foi possível remover o lançamento.");
+    }
+  };
+
   const removeOne = async (i: any) => {
-    const { error } = await supabase.from("cartao_parcelas").delete().eq("id", i.id);
-    if (error) toast.error(error.message); else { invalidate("installments"); toast.success("Parcela removida"); setDeleting(null); }
+    try {
+      if (isRefund(i)) {
+        await removeRefundFinancialEntries(i.id);
+      }
+
+      const { error } = await supabase
+        .from("cartao_parcelas")
+        .delete()
+        .eq("id", i.id);
+
+      if (error) throw error;
+
+      invalidate("installments");
+      invalidate("accounts");
+      invalidate("transactions");
+      toast.success(isRefund(i) ? "Estorno removido e valor devolvido à conta." : "Parcela removida");
+      setDeleting(null);
+    } catch (error: any) {
+      toast.error(error.message || "Não foi possível remover o lançamento.");
+    }
   };
 
   const removePaymentDirectly = async (installment: any, transaction: any) => {
