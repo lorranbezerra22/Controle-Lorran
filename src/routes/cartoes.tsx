@@ -775,6 +775,7 @@ function CartoesPage() {
     },
     creditToAccount = true,
     paymentAmountOverride?: number,
+    coveredByRefund = false,
   ) => {
     const isEstorno = Number(i.amount) < 0;
     const isPaying = isEstorno
@@ -947,11 +948,14 @@ function CartoesPage() {
               },
             }
           : {
-              paid_amount: Math.min(
-                installmentTotal,
-                currentPaidAmount + amountToRegister,
-              ),
+              paid_amount: coveredByRefund
+                ? installmentTotal
+                : Math.min(
+                    installmentTotal,
+                    currentPaidAmount + amountToRegister,
+                  ),
               status:
+                coveredByRefund ||
                 currentPaidAmount + amountToRegister >= installmentTotal - 0.01
                   ? "paid"
                   : "pending",
@@ -1637,6 +1641,7 @@ function CartoesPage() {
                       undefined,
                       true,
                       amountToDebit,
+                      true,
                     );
 
                     remainingRefund = Number(
