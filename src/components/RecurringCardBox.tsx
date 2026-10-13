@@ -352,23 +352,11 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
       const [year, month] = targetMonth.split("-").map(Number);
       const purchaseDate = `${targetMonth}-${String(clampDay(year, month - 1, template.purchaseDay)).padStart(2, "0")}`;
 
-      let firstYear = year;
-      let firstMonth = month - 1;
-      const purchaseDay = Number(purchaseDate.slice(8, 10));
-      const closing = Number(card.closing_day) || 1;
-      const due = Number(card.due_day) || 10;
-
-      // A fatura selecionada é a fatura de destino. Para cartões cujo
-      // vencimento ocorre antes do fechamento, a compra acontece no mês
-      // anterior para cair corretamente nessa fatura.
-      if (due < closing) {
-        const previousMonth = new Date(year, month - 2, 1);
-        firstYear = previousMonth.getFullYear();
-        firstMonth = previousMonth.getMonth();
-      }
-
-      // Compras feitas no fechamento ou depois entram na próxima fatura.
-      if (purchaseDay >= closing && due >= closing) firstMonth += 1;
+      // O mês escolhido é o mês de destino da fatura.
+      // Não recalculamos o vencimento a partir da data da compra, pois isso
+      // pode deslocar o lançamento para o mês seguinte.
+      const firstYear = year;
+      const firstMonth = month - 1;
 
       const splitPeople = template.splitPeople?.length
         ? template.splitPeople
