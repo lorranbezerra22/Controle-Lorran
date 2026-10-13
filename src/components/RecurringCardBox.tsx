@@ -259,8 +259,10 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
       if (!user) throw new Error("Não autenticado.");
 
       const [year, month] = targetMonth.split("-").map(Number);
-      const purchaseDay = clampDay(year, month - 1, template.purchaseDay);
-      const purchaseDate = `${targetMonth}-${String(purchaseDay).padStart(2, "0")}`;
+      const purchaseMonth = new Date(year, month - 2, 1);
+      const purchaseDate = `${monthISO(purchaseMonth)}-${String(
+        clampDay(purchaseMonth.getFullYear(), purchaseMonth.getMonth(), template.purchaseDay),
+      ).padStart(2, "0")}`;
 
       const { data: purchases, error: purchaseError } = await supabase
         .from("cartao_compras")
