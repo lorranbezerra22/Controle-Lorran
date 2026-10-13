@@ -350,7 +350,10 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
       if (!user) throw new Error("Não autenticado.");
 
       const [year, month] = targetMonth.split("-").map(Number);
-      const purchaseDate = `${targetMonth}-${String(clampDay(year, month - 1, template.purchaseDay)).padStart(2, "0")}`;
+      const purchaseMonth = new Date(year, month - 2, 1);
+      const purchaseDate = `${monthISO(purchaseMonth)}-${String(
+        clampDay(purchaseMonth.getFullYear(), purchaseMonth.getMonth(), template.purchaseDay),
+      ).padStart(2, "0")}`;
 
       // O mês escolhido é o mês de destino da fatura.
       // Não recalculamos o vencimento a partir da data da compra, pois isso
