@@ -357,6 +357,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
       // pode deslocar o lançamento para o mês seguinte.
       const firstYear = year;
       const firstMonth = month - 1;
+      const due = Number(card.due_day) || 10;
 
       const splitPeople = template.splitPeople?.length
         ? template.splitPeople
