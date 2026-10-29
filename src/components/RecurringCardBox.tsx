@@ -74,7 +74,24 @@ function readTemplates(): RecurringTemplate[] {
   }
 }
 
-function writeTemplates(templates: RecurringTemplate[]) {
+async function writeTemplates(templates: RecurringTemplate[]) {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError) throw authError;
+  if (!user) throw new Error("Entre na sua conta para salvar os recorrentes.");
+
+  const { error } = await (supabase as any)
+    .from("cartao_recorrentes")
+    .upsert(
+      { user_id: user.id, templates, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" },
+    );
+
+  if (error) throw error;
+
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
   window.dispatchEvent(new Event("recurring-templates-changed"));
 }
@@ -104,7 +121,53 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
   });
 
   useEffect(() => {
-    setTemplates(readTemplates());
+    if (!open) return;
+
+    let cancelled = false;
+
+    const loadTemplates = async () => {
+      try {
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
+
+        if (authError) throw authError;
+        if (!user) throw new Error("Entre na sua conta para ver os recorrentes.");
+
+        const { data, error } = await (supabase as any)
+          .from("cartao_recorrentes")
+          .select("templates")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        let saved = Array.isArray(data?.templates)
+          ? (data.templates as RecurringTemplate[])
+          : null;
+
+        // Transfere para a conta os rascunhos antigos que estavam apenas neste navegador.
+        if (!saved) {
+          saved = readTemplates();
+          if (saved.length > 0) {
+            await writeTemplates(saved);
+          }
+        }
+
+        if (!cancelled) setTemplates(saved);
+      } catch (error: any) {
+        if (!cancelled) {
+          toast.error(error.message || "Não foi possível carregar os recorrentes.");
+        }
+      }
+    };
+
+    void loadTemplates();
+
+    return () => {
+      cancelled = true;
+    };
   }, [open]);
 
   useEffect(() => {
@@ -187,24 +250,33 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
       ? templates.map((template) => (template.id === editingId ? next : template))
       : [...templates, next];
 
-    writeTemplates(updated);
-    setTemplates(updated);
-    setEditingId(null);
-    setForm((current) => ({
-      ...current,
-      description: "",
-      amount: "",
-      categoryId: "",
-      person: "",
-      splitMode: false,
-      splitPeople: [],
-      splitCustom: false,
-      splitAmounts: {},
-      splitCategoryIds: {},
-      brand: "",
-      installments: 1,
-    }));
-    toast.success(editingId ? "Rascunho atualizado." : "Lançamento recorrente salvo como rascunho.");
+    void writeTemplates(updated)
+      .then(() => {
+        setTemplates(updated);
+        setEditingId(null);
+        setForm((current) => ({
+          ...current,
+          description: "",
+          amount: "",
+          categoryId: "",
+          person: "",
+          splitMode: false,
+          splitPeople: [],
+          splitCustom: false,
+          splitAmounts: {},
+          splitCategoryIds: {},
+          brand: "",
+          installments: 1,
+        }));
+        toast.success(
+          editingId
+            ? "Rascunho atualizado."
+            : "Lançamento recorrente salvo na sua conta.",
+        );
+      })
+      .catch((error: any) => {
+        toast.error(error.message || "Não foi possível salvar o recorrente.");
+      });
   };
 
   const editTemplate = (template: RecurringTemplate) => {
@@ -231,8 +303,11 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
 
   const removeTemplate = (id: string) => {
     const updated = templates.filter((template) => template.id !== id);
-    writeTemplates(updated);
-    setTemplates(updated);
+    void writeTemplates(updated)
+      .then(() => setTemplates(updated))
+      .catch((error: any) => {
+        toast.error(error.message || "Não foi possível excluir o rascunho.");
+      });
   };
 
   const removeConfirmedLaunch = async (template: RecurringTemplate) => {
@@ -325,7 +400,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
           : item,
       );
 
-      writeTemplates(updated);
+      await writeTemplates(updated);
       setTemplates(updated);
       onCreated();
       toast.success(`"${template.description}" removido da fatura.`);
@@ -444,7 +519,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
           : item,
       );
 
-      writeTemplates(updated);
+      await writeTemplates(updated);
       setTemplates(updated);
       onCreated();
       toast.success(`"${template.description}" lançado na fatura.`);
