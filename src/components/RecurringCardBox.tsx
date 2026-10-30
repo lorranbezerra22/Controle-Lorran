@@ -22,7 +22,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { PersonSelect } from "@/components/person-select";
 import { BankIcon } from "@/components/BankIcon";
 import { toast } from "sonner";
-import { getRecurringAlerts } from "@/lib/recurring-alerts";
 
 type RecurringTemplate = {
   id: string;
@@ -41,6 +40,7 @@ type RecurringTemplate = {
   active: boolean;
   createdAt: string;
   confirmedMonths: string[];
+  launchedMonth?: string;
 };
 
 type Props = {
@@ -74,32 +74,9 @@ function readTemplates(): RecurringTemplate[] {
   }
 }
 
-const isMissingRecurringTable = (error: any) =>
-  error?.code === "PGRST205" ||
-  error?.code === "42P01" ||
-  String(error?.message || "").includes("cartao_recorrentes");
-
 async function writeTemplates(templates: RecurringTemplate[]) {
-  // Mantém uma cópia local caso a tabela online ainda não esteja disponível.
+  // Os lançamentos ficam guardados neste dispositivo até serem removidos.
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError) throw authError;
-  if (!user) throw new Error("Entre na sua conta para salvar os recorrentes.");
-
-  const { error } = await (supabase as any)
-    .from("cartao_recorrentes")
-    .upsert(
-      { user_id: user.id, templates, updated_at: new Date().toISOString() },
-      { onConflict: "user_id" },
-    );
-
-  if (error) throw error;
-
   window.dispatchEvent(new Event("recurring-templates-changed"));
 }
 
@@ -132,54 +109,13 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
 
     let cancelled = false;
 
-    const loadTemplates = async () => {
-      try {
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
+    const saved = readTemplates().map((template) => ({
+      ...template,
+      launchedMonth:
+        template.launchedMonth || template.confirmedMonths?.slice(-1)[0],
+    }));
 
-        if (authError) throw authError;
-        if (!user) throw new Error("Entre na sua conta para ver os recorrentes.");
-
-        const { data, error } = await (supabase as any)
-          .from("cartao_recorrentes")
-          .select("templates")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (error) {
-          if (isMissingRecurringTable(error)) {
-            if (!cancelled) setTemplates(readTemplates());
-            toast.warning(
-              "A tabela online de recorrentes ainda não está disponível. Os rascunhos deste dispositivo foram mantidos.",
-            );
-            return;
-          }
-          throw error;
-        }
-
-        let saved = Array.isArray(data?.templates)
-          ? (data.templates as RecurringTemplate[])
-          : null;
-
-        // Transfere para a conta os rascunhos antigos que estavam apenas neste navegador.
-        if (!saved) {
-          saved = readTemplates();
-          if (saved.length > 0) {
-            await writeTemplates(saved);
-          }
-        }
-
-        if (!cancelled) setTemplates(saved);
-      } catch (error: any) {
-        if (!cancelled) {
-          toast.error(error.message || "Não foi possível carregar os recorrentes.");
-        }
-      }
-    };
-
-    void loadTemplates();
+    setTemplates(saved);
 
     return () => {
       cancelled = true;
@@ -196,8 +132,6 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
     () => templates.filter((template) => template.active),
     [templates],
   );
-
-  const recurringAlerts = useMemo(() => getRecurringAlerts(templates), [templates]);
 
   const selectedCard = cards.find((card) => card.id === form.cardId);
   const isSplit = form.splitMode && form.splitPeople.length >= 2;
@@ -286,18 +220,12 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
         }));
         toast.success(
           editingId
-            ? "Rascunho atualizado."
-            : "Lançamento recorrente salvo na sua conta.",
+            ? "Lançamento planejado atualizado."
+            : "Compra guardada neste dispositivo.",
         );
       })
       .catch((error: any) => {
-        if (isMissingRecurringTable(error)) {
-          toast.warning(
-            "Rascunho guardado neste dispositivo. A sincronização online será ativada quando a tabela estiver disponível.",
-          );
-          return;
-        }
-        toast.error(error.message || "Não foi possível salvar o recorrente.");
+        toast.error(error.message || "Não foi possível guardar a compra.");
       });
   };
 
@@ -333,7 +261,8 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
   };
 
   const removeConfirmedLaunch = async (template: RecurringTemplate) => {
-    if (!template.confirmedMonths.includes(targetMonth)) return;
+    const launchedMonth = template.launchedMonth || targetMonth;
+    if (!template.launchedMonth && !template.confirmedMonths.includes(targetMonth)) return;
 
     const card = cards.find((item) => item.id === template.cardId);
     if (!card) {
@@ -343,7 +272,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
 
     if (
       !window.confirm(
-        `Remover "${template.description}" da fatura de ${fmtDate(`${targetMonth}-01`).slice(3)}?`,
+        `Remover "${template.description}" da fatura de ${fmtDate(`${launchedMonth}-01`).slice(3)}?`,
       )
     ) {
       return;
@@ -355,7 +284,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado.");
 
-      const [year, month] = targetMonth.split("-").map(Number);
+      const [year, month] = launchedMonth.split("-").map(Number);
       const purchaseMonth = new Date(year, month - 2, 1);
       const purchaseDate = `${monthISO(purchaseMonth)}-${String(
         clampDay(purchaseMonth.getFullYear(), purchaseMonth.getMonth(), template.purchaseDay),
@@ -415,8 +344,9 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
         item.id === template.id
           ? {
               ...item,
+              launchedMonth: undefined,
               confirmedMonths: item.confirmedMonths.filter(
-                (monthValue) => monthValue !== targetMonth,
+                (monthValue) => monthValue !== launchedMonth,
               ),
             }
           : item,
@@ -434,8 +364,8 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
   };
 
   const confirmTemplate = async (template: RecurringTemplate) => {
-    if (template.confirmedMonths.includes(targetMonth)) {
-      toast.error("Esse lançamento já foi confirmado para este mês.");
+    if (template.launchedMonth || template.confirmedMonths.length > 0) {
+      toast.error("Esta compra já foi lançada. Remova-a da fatura para confirmar novamente.");
       return;
     }
 
@@ -537,7 +467,11 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
 
       const updated = templates.map((item) =>
         item.id === template.id
-          ? { ...item, confirmedMonths: [...item.confirmedMonths, targetMonth] }
+          ? {
+            ...item,
+            launchedMonth: targetMonth,
+            confirmedMonths: [...item.confirmedMonths, targetMonth],
+          }
           : item,
       );
 
@@ -557,7 +491,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="rounded-full">
           <RefreshCw className="w-4 h-4 mr-1" />
-          Recorrentes
+          Compras planejadas
         </Button>
       </DialogTrigger>
 
@@ -567,35 +501,21 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
             Cartão de crédito
           </p>
           <DialogTitle className="mt-1 text-xl">
-            Lançamentos recorrentes
+            Compras aguardando a fatura
           </DialogTitle>
           <p className="mt-1 text-sm text-muted-foreground">
-            Organize os lançamentos mensais e confirme quando quiser adicioná-los à fatura.
+            Guarde uma compra com o cartão escolhido e confirme o lançamento quando ela aparecer na fatura.
           </p>
         </DialogHeader>
 
         <div className="space-y-5 px-6 py-5">
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
-            Salve aqui os lançamentos mensais como rascunho. Quando chegar perto do dia programado,
-            o sino exibirá um lembrete para você confirmar o lançamento na fatura.
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
+            <p className="font-semibold text-foreground">Seus lançamentos ficam guardados</p>
+            <p className="mt-1">
+              As compras planejadas permanecem nesta lista até você excluí-las. Depois de confirmar,
+              elas continuam no histórico como lançadas.
+            </p>
           </div>
-
-          {recurringAlerts.length > 0 && (
-            <div className="rounded-xl border border-warning/30 bg-warning/5 p-3 text-sm">
-              <div className="font-semibold text-warning">Próximos lançamentos</div>
-              <div className="mt-1 space-y-1 text-muted-foreground">
-                {recurringAlerts.map(({ template, daysUntil }) => (
-                  <div key={template.id}>
-                    <strong className="text-foreground">{template.description}</strong>{" "}
-                    {daysUntil === 0
-                      ? "deve ser lançado hoje"
-                      : `deve ser lançado em ${daysUntil} dia${daysUntil === 1 ? "" : "s"}`}
-                    .
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           <Collapsible open={formExpanded} onOpenChange={setFormExpanded} className="space-y-3">
             <CollapsibleTrigger asChild>
@@ -611,7 +531,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   )}
                   <Plus className="h-4 w-4 text-primary" />
-                  {editingId ? "Editar lançamento recorrente" : "Novo lançamento recorrente"}
+                  {editingId ? "Editar compra planejada" : "Guardar nova compra"}
                 </span>
               </Button>
             </CollapsibleTrigger>
@@ -661,7 +581,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
               </div>
 
               <div className="space-y-1.5">
-                <Label>Valor mensal</Label>
+                <Label>Valor da compra</Label>
                 <Input
                   type="number"
                   min="0.01"
@@ -974,7 +894,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                   ) : (
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   )}
-                  Rascunhos pendentes
+                  Compras guardadas
                 </span>
               </Button>
             </CollapsibleTrigger>
@@ -984,7 +904,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <p className="text-xs text-muted-foreground">
-                  Escolha a fatura de destino e confirme os itens que serão lançados nela.
+                As compras guardadas permanecem aqui até você removê-las ou confirmá-las na fatura.
                 </p>
               </div>
               <div className="space-y-1">
@@ -1005,10 +925,10 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">
-                    Nenhum lançamento recorrente cadastrado
+                    Nenhuma compra planejada
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Crie um rascunho para confirmar na próxima fatura.
+                    Guarde uma compra e confirme quando ela aparecer na fatura.
                   </p>
                 </div>
                 <Button
@@ -1018,14 +938,14 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                   onClick={() => setFormExpanded(true)}
                 >
                   <Plus className="mr-1.5 h-4 w-4" />
-                  Criar recorrente
+                  Guardar uma compra
                 </Button>
               </div>
             ) : (
               <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
                 {activeTemplates.map((template) => {
                   const card = cards.find((item) => item.id === template.cardId);
-                  const confirmed = template.confirmedMonths.includes(targetMonth);
+                  const confirmed = Boolean(template.launchedMonth);
                   const people = template.splitPeople?.length
                     ? template.splitPeople
                     : [template.person || "Sem pessoa"];
@@ -1064,7 +984,9 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
 
                           {confirmed && (
                             <span className="shrink-0 text-xs font-medium text-success">
-                              Lançado
+                              {template.launchedMonth
+                                ? `Lançado · ${fmtDate(`${template.launchedMonth}-01`).slice(3)}`
+                                : "Guardado"}
                             </span>
                           )}
                         </Button>
@@ -1128,7 +1050,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
 
                         {confirmed && (
                           <div className="pt-3 text-xs text-success">
-                            Confirmado para {fmtDate(`${targetMonth}-01`).slice(3)}
+                            Confirmado para {fmtDate(`${template.launchedMonth || targetMonth}-01`).slice(3)}
                           </div>
                         )}
 
@@ -1140,7 +1062,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                               disabled={saving || !card}
                               onClick={() => confirmTemplate(template)}
                             >
-                              Confirmar
+                              Confirmar na fatura
                             </Button>
                           ) : (
                             <Button
@@ -1150,7 +1072,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                               onClick={() => removeConfirmedLaunch(template)}
                             >
                               <Trash2 className="mr-1.5 h-4 w-4" />
-                              Remover lançamento
+                              Remover da fatura
                             </Button>
                           )}
 
