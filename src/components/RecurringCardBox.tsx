@@ -74,7 +74,15 @@ function readTemplates(): RecurringTemplate[] {
   }
 }
 
+const isMissingRecurringTable = (error: any) =>
+  error?.code === "PGRST205" ||
+  error?.code === "42P01" ||
+  String(error?.message || "").includes("cartao_recorrentes");
+
 async function writeTemplates(templates: RecurringTemplate[]) {
+  // Mantém uma cópia local caso a tabela online ainda não esteja disponível.
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
+
   const {
     data: { user },
     error: authError,
@@ -92,7 +100,6 @@ async function writeTemplates(templates: RecurringTemplate[]) {
 
   if (error) throw error;
 
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
   window.dispatchEvent(new Event("recurring-templates-changed"));
 }
 
@@ -141,7 +148,16 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
           .eq("user_id", user.id)
           .maybeSingle();
 
-        if (error) throw error;
+        if (error) {
+          if (isMissingRecurringTable(error)) {
+            if (!cancelled) setTemplates(readTemplates());
+            toast.warning(
+              "A tabela online de recorrentes ainda não está disponível. Os rascunhos deste dispositivo foram mantidos.",
+            );
+            return;
+          }
+          throw error;
+        }
 
         let saved = Array.isArray(data?.templates)
           ? (data.templates as RecurringTemplate[])
@@ -250,9 +266,9 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
       ? templates.map((template) => (template.id === editingId ? next : template))
       : [...templates, next];
 
+    setTemplates(updated);
     void writeTemplates(updated)
       .then(() => {
-        setTemplates(updated);
         setEditingId(null);
         setForm((current) => ({
           ...current,
@@ -275,6 +291,12 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
         );
       })
       .catch((error: any) => {
+        if (isMissingRecurringTable(error)) {
+          toast.warning(
+            "Rascunho guardado neste dispositivo. A sincronização online será ativada quando a tabela estiver disponível.",
+          );
+          return;
+        }
         toast.error(error.message || "Não foi possível salvar o recorrente.");
       });
   };
@@ -539,12 +561,20 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-h-[88vh] max-w-2xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Lançamentos recorrentes do cartão</DialogTitle>
+      <DialogContent className="max-h-[88vh] max-w-3xl overflow-y-auto rounded-2xl border-border bg-background p-0 shadow-2xl">
+        <DialogHeader className="border-b border-border bg-card px-6 py-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+            Cartão de crédito
+          </p>
+          <DialogTitle className="mt-1 text-xl">
+            Lançamentos recorrentes
+          </DialogTitle>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Organize os lançamentos mensais e confirme quando quiser adicioná-los à fatura.
+          </p>
         </DialogHeader>
 
-        <div className="space-y-5">
+        <div className="space-y-5 px-6 py-5">
           <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
             Salve aqui os lançamentos mensais como rascunho. Quando chegar perto do dia programado,
             o sino exibirá um lembrete para você confirmar o lançamento na fatura.
@@ -969,8 +999,27 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
             </div>
 
             {activeTemplates.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                Nenhum lançamento recorrente cadastrado.
+              <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-muted/10 px-5 py-8 text-center">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <RefreshCw className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    Nenhum lançamento recorrente cadastrado
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Crie um rascunho para confirmar na próxima fatura.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setFormExpanded(true)}
+                >
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  Criar recorrente
+                </Button>
               </div>
             ) : (
               <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
