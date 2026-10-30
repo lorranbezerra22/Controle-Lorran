@@ -27,7 +27,6 @@ import { CountUp } from "@/components/CountUp";
 import { installmentValueForPeople } from "@/lib/adjustments";
 import { PageHeader } from "@/components/PageHeader";
 import { RecurringCardBox } from "@/components/RecurringCardBox";
-import { InvoiceExportDialog } from "@/components/InvoiceExportDialog";
 import { Progress } from "@/components/ui/progress";
 const todayLocalISO = () => {
   const d = new Date();
@@ -1664,7 +1663,6 @@ function CartoesPage() {
             </Field>
             </>
             ); })()}
-            <InvoiceExportDialog installments={monthInst} cats={cats} />
             <Button
               size="sm"
               variant="outline"

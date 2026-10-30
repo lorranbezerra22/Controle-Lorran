@@ -135,6 +135,72 @@ function normalizeKind(v: any, fallback: "income" | "expense" = "expense"): "inc
   return fallback;
 }
 
+type InvoiceDraft = {
+  id: string;
+  description: string;
+  amount: string;
+  purchaseDate: string;
+  categoryId: string;
+  person: string;
+};
+
+async function parseInvoiceUpload(file: File): Promise<Omit<InvoiceDraft, "id" | "categoryId" | "person">[]> {
+  if (/\\.ofx$/i.test(file.name)) {
+    const text = await file.text();
+    const getTag = (block: string, tag: string) =>
+      block.match(new RegExp(`<${tag}>([^<\\\\r\\\\n]*)`, "i"))?.[1]?.trim()
+      ?? block.match(new RegExp(`(?:^|\\\\n)${tag}:([^\\\\r\\\\n]*)`, "i"))?.[1]?.trim()
+      ?? "";
+
+    return Array.from(text.matchAll(/<STMTTRN>([\\s\\S]*?)<\\/STMTTRN>/gi))
+      .map((match) => {
+        const block = match[1];
+        const rawDate = getTag(block, "DTPOSTED").slice(0, 8);
+        const purchaseDate = /^\\d{8}$/.test(rawDate)
+          ? `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`
+          : "";
+        const amount = parseAmount(getTag(block, "TRNAMT"));
+        return {
+          description: getTag(block, "NAME") || getTag(block, "MEMO"),
+          amount: amount == null ? "" : String(Math.abs(amount)),
+          purchaseDate,
+        };
+      })
+      .filter((row) => row.description && row.amount);
+  }
+
+  const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  if (!sheet) return [];
+
+  const data = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, raw: true, defval: null });
+  const headerIndex = data.findIndex((row) =>
+    row?.some((cell) => typeof cell === "string" && /descri|hist|lan[cç]|trans|valor|amount|data|date/i.test(String(cell))),
+  );
+  const headers = (headerIndex >= 0 ? data[headerIndex] : data[0] || [])
+    .map((cell: any) => String(cell ?? "").toLowerCase().trim());
+  const findColumn = (pattern: RegExp, fallback: number) => {
+    const index = headers.findIndex((header: string) => pattern.test(header));
+    return index >= 0 ? index : fallback;
+  };
+
+  const descriptionIndex = findColumn(/descri|hist|lan[cç]|trans|estabelecimento|merchant|memo|name/, 0);
+  const amountIndex = findColumn(/valor|amount|total/, 1);
+  const dateIndex = findColumn(/data|date|compra|posted/, 2);
+  const startIndex = headerIndex >= 0 ? headerIndex + 1 : 0;
+
+  return data.slice(startIndex).flatMap((row: any[]) => {
+    const description = String(row?.[descriptionIndex] ?? "").trim();
+    const amount = parseAmount(row?.[amountIndex]);
+    if (!description || amount == null) return [];
+    return [{
+      description,
+      amount: String(Math.abs(amount)),
+      purchaseDate: excelDateToISO(row?.[dateIndex]) || "",
+    }];
+  });
+}
+
 function ImportPage() {
   const [sheets, setSheets] = useState<SheetState[]>([]);
   const [filename, setFilename] = useState<string>("");
@@ -143,6 +209,101 @@ function ImportPage() {
   const { data: cards = [] } = useCards();
   const { data: categories = [] } = useCategories();
   const invalidate = useInvalidate();
+  const [invoiceRows, setInvoiceRows] = useState<InvoiceDraft[]>([]);
+  const [invoiceFilename, setInvoiceFilename] = useState("");
+  const [invoiceCardId, setInvoiceCardId] = useState("");
+  const [invoiceDueDate, setInvoiceDueDate] = useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  });
+  const [savingInvoice, setSavingInvoice] = useState(false);
+
+  const loadInvoiceFile = async (file: File) => {
+    try {
+      const rows = await parseInvoiceUpload(file);
+      if (rows.length === 0) {
+        toast.error("Não encontrei lançamentos. Envie uma fatura OFX, CSV ou Excel.");
+        return;
+      }
+      setInvoiceFilename(file.name);
+      setInvoiceRows(rows.map((row, index) => ({
+        ...row,
+        id: `${Date.now()}-${index}`,
+        categoryId: "",
+        person: "",
+      })));
+      if (!invoiceCardId && cards[0]?.id) setInvoiceCardId(cards[0].id);
+    } catch (error: any) {
+      toast.error(error.message || "Não foi possível ler esse arquivo.");
+    }
+  };
+
+  const updateInvoiceRow = (id: string, patch: Partial<InvoiceDraft>) => {
+    setInvoiceRows((current) =>
+      current.map((row) => row.id === id ? { ...row, ...patch } : row),
+    );
+  };
+
+  const saveInvoiceRows = async () => {
+    if (!invoiceCardId) return toast.error("Selecione o cartão da fatura.");
+    if (!invoiceDueDate) return toast.error("Informe o vencimento da fatura.");
+    if (invoiceRows.some((row) => !row.description.trim() || Number(row.amount) <= 0)) {
+      return toast.error("Revise a descrição e o valor de cada lançamento.");
+    }
+
+    setSavingInvoice(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado.");
+
+      let saved = 0;
+      for (const row of invoiceRows) {
+        const purchaseDate = row.purchaseDate || invoiceDueDate;
+        const amount = Math.abs(Number(row.amount));
+        const { data: purchase, error: purchaseError } = await supabase
+          .from("cartao_compras")
+          .insert({
+            user_id: user.id,
+            card_id: invoiceCardId,
+            description: row.description.trim(),
+            purchase_date: purchaseDate,
+            total_amount: amount,
+            installments_count: 1,
+            category_id: row.categoryId || null,
+            person: row.person.trim() || null,
+          })
+          .select()
+          .single();
+
+        if (purchaseError) throw purchaseError;
+
+        const { error: installmentError } = await supabase
+          .from("cartao_parcelas")
+          .insert({
+            user_id: user.id,
+            purchase_id: purchase.id,
+            card_id: invoiceCardId,
+            installment_number: 1,
+            amount,
+            due_at: invoiceDueDate,
+            status: "pending",
+          });
+
+        if (installmentError) throw installmentError;
+        saved++;
+      }
+
+      toast.success(`${saved} lançamentos importados para a fatura.`);
+      setInvoiceRows([]);
+      setInvoiceFilename("");
+      invalidate("installments");
+      invalidate("cards");
+    } catch (error: any) {
+      toast.error(error.message || "Não foi possível importar a fatura.");
+    } finally {
+      setSavingInvoice(false);
+    }
+  };
 
   const { data: batches = [], refetch: refetchBatches } = useQuery({
     queryKey: ["import_batches"],
@@ -419,6 +580,140 @@ function ImportPage() {
         <h1 className="text-2xl font-bold">Importar planilha</h1>
         <p className="text-sm text-muted-foreground">Suba o Gestão_Familia.xlsx e mapeie cada aba.</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Importar fatura do cartão</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Envie um arquivo OFX, CSV ou Excel exportado do banco. Confira e ajuste os lançamentos antes de adicioná-los à fatura.
+            O acesso direto ao banco não está conectado.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Cartão</label>
+              <Select value={invoiceCardId} onValueChange={setInvoiceCardId}>
+                <SelectTrigger><SelectValue placeholder="Selecione o cartão" /></SelectTrigger>
+                <SelectContent>
+                  {cards.map((card: any) => (
+                    <SelectItem key={card.id} value={card.id}>{card.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Vencimento da fatura</label>
+              <input
+                type="date"
+                value={invoiceDueDate}
+                onChange={(event) => setInvoiceDueDate(event.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+
+          <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-6 text-center transition-colors hover:bg-muted/40">
+            <Upload className="h-7 w-7 text-muted-foreground" />
+            <span className="text-sm font-medium">
+              {invoiceFilename || "Selecionar arquivo da fatura"}
+            </span>
+            <span className="text-xs text-muted-foreground">OFX, CSV, XLSX ou XLS</span>
+            <input
+              type="file"
+              accept=".ofx,.csv,.xlsx,.xls"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void loadInvoiceFile(file);
+                event.target.value = "";
+              }}
+            />
+          </label>
+
+          {invoiceRows.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-medium">
+                  {invoiceRows.length} lançamento(s) para revisar
+                </p>
+                <Button type="button" onClick={saveInvoiceRows} disabled={savingInvoice}>
+                  {savingInvoice ? "Importando..." : "Importar para a fatura"}
+                </Button>
+              </div>
+
+              <div className="max-h-[440px] space-y-3 overflow-y-auto pr-1">
+                {invoiceRows.map((row, index) => (
+                  <div key={row.id} className="grid gap-3 rounded-xl border border-border bg-muted/10 p-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Descrição</label>
+                      <Input
+                        value={row.description}
+                        onChange={(event) => updateInvoiceRow(row.id, { description: event.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Valor</label>
+                      <Input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={row.amount}
+                        onChange={(event) => updateInvoiceRow(row.id, { amount: event.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Data da compra</label>
+                      <input
+                        type="date"
+                        value={row.purchaseDate}
+                        onChange={(event) => updateInvoiceRow(row.id, { purchaseDate: event.target.value })}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Categoria</label>
+                      <Select
+                        value={row.categoryId || "none"}
+                        onValueChange={(value) => updateInvoiceRow(row.id, { categoryId: value === "none" ? "" : value })}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sem categoria</SelectItem>
+                          {categories.filter((category: any) => category.kind === "expense").map((category: any) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.icon ? `${category.icon} ` : ""}{category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Pessoa</label>
+                      <Input
+                        value={row.person}
+                        onChange={(event) => updateInvoiceRow(row.id, { person: event.target.value })}
+                        placeholder="Ex.: Lorran, Tayane ou Família"
+                      />
+                    </div>
+                    <div className="flex items-end justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">Lançamento {index + 1}</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setInvoiceRows((current) => current.filter((item) => item.id !== row.id))}
+                      >
+                        <Trash2 className="mr-1 h-4 w-4" /> Remover
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {sheets.length === 0 && (
         <Card>
