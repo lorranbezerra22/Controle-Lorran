@@ -145,18 +145,18 @@ type InvoiceDraft = {
 };
 
 async function parseInvoiceUpload(file: File): Promise<Omit<InvoiceDraft, "id" | "categoryId" | "person">[]> {
-  if (/\\.ofx$/i.test(file.name)) {
+  if (/\.ofx$/i.test(file.name)) {
     const text = await file.text();
     const getTag = (block: string, tag: string) =>
-      block.match(new RegExp(`<${tag}>([^<\\\\r\\\\n]*)`, "i"))?.[1]?.trim()
-      ?? block.match(new RegExp(`(?:^|\\\\n)${tag}:([^\\\\r\\\\n]*)`, "i"))?.[1]?.trim()
+      block.match(new RegExp(`<${tag}>([^<\\r\\n]*)`, "i"))?.[1]?.trim()
+      ?? block.match(new RegExp(`(?:^|\\n)${tag}:([^\\r\\n]*)`, "i"))?.[1]?.trim()
       ?? "";
 
-    return Array.from(text.matchAll(/<STMTTRN>([\\s\\S]*?)<\\/STMTTRN>/gi))
+    return Array.from(text.matchAll(/<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi))
       .map((match) => {
         const block = match[1];
         const rawDate = getTag(block, "DTPOSTED").slice(0, 8);
-        const purchaseDate = /^\\d{8}$/.test(rawDate)
+        const purchaseDate = /^\d{8}$/.test(rawDate)
           ? `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`
           : "";
         const amount = parseAmount(getTag(block, "TRNAMT"));
