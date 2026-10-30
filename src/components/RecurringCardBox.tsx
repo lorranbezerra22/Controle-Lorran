@@ -260,9 +260,17 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
       });
   };
 
-  const removeConfirmedLaunch = async (template: RecurringTemplate) => {
-    const launchedMonth = template.launchedMonth || targetMonth;
-    if (!template.launchedMonth && !template.confirmedMonths.includes(targetMonth)) return;
+  const removeConfirmedLaunch = async (
+    template: RecurringTemplate,
+    monthToRemove: string,
+  ) => {
+    const launchedMonth = monthToRemove;
+    if (
+      !template.confirmedMonths.includes(monthToRemove) &&
+      template.launchedMonth !== monthToRemove
+    ) {
+      return;
+    }
 
     const card = cards.find((item) => item.id === template.cardId);
     if (!card) {
@@ -340,17 +348,19 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
         if (error) throw error;
       }
 
-      const updated = templates.map((item) =>
-        item.id === template.id
-          ? {
-              ...item,
-              launchedMonth: undefined,
-              confirmedMonths: item.confirmedMonths.filter(
-                (monthValue) => monthValue !== launchedMonth,
-              ),
-            }
-          : item,
-      );
+      const updated = templates.map((item) => {
+        if (item.id !== template.id) return item;
+
+        const confirmedMonths = item.confirmedMonths.filter(
+          (monthValue) => monthValue !== launchedMonth,
+        );
+
+        return {
+          ...item,
+          confirmedMonths,
+          launchedMonth: confirmedMonths[confirmedMonths.length - 1],
+        };
+      });
 
       await writeTemplates(updated);
       setTemplates(updated);
@@ -364,8 +374,11 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
   };
 
   const confirmTemplate = async (template: RecurringTemplate) => {
-    if (template.launchedMonth || template.confirmedMonths.length > 0) {
-      toast.error("Esta compra já foi lançada. Remova-a da fatura para confirmar novamente.");
+    if (
+      template.confirmedMonths.includes(targetMonth) ||
+      template.launchedMonth === targetMonth
+    ) {
+      toast.error("Esta compra já foi lançada na fatura do mês selecionado.");
       return;
     }
 
@@ -949,7 +962,9 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
               <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
                 {activeTemplates.map((template) => {
                   const card = cards.find((item) => item.id === template.cardId);
-                  const confirmed = Boolean(template.launchedMonth);
+                  const confirmed =
+                    template.confirmedMonths.includes(targetMonth) ||
+                    template.launchedMonth === targetMonth;
                   const people = template.splitPeople?.length
                     ? template.splitPeople
                     : [template.person || "Sem pessoa"];
@@ -988,9 +1003,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
 
                           {confirmed && (
                             <span className="shrink-0 text-xs font-medium text-success">
-                              {template.launchedMonth
-                                ? `Lançado · ${fmtDate(`${template.launchedMonth}-01`).slice(3)}`
-                                : "Guardado"}
+                              {`Lançado · ${fmtDate(`${targetMonth}-01`).slice(3)}`}
                             </span>
                           )}
                         </Button>
@@ -1054,7 +1067,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
 
                         {confirmed && (
                           <div className="pt-3 text-xs text-success">
-                            Confirmado para {fmtDate(`${template.launchedMonth || targetMonth}-01`).slice(3)}
+                            Confirmado para {fmtDate(`${targetMonth}-01`).slice(3)}
                           </div>
                         )}
 
@@ -1073,7 +1086,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                               size="sm"
                               variant="destructive"
                               disabled={saving || !card}
-                              onClick={() => removeConfirmedLaunch(template)}
+                              onClick={() => removeConfirmedLaunch(template, targetMonth)}
                             >
                               <Trash2 className="mr-1.5 h-4 w-4" />
                               Remover da fatura
