@@ -517,12 +517,16 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
             </p>
           </div>
 
-          <Collapsible open={formExpanded} onOpenChange={setFormExpanded} className="space-y-3">
+          <Collapsible
+            open={formExpanded}
+            onOpenChange={setFormExpanded}
+            className="overflow-hidden rounded-xl border border-border"
+          >
             <CollapsibleTrigger asChild>
               <Button
                 type="button"
-                variant="outline"
-                className="w-full justify-between rounded-xl border-border"
+                variant="ghost"
+                className="w-full justify-between rounded-none border-0 px-4 data-[state=open]:border-b data-[state=open]:border-border"
               >
                 <span className="inline-flex items-center gap-2 font-semibold">
                   {formExpanded ? (
@@ -537,7 +541,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
             </CollapsibleTrigger>
 
             <CollapsibleContent>
-              <form onSubmit={addTemplate} className="space-y-3 rounded-xl border border-border p-4">
+              <form onSubmit={addTemplate} className="space-y-3 p-4">
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
