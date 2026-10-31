@@ -1467,7 +1467,21 @@ function CartoesPage() {
 
                 {totals[c.id]?.brandTotals && Object.keys(totals[c.id].brandTotals).length > 0 && (
                   <div className="grid grid-cols-2 gap-2 border-t border-border/50 pt-3">
-                    {Object.entries(totals[c.id].brandTotals).map(([brand, data], bi) => (
+                    {Object.entries(totals[c.id].brandTotals)
+                      .sort(([brandA], [brandB]) => {
+                        const brandOrder = (c.metadata?.brands ?? []).map((item: any) => {
+                          const name = `${item.brand.charAt(0).toUpperCase()}${item.brand.slice(1).toLowerCase()}`;
+                          return item.last_digits ? `${name} ${item.last_digits}` : name;
+                        });
+                        const indexA = brandOrder.indexOf(brandA);
+                        const indexB = brandOrder.indexOf(brandB);
+
+                        if (indexA === -1 && indexB === -1) return 0;
+                        if (indexA === -1) return 1;
+                        if (indexB === -1) return -1;
+                        return indexA - indexB;
+                      })
+                      .map(([brand, data], bi) => (
                       <div key={bi} className="min-w-0 rounded-lg border border-border/60 bg-muted/20 p-2.5">
                         <span className="block truncate text-[9px] uppercase text-muted-foreground font-bold leading-none">
                           {brand}
