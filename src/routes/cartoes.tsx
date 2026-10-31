@@ -2836,6 +2836,9 @@ function PurchaseForm({ cards, cats, onDone }: any) {
   const [splitCustom, setSplitCustom] = useState(false);
   const [splitAmounts, setSplitAmounts] = useState<Record<string, string>>({});
   const [splitCategoryIds, setSplitCategoryIds] = useState<Record<string, string>>({});
+  const [brandPickerOpen, setBrandPickerOpen] = useState(
+    () => (cards.find((card: any) => card.id === cards[0]?.id)?.metadata?.brands || []).length > 1,
+  );
   const [saving, setSaving] = useState(false);
 
   const refundPreview = useMemo(() => {
@@ -3085,6 +3088,7 @@ function PurchaseForm({ cards, cats, onDone }: any) {
               ? `${firstBrand.brand.charAt(0).toUpperCase()}${firstBrand.brand.slice(1)} ${firstBrand.last_digits}`
               : "",
           });
+          setBrandPickerOpen(brands.length > 1);
         }}>
           <SelectTrigger><SelectValue placeholder="Selecione o cartão" /></SelectTrigger>
           <SelectContent>
@@ -3113,26 +3117,45 @@ function PurchaseForm({ cards, cats, onDone }: any) {
                 Escolha qual cartão deste conjunto foi usado.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {brands.map((b: any, idx: number) => {
-                const label = `${b.brand.charAt(0).toUpperCase()}${b.brand.slice(1)} ${b.last_digits}`;
-                const active = form.brand === label;
+            {brandPickerOpen ? (
+              <div className="flex flex-wrap gap-2">
+                {brands.map((b: any, idx: number) => {
+                  const label = `${b.brand.charAt(0).toUpperCase()}${b.brand.slice(1)} ${b.last_digits}`;
 
-                return (
-                  <Button
-                    key={idx}
-                    type="button"
-                    variant={active ? "default" : "outline"}
-                    size="sm"
-                    className="h-9 text-[10px] font-bold uppercase tracking-wider"
-                    aria-pressed={active}
-                    onClick={() => setForm({ ...form, brand: label })}
-                  >
-                    {label}
-                  </Button>
-                );
-              })}
-            </div>
+                  return (
+                    <Button
+                      key={idx}
+                      type="button"
+                      variant={form.brand === label ? "default" : "outline"}
+                      size="sm"
+                      className="h-9 text-[10px] font-bold uppercase tracking-wider"
+                      aria-pressed={form.brand === label}
+                      onClick={() => {
+                        setForm({ ...form, brand: label });
+                        setBrandPickerOpen(false);
+                      }}
+                    >
+                      {label}
+                    </Button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2">
+                <span className="min-w-0 truncate text-sm font-medium text-foreground">
+                  {form.brand || "Bandeira selecionada"}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => setBrandPickerOpen(true)}
+                >
+                  Trocar
+                </Button>
+              </div>
+            )}
           </div>
         );
       })()}
