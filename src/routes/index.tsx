@@ -818,17 +818,22 @@ function Dashboard() {
         );
       })()}
 
-      <section className="overflow-hidden rounded-2xl border border-border/70 bg-card/70 shadow-[var(--shadow-elegant)]">
-        <div className="flex flex-col gap-3 border-b border-border/60 px-4 py-3 sm:min-h-[88px] sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <section className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-card/40 shadow-[var(--shadow-elegant)]">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, var(--foreground) 1px, transparent 0)", backgroundSize: "22px 22px" }} />
+        <div className="relative flex flex-col gap-3 border-b border-border/60 px-4 py-3 sm:min-h-[88px] sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
               <CreditCard className="h-4 w-4" />
             </div>
             <div className="min-w-0">
+              <div className="mb-1 flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                <span className="text-[10px] uppercase tracking-[0.2em] text-primary">Cartões</span>
+              </div>
               <h3 className="text-sm font-semibold">Resumo dos cartões</h3>
               <p className="text-xs text-muted-foreground">Faturas e pagamentos do período selecionado</p>
             </div>
-            <span className="shrink-0 rounded-full border border-border bg-background/60 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            <span className="shrink-0 rounded-full border border-border/60 bg-background/50 px-2.5 py-1 text-xs font-medium text-muted-foreground">
               {cards.length} {cards.length === 1 ? "cartão" : "cartões"}
             </span>
           </div>
