@@ -47,7 +47,7 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
     };
   }, []);
 
-  const { overdueTx, overdueInst, cardAlerts, recurringAlerts, total } = useMemo(() => {
+  const { upcomingTx, overdueTx, overdueInst, cardAlerts, recurringAlerts, total } = useMemo(() => {
     const now = new Date();
     const today = ymd(now);
     const y = now.getFullYear();
