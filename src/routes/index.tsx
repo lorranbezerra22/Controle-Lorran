@@ -8,6 +8,7 @@ import {
   Wallet,
   CreditCard,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   Eye,
   EyeOff,
@@ -667,6 +668,7 @@ function Dashboard() {
   const [openLorran, setOpenLorran] = useLsBool("card:lorran", true);
   const [openFamilia, setOpenFamilia] = useLsBool("card:familia", true);
   const [openTayLoja, setOpenTayLoja] = useLsBool("card:tayloja", true);
+  const [openCardSummary, setOpenCardSummary] = useLsBool("cardSummary", true);
   const cardsById = useMemo(() => {
     const m = new Map<string, any>();
     cards.forEach((c: any) => m.set(c.id, c));
@@ -830,18 +832,30 @@ function Dashboard() {
               {cards.length} {cards.length === 1 ? "cartão" : "cartões"}
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:min-w-[300px]">
-            <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-2">
-              <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Total das faturas</div>
-              <div className="mt-0.5 text-sm font-bold tabular-nums">{brl(fatura)}</div>
+          <div className="flex items-center gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:min-w-[300px]">
+              <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-2">
+                <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Total das faturas</div>
+                <div className="mt-0.5 text-sm font-bold tabular-nums">{brl(fatura)}</div>
+              </div>
+              <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2">
+                <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Ainda em aberto</div>
+                <div className="mt-0.5 text-sm font-bold tabular-nums text-destructive">{brl(faturaRest)}</div>
+              </div>
             </div>
-            <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2">
-              <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Ainda em aberto</div>
-              <div className="mt-0.5 text-sm font-bold tabular-nums text-destructive">{brl(faturaRest)}</div>
-            </div>
+            <button
+              type="button"
+              onClick={() => setOpenCardSummary(!openCardSummary)}
+              aria-expanded={openCardSummary}
+              aria-label={openCardSummary ? "Recolher resumo dos cartões" : "Mostrar resumo dos cartões"}
+              title={openCardSummary ? "Recolher" : "Mostrar"}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background/60 text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-foreground"
+            >
+              {openCardSummary ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
           </div>
         </div>
-        <div className="p-4">
+        {openCardSummary && <div className="p-4">
           {cards.length === 0 ? (
             <div className="text-sm text-muted-foreground py-6 text-center">Cadastre seus cartões na aba Cartões.</div>
           ) : (
@@ -950,7 +964,7 @@ function Dashboard() {
               })}
             </div>
           )}
-        </div>
+        </div>}
       </section>
 
       <div className="grid lg:grid-cols-3 gap-4">
