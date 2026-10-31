@@ -24,6 +24,8 @@ import { motion } from "framer-motion";
 import { CountUp } from "@/components/CountUp";
 import { KpiTile } from "@/components/KpiTile";
 import { PageHeader } from "@/components/PageHeader";
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 function parseLocalDate(s: string): Date {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || "");
@@ -69,6 +71,29 @@ function ContaPage() {
       return data;
     },
   });
+
+  const monthlyYieldChartData = useMemo(() => {
+    const [year, month] = selectedMonth.split("-").map(Number);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const byDay = new Map<number, number>();
+
+    yields.forEach((yieldItem) => {
+      const date = parseLocalDate(yieldItem.date);
+      if (date.getFullYear() === year && date.getMonth() === month - 1) {
+        const day = date.getDate();
+        byDay.set(day, (byDay.get(day) ?? 0) + Number(yieldItem.amount));
+      }
+    });
+
+    return Array.from({ length: daysInMonth }, (_, index) => ({
+      day: String(index + 1).padStart(2, "0"),
+      rendimento: byDay.get(index + 1) ?? 0,
+    }));
+  }, [yields, selectedMonth]);
+
+  const monthlyYieldChartConfig = {
+    rendimento: { label: "Rendimento", color: "var(--color-primary)" },
+  } satisfies ChartConfig;
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -259,6 +284,33 @@ function ContaPage() {
                 Mês Atual
               </Button>
             </div>
+          </div>
+
+          <div className="tech-panel p-4 sm:p-5">
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold">Rendimentos diários</h3>
+              <p className="text-xs text-muted-foreground">
+                Valores registrados em cada dia do mês selecionado
+              </p>
+            </div>
+            {monthlyYieldChartData.some((item) => item.rendimento > 0) ? (
+              <ChartContainer config={monthlyYieldChartConfig} className="h-[240px] w-full">
+                <BarChart data={monthlyYieldChartData} accessibilityLayer>
+                  <CartesianGrid vertical={false} />
+                  <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={8} />
+                  <YAxis tickLine={false} axisLine={false} width={64} tickFormatter={(value) => brl(Number(value))} />
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent formatter={(value) => brl(Number(value))} />}
+                  />
+                  <Bar dataKey="rendimento" fill="var(--color-rendimento)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ChartContainer>
+            ) : (
+              <div className="flex h-[180px] items-center justify-center text-sm text-muted-foreground">
+                Nenhum rendimento registrado neste mês.
+              </div>
+            )}
           </div>
           
           <div className="grid gap-3">
