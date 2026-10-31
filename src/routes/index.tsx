@@ -816,21 +816,36 @@ function Dashboard() {
         );
       })()}
 
-      <div className="relative rounded-2xl border border-border overflow-hidden bg-gradient-to-br from-card via-card to-card/40" style={{ boxShadow: "var(--shadow-elegant)" }}>
-        <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, var(--foreground) 1px, transparent 0)", backgroundSize: "22px 22px" }} />
-        <div className="relative px-5 py-4 border-b border-border/60 flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            <span className="text-[11px] uppercase tracking-[0.2em] text-primary font-bold">Live</span>
-            <h3 className="ml-2 text-sm font-semibold flex items-center gap-2"><CreditCard className="w-4 h-4 text-primary" /> Cartões de crédito</h3>
+      <section className="overflow-hidden rounded-2xl border border-border bg-card/70 shadow-[var(--shadow-elegant)]">
+        <div className="flex flex-col gap-4 border-b border-border/60 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+              <CreditCard className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold">Resumo dos cartões</h3>
+              <p className="text-xs text-muted-foreground">Faturas e pagamentos do período selecionado</p>
+            </div>
+            <span className="rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              {cards.length} {cards.length === 1 ? "cartão" : "cartões"}
+            </span>
           </div>
-          <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Fatura atual · Pago vs restante</span>
+          <div className="grid grid-cols-2 gap-2 sm:min-w-[300px]">
+            <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-2">
+              <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Total das faturas</div>
+              <div className="mt-0.5 text-sm font-bold tabular-nums">{brl(fatura)}</div>
+            </div>
+            <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2">
+              <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Ainda em aberto</div>
+              <div className="mt-0.5 text-sm font-bold tabular-nums text-destructive">{brl(faturaRest)}</div>
+            </div>
+          </div>
         </div>
-        <div className="relative p-4">
+        <div className="p-4">
           {cards.length === 0 ? (
             <div className="text-sm text-muted-foreground py-6 text-center">Cadastre seus cartões na aba Cartões.</div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
               {cards.map((c: any) => {
                 const cardMonthInst = monthInst.filter((i: any) => i.card_id === c.id);
                 const fat = cardMonthInst.reduce(
@@ -897,31 +912,35 @@ function Dashboard() {
                 const pctPago = faturaLiquida > 0 ? (pago / faturaLiquida) * 100 : 0;
                 const isPaid = restante === 0 && faturaLiquida > 0;
                 return (
-                  <div key={c.id} className="group relative overflow-hidden rounded-xl border border-border/60 bg-background/40 p-3 backdrop-blur transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5">
-                    <div className="mb-2.5 flex items-center gap-3">
-                      <BankIcon bank={c.bank || c.name} size={28} square />
-                      <div className="min-w-0 flex-1 flex flex-col gap-0.5">
-                        <div className="text-sm font-medium truncate text-foreground">{c.name}</div>
-                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">{isPaid ? "Quitado" : `${pctPago.toFixed(0)}% pago`}</div>
+                  <div key={c.id} className="group rounded-xl border border-border/70 bg-background/50 p-4 transition-colors hover:border-primary/40 hover:bg-background/80">
+                    <div className="flex items-center gap-3">
+                      <BankIcon bank={c.bank || c.name} size={36} square />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-semibold text-foreground">{c.name}</div>
+                        <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Fatura do período</div>
                       </div>
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${isPaid ? "border-success/40 text-success bg-success/10" : "border-primary/40 text-primary bg-primary/10"}`}>
-                        {isPaid ? "OK" : "Aberto"}
-                      </span>
-                    </div>
-                    <div className="relative mb-2.5 h-1.5 overflow-hidden rounded-full bg-muted/80">
-                      <div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-success/80 to-success transition-all duration-700" style={{ width: `${Math.min(100, pctPago)}%` }} />
-                      <div className="absolute inset-0 opacity-30 pointer-events-none" style={{ backgroundImage: "linear-gradient(90deg, transparent 0, transparent 6px, var(--background) 6px, var(--background) 7px)", backgroundSize: "7px 100%" }} />
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div className="rounded-lg border border-border/50 bg-background/60 px-2 py-1.5">
-                        <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Fatura</div>
-                        <div className="mt-0.5 text-sm font-semibold tabular-nums text-foreground">{brl(fat)}</div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold tabular-nums text-foreground">{brl(fat)}</div>
+                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${isPaid ? "border-success/30 bg-success/10 text-success" : "border-primary/30 bg-primary/10 text-primary"}`}>
+                          {isPaid ? "Quitado" : "Em aberto"}
+                        </span>
                       </div>
-                      <div className="rounded-lg border border-success/20 bg-success/5 px-2 py-1.5">
+                    </div>
+                    <div className="mt-4">
+                      <div className="mb-1.5 flex items-center justify-between text-[10px]">
+                        <span className="font-medium text-muted-foreground">Progresso do pagamento</span>
+                        <span className="font-semibold tabular-nums text-foreground">{pctPago.toFixed(0)}%</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-success transition-all duration-700" style={{ width: `${Math.min(100, pctPago)}%` }} />
+                      </div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 divide-x divide-border/70 rounded-lg border border-border/60 bg-card/50">
+                      <div className="px-3 py-2">
                         <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Pago</div>
                         <div className="mt-0.5 text-sm font-semibold tabular-nums text-success">{brl(pago)}</div>
                       </div>
-                      <div className={`rounded-lg border px-2 py-1.5 ${isPaid ? "border-success/20 bg-success/5" : "border-destructive/20 bg-destructive/5"}`}>
+                      <div className="px-3 py-2 pl-4">
                         <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Restante</div>
                         <div className={`mt-0.5 text-sm font-semibold tabular-nums ${isPaid ? "text-success" : "text-destructive"}`}>{brl(restante)}</div>
                       </div>
@@ -932,7 +951,7 @@ function Dashboard() {
             </div>
           )}
         </div>
-      </div>
+      </section>
 
       <div className="grid lg:grid-cols-3 gap-4">
         <div className="relative rounded-2xl border border-border overflow-hidden bg-gradient-to-br from-card via-card to-card/40" style={{ boxShadow: "var(--shadow-elegant)" }}>
