@@ -668,7 +668,7 @@ function Dashboard() {
   const [openLorran, setOpenLorran] = useLsBool("card:lorran", true);
   const [openFamilia, setOpenFamilia] = useLsBool("card:familia", true);
   const [openTayLoja, setOpenTayLoja] = useLsBool("card:tayloja", true);
-  const [openCardSummary, setOpenCardSummary] = useLsBool("cardSummary", true);
+  const [openCardSummary, setOpenCardSummary] = useLsBool("cardSummary", false);
   const cardsById = useMemo(() => {
     const m = new Map<string, any>();
     cards.forEach((c: any) => m.set(c.id, c));
@@ -818,27 +818,27 @@ function Dashboard() {
         );
       })()}
 
-      <section className="overflow-hidden rounded-2xl border border-border bg-card/70 shadow-[var(--shadow-elegant)]">
-        <div className="flex flex-col gap-4 border-b border-border/60 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-              <CreditCard className="h-5 w-5" />
+      <section className="overflow-hidden rounded-2xl border border-border/70 bg-card/70 shadow-[var(--shadow-elegant)]">
+        <div className="flex flex-col gap-3 border-b border-border/60 px-4 py-3 sm:min-h-[88px] sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
+              <CreditCard className="h-4 w-4" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="text-sm font-semibold">Resumo dos cartões</h3>
               <p className="text-xs text-muted-foreground">Faturas e pagamentos do período selecionado</p>
             </div>
-            <span className="rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            <span className="shrink-0 rounded-full border border-border bg-background/60 px-2.5 py-1 text-xs font-medium text-muted-foreground">
               {cards.length} {cards.length === 1 ? "cartão" : "cartões"}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="grid grid-cols-2 gap-2 sm:min-w-[300px]">
-              <div className="rounded-xl border border-border/70 bg-background/60 px-3 py-2">
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="min-w-[136px] rounded-2xl border border-border/70 bg-background/40 px-3 py-2">
                 <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Total das faturas</div>
                 <div className="mt-0.5 text-sm font-bold tabular-nums">{brl(fatura)}</div>
               </div>
-              <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2">
+              <div className="min-w-[136px] rounded-2xl border border-destructive/25 bg-destructive/5 px-3 py-2">
                 <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Ainda em aberto</div>
                 <div className="mt-0.5 text-sm font-bold tabular-nums text-destructive">{brl(faturaRest)}</div>
               </div>
@@ -849,7 +849,7 @@ function Dashboard() {
               aria-expanded={openCardSummary}
               aria-label={openCardSummary ? "Recolher resumo dos cartões" : "Mostrar resumo dos cartões"}
               title={openCardSummary ? "Recolher" : "Mostrar"}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background/60 text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-foreground"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-background/40 text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-foreground"
             >
               {openCardSummary ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
