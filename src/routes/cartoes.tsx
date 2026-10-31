@@ -2976,6 +2976,9 @@ function PurchaseForm({ cards, cats, onDone }: any) {
     try {
       const card = cards.find((c: any) => c.id === form.card_id);
       if (!card) throw new Error("Selecione um cartão");
+      if ((card.metadata?.brands || []).length > 1 && !form.brand) {
+        throw new Error("Selecione a bandeira da compra.");
+      }
       const { data: { user } } = await supabase.auth.getUser();
       const total = Number(form.total_amount);
       const n = total < 0 ? 1 : Number(form.installments_count);
@@ -3059,11 +3062,14 @@ function PurchaseForm({ cards, cats, onDone }: any) {
         <Label>Cartão</Label>
         <Select value={form.card_id} onValueChange={v => {
           const c = cards.find((x: any) => x.id === v);
-          const firstBrand = c?.metadata?.brands?.[0];
+          const brands = c?.metadata?.brands || [];
+          const firstBrand = brands[0];
           setForm({
             ...form,
             card_id: v,
-            brand: firstBrand ? `${firstBrand.brand.charAt(0).toUpperCase()}${firstBrand.brand.slice(1)} ${firstBrand.last_digits}` : ""
+            brand: brands.length === 1 && firstBrand
+              ? `${firstBrand.brand.charAt(0).toUpperCase()}${firstBrand.brand.slice(1)} ${firstBrand.last_digits}`
+              : "",
           });
         }}>
           <SelectTrigger><SelectValue placeholder="Selecione o cartão" /></SelectTrigger>
@@ -3079,6 +3085,44 @@ function PurchaseForm({ cards, cats, onDone }: any) {
           </SelectContent>
         </Select>
       </div>
+
+      {(() => {
+        const card = cards.find((c: any) => c.id === form.card_id);
+        const brands = card?.metadata?.brands || [];
+        if (brands.length <= 1) return null;
+
+        return (
+          <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3">
+            <div>
+              <Label>Bandeira da compra</Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Escolha qual cartão deste conjunto foi usado.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {brands.map((b: any, idx: number) => {
+                const label = `${b.brand.charAt(0).toUpperCase()}${b.brand.slice(1)} ${b.last_digits}`;
+                const active = form.brand === label;
+
+                return (
+                  <Button
+                    key={idx}
+                    type="button"
+                    variant={active ? "default" : "outline"}
+                    size="sm"
+                    className="h-9 text-[10px] font-bold uppercase tracking-wider"
+                    aria-pressed={active}
+                    onClick={() => setForm({ ...form, brand: label })}
+                  >
+                    {label}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="space-y-1.5"><Label>Descrição</Label><SmartInput value={form.description} onChange={(v) => setForm({ ...form, description: v })} required /></div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5"><Label>Data da compra</Label><DatePicker value={form.purchase_date} onChange={(v) => setForm({ ...form, purchase_date: v })} /></div>
@@ -3344,34 +3388,6 @@ function PurchaseForm({ cards, cats, onDone }: any) {
 
 
 
-      {(() => {
-        const card = cards.find((c: any) => c.id === form.card_id);
-        const brands = card?.metadata?.brands || [];
-        if (brands.length <= 1) return null;
-        return (
-          <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
-            <Label>Bandeira da Compra</Label>
-            <div className="flex flex-wrap gap-2">
-              {brands.map((b: any, idx: number) => {
-                const label = `${b.brand.charAt(0).toUpperCase()}${b.brand.slice(1)} ${b.last_digits}`;
-                const active = form.brand === label;
-                return (
-                  <Button
-                    key={idx}
-                    type="button"
-                    variant={active ? "default" : "outline"}
-                    size="sm"
-                    className="h-8 text-[10px] uppercase font-bold tracking-wider"
-                    onClick={() => setForm({ ...form, brand: label })}
-                  >
-                    {label}
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
       <Button type="submit" disabled={saving || (splitMode && splitPeople.length < 2)} className="w-full">{saving ? "Salvando…" : "Salvar compra"}</Button>
     </form>
   );
