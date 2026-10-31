@@ -819,31 +819,31 @@ function Dashboard() {
       })()}
 
       <section className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-card/40 shadow-[var(--shadow-elegant)]">
-        <div className="pointer-events-none absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, var(--foreground) 1px, transparent 0)", backgroundSize: "22px 22px" }} />
-        <div className="relative flex flex-col gap-3 border-b border-border/60 px-4 py-3 sm:min-h-[88px] sm:flex-row sm:items-center sm:justify-between sm:px-5">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
-              <CreditCard className="h-4 w-4" />
+      <div className="pointer-events-none absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, var(--foreground) 1px, transparent 0)", backgroundSize: "22px 22px" }} />
+      <div className="relative flex flex-col gap-3 border-b border-border/60 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="min-w-0">
+            <div className="mb-1 flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+              <span className="text-[10px] uppercase tracking-[0.2em] text-primary">Cartões</span>
             </div>
-            <div className="min-w-0">
-              <div className="mb-1 flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                <span className="text-[10px] uppercase tracking-[0.2em] text-primary">Cartões</span>
-              </div>
-              <h3 className="text-sm font-semibold">Resumo dos cartões</h3>
-              <p className="text-xs text-muted-foreground">Faturas e pagamentos do período selecionado</p>
-            </div>
-            <span className="shrink-0 rounded-full border border-border/60 bg-background/50 px-2.5 py-1 text-xs font-medium text-muted-foreground">
-              {cards.length} {cards.length === 1 ? "cartão" : "cartões"}
-            </span>
+            <h3 className="flex items-center gap-2 text-sm font-semibold">
+              <CreditCard className="h-4 w-4 text-primary" />
+              Resumo dos cartões
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground">Faturas e pagamentos do período selecionado</p>
           </div>
+          <span className="shrink-0 rounded-full border border-border/60 bg-background/50 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            {cards.length} {cards.length === 1 ? "cartão" : "cartões"}
+          </span>
+        </div>
           <div className="flex items-center gap-2 self-end sm:self-auto">
             <div className="grid grid-cols-2 gap-2">
-              <div className="min-w-[136px] rounded-2xl border border-border/70 bg-background/40 px-3 py-2">
+              <div className="min-w-[136px] rounded-xl border border-border/60 bg-background/50 px-3 py-2">
                 <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Total das faturas</div>
-                <div className="mt-0.5 text-sm font-bold tabular-nums">{brl(fatura)}</div>
+                <div className="mt-0.5 text-sm font-bold tabular-nums text-foreground">{brl(fatura)}</div>
               </div>
-              <div className="min-w-[136px] rounded-2xl border border-destructive/25 bg-destructive/5 px-3 py-2">
+              <div className="min-w-[136px] rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2">
                 <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Ainda em aberto</div>
                 <div className="mt-0.5 text-sm font-bold tabular-nums text-destructive">{brl(faturaRest)}</div>
               </div>
@@ -931,7 +931,7 @@ function Dashboard() {
                 const pctPago = faturaLiquida > 0 ? (pago / faturaLiquida) * 100 : 0;
                 const isPaid = restante === 0 && faturaLiquida > 0;
                 return (
-                  <div key={c.id} className="group rounded-xl border border-border/70 bg-background/50 p-4 transition-colors hover:border-primary/40 hover:bg-background/80">
+                  <div key={c.id} className="group rounded-xl border border-border/60 bg-background/40 p-4 transition-colors hover:border-primary/40 hover:bg-background/70">
                     <div className="flex items-center gap-3">
                       <BankIcon bank={c.bank || c.name} size={36} square />
                       <div className="min-w-0 flex-1">
@@ -987,28 +987,28 @@ function Dashboard() {
               const tot = yearData.reduce((a, m) => ({ r: a.r + m.Receitas, d: a.d + m.Despesas }), { r: 0, d: 0 });
               const bal = tot.r - tot.d;
               return (
-                <div className="flex gap-3 text-xs">
+                <div className="flex flex-wrap gap-2 text-xs">
                   {personFilter !== "all" && (
-                    <div className="rounded-lg border border-border/60 bg-background/50 px-2.5 py-1.5">
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Receitas</div>
-                      <div className="tabular-nums font-semibold" style={{ color: "oklch(0.72 0.18 155)" }}>{brl(tot.r)}</div>
+                    <div className="min-w-[112px] rounded-xl border border-border/60 bg-background/50 px-3 py-2">
+                      <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Receitas</div>
+                      <div className="mt-0.5 tabular-nums font-bold text-success">{brl(tot.r)}</div>
                     </div>
                   )}
-                  <div className="rounded-lg border border-border/60 bg-background/50 px-2.5 py-1.5">
-                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Despesas</div>
-                    <div className="tabular-nums font-semibold text-destructive">{brl(tot.d)}</div>
+                  <div className="min-w-[112px] rounded-xl border border-border/60 bg-background/50 px-3 py-2">
+                    <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Despesas</div>
+                    <div className="mt-0.5 tabular-nums font-bold text-destructive">{brl(tot.d)}</div>
                   </div>
                   {personFilter !== "all" && (
-                    <div className="rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5">
-                      <div className="text-[9px] uppercase tracking-wider text-primary">Saldo</div>
-                      <div className={`tabular-nums font-semibold ${bal >= 0 ? "text-success" : "text-destructive"}`}>{brl(bal)}</div>
+                    <div className="min-w-[112px] rounded-xl border border-primary/30 bg-primary/5 px-3 py-2">
+                      <div className="text-[9px] font-semibold uppercase tracking-wider text-primary">Saldo</div>
+                      <div className={`mt-0.5 tabular-nums font-bold ${bal >= 0 ? "text-success" : "text-destructive"}`}>{brl(bal)}</div>
                     </div>
                   )}
                 </div>
               );
             })()}
           </div>
-          <div className="relative p-3">
+          <div className="relative p-4">
             <ResponsiveContainer width="100%" height={280}>
               <AreaChart data={yearData} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
                 <defs>
