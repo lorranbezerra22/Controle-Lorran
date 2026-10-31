@@ -55,6 +55,12 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
     const monthStart = ymd(new Date(y, m, 1));
     const monthEnd = ymd(new Date(y, m + 1, 0));
 
+    const upcomingTx = (transactions || []).filter(
+      (t: any) =>
+        t.status === "pending" &&
+        t.due_at > today &&
+        t.due_at <= ymd(new Date(now.getFullYear(), now.getMonth(), now.getDate() + RECURRING_ALERT_DAYS_BEFORE)),
+    );
     const overdueTx = (transactions || []).filter(
       (t: any) => t.status === "pending" && t.due_at <= today,
     );
@@ -88,12 +94,13 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
       RECURRING_ALERT_DAYS_BEFORE,
     );
     const total =
+      upcomingTx.length +
       overdueTx.length +
       overdueInst.length +
       cardAlerts.length +
       recurringAlerts.length;
 
-    return { overdueTx, overdueInst, cardAlerts, recurringAlerts, total };
+    return { upcomingTx, overdueTx, overdueInst, cardAlerts, recurringAlerts, total };
   }, [transactions, installments, cards, recurringVersion]);
 
   return (
@@ -204,6 +211,30 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
                       >
                         {diff < 0 ? `Venceu há ${Math.abs(diff)}d` : diff === 0 ? "Hoje" : `Em ${diff}d`}
                       </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {upcomingTx.length > 0 && (
+              <section>
+                <h4 className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2 font-medium">
+                  Lançamentos vencendo nos próximos {RECURRING_ALERT_DAYS_BEFORE} dias ({upcomingTx.length})
+                </h4>
+                <ul className="space-y-2">
+                  {upcomingTx.map((t: any) => (
+                    <li
+                      key={t.id}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-warning/30 bg-warning/5 px-3 py-2.5"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium truncate">{t.description}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {fmtDate(t.due_at)}{t.person ? ` · ${t.person}` : ""}
+                        </div>
+                      </div>
+                      <span className="text-sm font-semibold tabular-nums">{brl(Number(t.amount))}</span>
                     </li>
                   ))}
                 </ul>
