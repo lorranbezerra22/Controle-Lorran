@@ -2836,9 +2836,6 @@ function PurchaseForm({ cards, cats, onDone }: any) {
   const [splitCustom, setSplitCustom] = useState(false);
   const [splitAmounts, setSplitAmounts] = useState<Record<string, string>>({});
   const [splitCategoryIds, setSplitCategoryIds] = useState<Record<string, string>>({});
-  const [brandPickerOpen, setBrandPickerOpen] = useState(
-    () => (cards.find((card: any) => card.id === cards[0]?.id)?.metadata?.brands || []).length > 1,
-  );
   const [saving, setSaving] = useState(false);
 
   const refundPreview = useMemo(() => {
@@ -3088,7 +3085,6 @@ function PurchaseForm({ cards, cats, onDone }: any) {
               ? `${firstBrand.brand.charAt(0).toUpperCase()}${firstBrand.brand.slice(1)} ${firstBrand.last_digits}`
               : "",
           });
-          setBrandPickerOpen(brands.length > 1);
         }}>
           <SelectTrigger><SelectValue placeholder="Selecione o cartão" /></SelectTrigger>
           <SelectContent>
@@ -3110,52 +3106,26 @@ function PurchaseForm({ cards, cats, onDone }: any) {
         if (brands.length <= 1) return null;
 
         return (
-          <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3">
-            <div>
-              <Label>Bandeira da compra</Label>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Escolha qual cartão deste conjunto foi usado.
-              </p>
-            </div>
-            {brandPickerOpen ? (
-              <div className="flex flex-wrap gap-2">
+          <div className="space-y-1.5">
+            <Label>Bandeira da compra</Label>
+            <Select
+              value={form.brand || undefined}
+              onValueChange={(brand) => setForm({ ...form, brand })}
+            >
+              <SelectTrigger className="h-10 w-full rounded-full border-border bg-background px-3">
+                <SelectValue placeholder="Selecione a bandeira" />
+              </SelectTrigger>
+              <SelectContent>
                 {brands.map((b: any, idx: number) => {
                   const label = `${b.brand.charAt(0).toUpperCase()}${b.brand.slice(1)} ${b.last_digits}`;
-
                   return (
-                    <Button
-                      key={idx}
-                      type="button"
-                      variant={form.brand === label ? "default" : "outline"}
-                      size="sm"
-                      className="h-9 text-[10px] font-bold uppercase tracking-wider"
-                      aria-pressed={form.brand === label}
-                      onClick={() => {
-                        setForm({ ...form, brand: label });
-                        setBrandPickerOpen(false);
-                      }}
-                    >
+                    <SelectItem key={idx} value={label}>
                       {label}
-                    </Button>
+                    </SelectItem>
                   );
                 })}
-              </div>
-            ) : (
-              <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2">
-                <span className="min-w-0 truncate text-sm font-medium text-foreground">
-                  {form.brand || "Bandeira selecionada"}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="shrink-0"
-                  onClick={() => setBrandPickerOpen(true)}
-                >
-                  Trocar
-                </Button>
-              </div>
-            )}
+              </SelectContent>
+            </Select>
           </div>
         );
       })()}
