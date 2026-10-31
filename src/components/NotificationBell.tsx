@@ -53,14 +53,10 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
     const monthEnd = ymd(new Date(y, m + 1, 0));
 
     const overdueTx = (transactions || []).filter(
-      (t: any) => t.status === "pending" && t.due_at >= monthStart && t.due_at <= monthEnd && t.due_at <= today,
+      (t: any) => t.status === "pending" && t.due_at <= today,
     );
     const overdueInst = (installments || []).filter(
-      (i: any) =>
-        !installmentIsPaid(i) &&
-        i.due_at >= monthStart &&
-        i.due_at <= monthEnd &&
-        i.due_at <= today,
+      (i: any) => !installmentIsPaid(i) && i.due_at <= today,
     );
 
     const lastDay = new Date(y, m + 1, 0).getDate();
