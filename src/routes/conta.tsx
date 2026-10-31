@@ -304,9 +304,9 @@ function ContaPage() {
 
           <div className="tech-panel p-4 sm:p-5">
             <div className="mb-4">
-              <h3 className="text-sm font-semibold">Rendimentos por mês</h3>
+              <h3 className="text-sm font-semibold">Balanceamento anual de rendimentos</h3>
               <p className="text-xs text-muted-foreground">
-                Total recebido em cada mês de {selectedYear}
+                Compare a distribuição dos rendimentos mês a mês em {selectedYear}
               </p>
             </div>
             {annualYieldChartData.some((item) => item.rendimento > 0) ? (
@@ -329,6 +329,55 @@ function ContaPage() {
             )}
           </div>
           
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-xl font-bold">Histórico Global de Rendimentos</h2>
+              <p className="text-sm text-muted-foreground">Todos os rendimentos registrados nas contas</p>
+            </div>
+            {yields.length > 0 ? (
+              <div className="tech-panel overflow-hidden">
+                <div className="overflow-auto max-h-[360px]">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-muted/50 text-[10px] uppercase tracking-widest font-bold text-muted-foreground sticky top-0 backdrop-blur z-10">
+                      <tr>
+                        <th className="px-4 py-3">Data</th>
+                        <th className="px-4 py-3">Conta</th>
+                        <th className="px-4 py-3 text-right">Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {yields.map((y: any) => (
+                        <tr key={y.id} className="hover:bg-muted/20 transition-colors">
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {format(parseLocalDate(y.date), "dd/MM/yyyy", { locale: ptBR })}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-xs">{(y.accounts as any)?.bank}</div>
+                            <div className="text-[10px] text-muted-foreground">{(y.accounts as any)?.account_name}</div>
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold text-green-600">
+                            {brl(y.amount)}
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="bg-muted/30 font-bold">
+                        <td colSpan={2} className="px-4 py-3 text-right uppercase text-[10px] tracking-widest">Total Global:</td>
+                        <td className="px-4 py-3 text-right text-green-600">
+                          {brl(yields.reduce((s, y) => s + Number(y.amount), 0))}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="py-12 text-center border border-dashed border-border rounded-2xl text-muted-foreground text-sm bg-muted/10">
+                <Calendar className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                Nenhum rendimento registrado.
+              </div>
+            )}
+          </section>
+
           <div className="hidden">
             {yields.filter(y => {
               const d = parseLocalDate(y.date);
