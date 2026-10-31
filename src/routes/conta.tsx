@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Minus, Pencil, Trash2, Landmark, TrendingUp, Calendar, ChevronDown, ChevronUp, Wallet } from "lucide-react";
+import { Plus, Minus, Pencil, Trash2, Landmark, TrendingUp, Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Wallet } from "lucide-react";
 import { BANKS } from "@/lib/banks";
 
 import { useState, useMemo } from "react";
@@ -45,6 +45,7 @@ export const Route = createFileRoute("/conta")({
 function ContaPage() {
   const invalidate = useInvalidate();
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ["accounts"],
@@ -72,26 +73,24 @@ function ContaPage() {
     },
   });
 
-  const monthlyYieldChartData = useMemo(() => {
-    const [year, month] = selectedMonth.split("-").map(Number);
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const byDay = new Map<number, number>();
+  const annualYieldChartData = useMemo(() => {
+    const byMonth = new Map<number, number>();
 
     yields.forEach((yieldItem) => {
       const date = parseLocalDate(yieldItem.date);
-      if (date.getFullYear() === year && date.getMonth() === month - 1) {
-        const day = date.getDate();
-        byDay.set(day, (byDay.get(day) ?? 0) + Number(yieldItem.amount));
+      if (date.getFullYear() === selectedYear) {
+        const month = date.getMonth();
+        byMonth.set(month, (byMonth.get(month) ?? 0) + Number(yieldItem.amount));
       }
     });
 
-    return Array.from({ length: daysInMonth }, (_, index) => ({
-      day: String(index + 1).padStart(2, "0"),
-      rendimento: byDay.get(index + 1) ?? 0,
+    return Array.from({ length: 12 }, (_, month) => ({
+      month: ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"][month],
+      rendimento: byMonth.get(month) ?? 0,
     }));
-  }, [yields, selectedMonth]);
+  }, [yields, selectedYear]);
 
-  const monthlyYieldChartConfig = {
+  const annualYieldChartConfig = {
     rendimento: { label: "Rendimento", color: "var(--color-primary)" },
   } satisfies ChartConfig;
 
@@ -270,35 +269,52 @@ function ContaPage() {
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <h2 className="text-xl font-bold flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-green-500" />
-              Histórico Global de Rendimentos
+              Histórico Anual de Rendimentos
             </h2>
-            <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg border border-border">
-              <span className="text-[10px] uppercase font-bold px-2 text-muted-foreground">Filtrar mês:</span>
-              <MonthPicker value={selectedMonth} onChange={(v) => setSelectedMonth(v)} />
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-7 text-[10px] uppercase font-bold"
-                onClick={() => setSelectedMonth(format(new Date(), "yyyy-MM"))}
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 p-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label="Ano anterior"
+                onClick={() => setSelectedYear((year) => year - 1)}
               >
-                Mês Atual
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="min-w-12 text-center text-sm font-bold tabular-nums">{selectedYear}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label="Próximo ano"
+                onClick={() => setSelectedYear((year) => year + 1)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-[10px] uppercase font-bold"
+                onClick={() => setSelectedYear(new Date().getFullYear())}
+              >
+                Ano atual
               </Button>
             </div>
           </div>
 
           <div className="tech-panel p-4 sm:p-5">
             <div className="mb-4">
-              <h3 className="text-sm font-semibold">Rendimentos diários</h3>
+              <h3 className="text-sm font-semibold">Rendimentos por mês</h3>
               <p className="text-xs text-muted-foreground">
-                Valores registrados em cada dia do mês selecionado
+                Total recebido em cada mês de {selectedYear}
               </p>
             </div>
-            {monthlyYieldChartData.some((item) => item.rendimento > 0) ? (
-              <ChartContainer config={monthlyYieldChartConfig} className="h-[240px] w-full">
-                <BarChart data={monthlyYieldChartData} accessibilityLayer>
+            {annualYieldChartData.some((item) => item.rendimento > 0) ? (
+              <ChartContainer config={annualYieldChartConfig} className="h-[260px] w-full">
+                <BarChart data={annualYieldChartData} accessibilityLayer>
                   <CartesianGrid vertical={false} />
-                  <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={8} />
-                  <YAxis tickLine={false} axisLine={false} width={64} tickFormatter={(value) => brl(Number(value))} />
+                  <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                  <YAxis tickLine={false} axisLine={false} width={72} tickFormatter={(value) => brl(Number(value))} />
                   <ChartTooltip
                     cursor={false}
                     content={<ChartTooltipContent formatter={(value) => brl(Number(value))} />}
@@ -308,12 +324,12 @@ function ContaPage() {
               </ChartContainer>
             ) : (
               <div className="flex h-[180px] items-center justify-center text-sm text-muted-foreground">
-                Nenhum rendimento registrado neste mês.
+                Nenhum rendimento registrado em {selectedYear}.
               </div>
             )}
           </div>
           
-          <div className="grid gap-3">
+          <div className="hidden">
             {yields.filter(y => {
               const d = parseLocalDate(y.date);
               const [year, month] = selectedMonth.split('-').map(Number);
