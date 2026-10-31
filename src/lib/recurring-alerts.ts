@@ -15,6 +15,8 @@ export type RecurringAlert = {
 
 const STORAGE_KEY = "cartoes:recorrentes";
 
+export const RECURRING_ALERT_DAYS_BEFORE = 5;
+
 const localISO = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
@@ -37,7 +39,7 @@ export function readRecurringTemplates(): RecurringAlertTemplate[] {
 export function getRecurringAlerts(
   templates: RecurringAlertTemplate[] = readRecurringTemplates(),
   now = new Date(),
-  daysBefore = 5,
+  daysBefore = RECURRING_ALERT_DAYS_BEFORE,
 ): RecurringAlert[] {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const alerts: RecurringAlert[] = [];

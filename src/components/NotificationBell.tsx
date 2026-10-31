@@ -3,7 +3,10 @@ import { Bell, ExternalLink, RefreshCw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { brl, fmtDate } from "@/lib/format";
-import { getRecurringAlerts } from "@/lib/recurring-alerts";
+import {
+  getRecurringAlerts,
+  RECURRING_ALERT_DAYS_BEFORE,
+} from "@/lib/recurring-alerts";
 
 interface NotificationBellProps {
   transactions: any[];
@@ -66,7 +69,7 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
         if (!dueDay) return null;
         const dueDate = new Date(y, m, dueDay);
         const diff = Math.round((dueDate.getTime() - new Date(y, m, now.getDate()).getTime()) / 86400000);
-        if (diff > 5) return null;
+        if (diff > RECURRING_ALERT_DAYS_BEFORE) return null;
         const hasPending = (installments || []).some(
           (i: any) =>
             i.card_id === c.id &&
@@ -79,7 +82,11 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
       })
       .filter(Boolean) as { card: any; dueDate: Date; diff: number }[];
 
-    const recurringAlerts = getRecurringAlerts();
+    const recurringAlerts = getRecurringAlerts(
+      undefined,
+      now,
+      RECURRING_ALERT_DAYS_BEFORE,
+    );
     const total =
       overdueTx.length +
       overdueInst.length +
