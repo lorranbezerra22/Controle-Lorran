@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Trash2, Pencil, Check, X, UserPlus, ChevronDown, ChevronRight, FileDown, MessageSquare, Database, Settings as SettingsIcon } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { brl, monthLabel } from "@/lib/format";
 import { SmartInput } from "@/components/smart-input";
 import { personColor, isFamilia } from "@/lib/people";
-import { useSession } from "@/lib/auth";
+
 
 function useLsBool(key: string, initial: boolean) {
   const storageKey = `base:${key}`;
@@ -39,8 +39,6 @@ export const Route = createFileRoute("/base")({
 
 function BasePage() {
   const { data: cats = [] } = useCategories();
-  const { session } = useSession();
-  const canCreateAccounts = session?.user.email?.toLowerCase() === "lorranbezerra876@gmail.com";
   const invalidate = useInvalidate();
   const [open, setOpen] = useState(false);
   const [openPerson, setOpenPerson] = useState(false);
@@ -57,7 +55,6 @@ function BasePage() {
         subtitle="Categorias e pessoas"
         actions={
           <>
-            {canCreateAccounts && <CreateAccountDialog />}
             <Dialog open={openPerson} onOpenChange={setOpenPerson}>
               <DialogTrigger asChild><Button variant="outline" size="sm" className="rounded-full"><UserPlus className="w-4 h-4 mr-1" /> Nova pessoa</Button></DialogTrigger>
               <DialogContent>
@@ -494,79 +491,6 @@ function PeopleReportSection() {
         </div>
       )}
     </div>
-  );
-}
-
-function CreateAccountDialog() {
-  const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      const { error } = await supabase.functions.invoke("admin-create-user", {
-        body: { email: email.trim().toLowerCase(), password },
-      });
-      if (error) throw error;
-      toast.success("Conta criada com sucesso");
-      setEmail("");
-      setPassword("");
-      setOpen(false);
-    } catch (err: any) {
-      toast.error(err.message || "Não foi possível criar a conta");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="rounded-full">
-          <UserPlus className="w-4 h-4 mr-1" /> Nova conta
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Criar nova conta</DialogTitle>
-          <DialogDescription>
-            Cadastre uma conta para acessar este sistema.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={submit} className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="new-account-email">Email</Label>
-            <Input
-              id="new-account-email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="new-account-password">Senha inicial</Label>
-            <Input
-              id="new-account-password"
-              type="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              minLength={6}
-              required
-            />
-            <p className="text-xs text-muted-foreground">Use pelo menos 6 caracteres.</p>
-          </div>
-          <Button type="submit" className="w-full" disabled={saving}>
-            {saving ? "Criando…" : "Criar conta"}
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 }
 
