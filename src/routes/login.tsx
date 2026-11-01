@@ -15,12 +15,13 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "admin-create">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [signupAllowed, setSignupAllowed] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
   const { next } = Route.useSearch();
 
@@ -31,7 +32,14 @@ function LoginPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) goNext();
+      const session = data.session;
+      if (!session) return;
+
+      if (session.user.email?.toLowerCase() === "lorranbezerra876@gmail.com") {
+        setIsAdmin(true);
+      } else {
+        goNext();
+      }
     });
     supabase.rpc("signup_allowed").then(({ data }) => setSignupAllowed(!!data));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -41,7 +49,17 @@ function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      if (mode === "signup") {
+      if (mode === "admin-create") {
+        if (!isAdmin) throw new Error("Somente o administrador pode criar novos acessos.");
+        const { data, error } = await supabase.functions.invoke("admin-create-user", {
+          body: { email, password },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        toast.success("Acesso criado. Sua esposa já pode entrar com esse email e senha.");
+        setEmail("");
+        setPassword("");
+      } else if (mode === "signup") {
         if (!signupAllowed) throw new Error("Cadastro desabilitado. Modo pessoal já configurado.");
         const redirectTo = next ? `${window.location.origin}${next}` : `${window.location.origin}/`;
         const { error } = await supabase.auth.signUp({
@@ -55,7 +73,12 @@ function LoginPage() {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        goNext();
+        if (email.trim().toLowerCase() === "lorranbezerra876@gmail.com") {
+          setIsAdmin(true);
+          setMode("admin-create");
+        } else {
+          goNext();
+        }
       }
     } catch (err: any) {
       toast.error(err.message ?? "Erro ao autenticar");
@@ -77,19 +100,34 @@ function LoginPage() {
         </div>
 
         <div className="bg-card/95 backdrop-blur-md border border-border rounded-2xl p-6" style={{ boxShadow: "var(--shadow-elegant)" }}>
-          {signupAllowed && (
+          {(signupAllowed || isAdmin) && (
             <div className="flex gap-2 mb-6 p-1 bg-muted/50 rounded-lg">
               <button
                 type="button"
                 onClick={() => setMode("signin")}
                 className={`flex-1 py-2 text-sm rounded-md transition-colors ${mode === "signin" ? "bg-card text-foreground" : "text-muted-foreground"}`}
               >Entrar</button>
-              <button
-                type="button"
-                onClick={() => setMode("signup")}
-                className={`flex-1 py-2 text-sm rounded-md transition-colors ${mode === "signup" ? "bg-card text-foreground" : "text-muted-foreground"}`}
-              >Criar conta</button>
+              {signupAllowed && (
+                <button
+                  type="button"
+                  onClick={() => setMode("signup")}
+                  className={`flex-1 py-2 text-sm rounded-md transition-colors ${mode === "signup" ? "bg-card text-foreground" : "text-muted-foreground"}`}
+                >Criar conta</button>
+              )}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setMode("admin-create")}
+                  className={`flex-1 py-2 text-sm rounded-md transition-colors ${mode === "admin-create" ? "bg-card text-foreground" : "text-muted-foreground"}`}
+                >Novo acesso</button>
+              )}
             </div>
+          )}
+
+          {mode === "admin-create" && (
+            <p className="mb-4 text-sm text-muted-foreground">
+              Crie o email e a senha que sua esposa usará para acessar o CRM.
+            </p>
           )}
 
           <form onSubmit={submit} className="space-y-4">
@@ -108,7 +146,7 @@ function LoginPage() {
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
             </div>
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Aguarde…" : mode === "signin" ? "Entrar" : "Criar conta"}
+              {loading ? "Aguarde…" : mode === "signin" ? "Entrar" : mode === "admin-create" ? "Criar acesso" : "Criar conta"}
             </Button>
           </form>
         </div>
