@@ -659,6 +659,7 @@ function Dashboard() {
 
   type CatItem = (typeof catData)[number];
   const [openCat, setOpenCat] = useState<null | CatItem>(null);
+  const [openPersonDetail, setOpenPersonDetail] = useState<string | null>(null);
   const [openPeopleAn, setOpenPeopleAn] = useLsBool("peopleAn", true);
   const [peopleTab, setPeopleTab] = useState<"totais" | "cartoes" | "pagamentos">(() => {
     if (typeof window === "undefined") return "totais";
@@ -1277,7 +1278,14 @@ function Dashboard() {
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
                               <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: colorForPerson(p.name) }} />
-                              <span className="truncate">{p.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => setOpenPersonDetail(p.name)}
+                                className="truncate text-left hover:text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm"
+                                aria-label={`Ver despesas e pagamentos de ${p.name}`}
+                              >
+                                {p.name}
+                              </button>
                             </span>
                             <span className="text-xs text-muted-foreground">
                               Total considerado: <strong className="tabular-nums text-foreground">{brl(totalConsiderado)}</strong>
@@ -1332,6 +1340,27 @@ function Dashboard() {
           <div className="relative px-6 py-4">
             {openCat && <CategoryDetail cat={openCat} cardsById={cardsById} />}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={openPersonDetail !== null} onOpenChange={(open) => !open && setOpenPersonDetail(null)}>
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Despesas de {openPersonDetail}</DialogTitle>
+            <DialogDescription>
+              Detalhamento dos custos, pagamentos e valores restantes no período selecionado.
+            </DialogDescription>
+          </DialogHeader>
+          {openPersonDetail && (
+            <PersonExpenseDetail
+              name={openPersonDetail}
+              transactions={monthTx}
+              installments={monthInst}
+              adjustments={adjMap}
+              categories={categories}
+              cardsById={cardsById}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
@@ -1477,6 +1506,188 @@ function CategoryDetail({ cat, cardsById }: { cat: any; cardsById: Map<string, a
   );
 }
 
+
+function PersonExpenseDetail({
+  name,
+  transactions,
+  installments,
+  adjustments,
+  categories,
+  cardsById,
+}: {
+  name: string;
+  transactions: any[];
+  installments: any[];
+  adjustments: any;
+  categories: any[];
+  cardsById: Map<string, any>;
+}) {
+  const normalize = (value: string | null | undefined) =>
+    (value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const target = normalize(name);
+  const isFamily = target === "familia";
+  const splitsFamily = target === "lorran" || target === "tayane";
+  const categoryMap = new Map(categories.map((category: any) => [category.id, category]));
+
+  const items: Array<{
+    id: string;
+    date: string;
+    description: string;
+    category: string;
+    source: string;
+    card?: string;
+    status: string;
+    amount: number;
+    paid: number;
+  }> = [];
+
+  transactions.forEach((transaction: any) => {
+    if (
+      transaction.kind !== "expense" ||
+      transaction.card_installment_id ||
+      transaction.category_id === "0494a63e-6737-4a3c-8778-67ce5f96a0a1" ||
+      transaction.category_id === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a"
+    ) return;
+
+    effectiveShares(transaction, adjustments).forEach((share) => {
+      const owner = normalize(share.person);
+      let factor = 0;
+      if (isFamily && owner === "familia") factor = 1;
+      else if (!isFamily && owner === target) factor = 1;
+      else if (!isFamily && splitsFamily && owner === "familia") factor = 0.5;
+      if (!factor) return;
+
+      const amount = Number(share.amount || 0) * factor;
+      const category = categoryMap.get(transaction.category_id) as any;
+      items.push({
+        id: `${transaction.id}-${owner}`,
+        date: transaction.due_at,
+        description: transaction.description || "Lançamento",
+        category: category?.name || transaction.categorias?.name || "Sem categoria",
+        source: "Lançamento manual",
+        status: amount < 0 ? "Crédito" : transaction.status === "paid" ? "Pago" : "Pendente",
+        amount,
+        paid: amount > 0 && transaction.status === "paid" ? amount : 0,
+      });
+    });
+  });
+
+  installments.forEach((installment: any) => {
+    if (
+      installment.category_id === "0a5d4e1a-8c5d-4f1e-9e1a-8c5d4f1e9e1a"
+    ) return;
+
+    const owner = normalize(installment.cartao_compras?.person);
+    let factor = 0;
+    if (isFamily && owner === "familia") factor = 1;
+    else if (!isFamily && owner === target) factor = 1;
+    else if (!isFamily && splitsFamily && owner === "familia") factor = 0.5;
+    if (!factor) return;
+
+    const amount = Number(installment.amount || 0) * factor;
+    const card = installment.cartoes || cardsById.get(installment.card_id) || {};
+    const category = categoryMap.get(installment.cartao_compras?.category_id) as any;
+    const parts = installment.participacoes || [];
+    const personPaid = parts
+      .filter((part: any) => normalize(part.person) === target && part.status === "paid")
+      .reduce((sum: number, part: any) => sum + Number(part.amount || 0), 0);
+    const paid = amount <= 0
+      ? 0
+      : installment.status === "paid"
+        ? amount
+        : personPaid > 0
+          ? Math.min(amount, personPaid)
+          : Math.min(amount, Number(installment.paid_amount || 0) * factor);
+
+    items.push({
+      id: `card-${installment.id}`,
+      date: installment.due_at,
+      description: installment.cartao_compras?.description || "Compra no cartão",
+      category: category?.name || installment.cartao_compras?.categorias?.name || "Sem categoria",
+      source: `Cartão${card.name ? ` · ${card.name}` : ""}`,
+      card: installment.installment_number && installment.cartao_compras?.installments_count
+        ? `Parcela ${installment.installment_number}/${installment.cartao_compras.installments_count}`
+        : undefined,
+      status: amount < 0 ? "Crédito" : paid >= amount ? "Pago" : "Pendente",
+      amount,
+      paid,
+    });
+  });
+
+  items.sort((a, b) => b.date.localeCompare(a.date));
+  const total = items.reduce((sum, item) => sum + item.amount, 0);
+  const paid = Math.min(
+    items.reduce((sum, item) => sum + item.paid, 0),
+    Math.max(0, total),
+  );
+  const remaining = Math.max(0, total - paid);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-xl border border-border/60 bg-background/40 px-3 py-2">
+          <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Total considerado</div>
+          <div className="text-sm font-bold tabular-nums">{brl(total)}</div>
+        </div>
+        <div className="rounded-xl border border-success/30 bg-success/5 px-3 py-2">
+          <div className="text-[9px] uppercase tracking-wider text-success">Já pagou</div>
+          <div className="text-sm font-bold tabular-nums text-success">{brl(paid)}</div>
+        </div>
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2">
+          <div className="text-[9px] uppercase tracking-wider text-destructive">Falta pagar</div>
+          <div className="text-sm font-bold tabular-nums text-destructive">{brl(remaining)}</div>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-border/60">
+        <table className="w-full min-w-[760px] text-xs">
+          <thead className="bg-muted/30 text-muted-foreground">
+            <tr>
+              <th className="px-3 py-2 text-left font-medium">Data</th>
+              <th className="px-3 py-2 text-left font-medium">Descrição</th>
+              <th className="px-3 py-2 text-left font-medium">Categoria</th>
+              <th className="px-3 py-2 text-left font-medium">Origem</th>
+              <th className="px-3 py-2 text-left font-medium">Status</th>
+              <th className="px-3 py-2 text-right font-medium">Valor</th>
+              <th className="px-3 py-2 text-right font-medium">Pago</th>
+              <th className="px-3 py-2 text-right font-medium">Restante</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
+                  Nenhuma despesa encontrada para este nome no período.
+                </td>
+              </tr>
+            ) : items.map((item) => (
+              <tr key={item.id} className="border-t border-border/60 hover:bg-muted/20">
+                <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{fmtDate(item.date)}</td>
+                <td className="px-3 py-2">
+                  <div className="font-medium">{item.description}</div>
+                  {item.card && <div className="text-[10px] text-muted-foreground">{item.card}</div>}
+                </td>
+                <td className="px-3 py-2">{item.category}</td>
+                <td className="px-3 py-2">{item.source}</td>
+                <td className="px-3 py-2">
+                  <span className={item.status === "Pago" ? "text-success" : item.status === "Crédito" ? "text-warning" : "text-muted-foreground"}>
+                    {item.status}
+                  </span>
+                </td>
+                <td className="px-3 py-2 text-right font-semibold tabular-nums">{brl(item.amount)}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-success">{brl(item.paid)}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-destructive">
+                  {brl(Math.max(0, item.amount - item.paid))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-[11px] text-muted-foreground">{items.length} lançamento(s) detalhado(s).</p>
+    </div>
+  );
+}
 
 function computePaidRest(targetName: string, monthTx: any[], monthInst: any[], adjMap: any) {
   const norm = (s: string) =>
