@@ -21,6 +21,12 @@ function ymd(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
+function daysLate(dueAt: string, today: string) {
+  const dueDate = new Date(`${dueAt}T00:00:00`);
+  const todayDate = new Date(`${today}T00:00:00`);
+  return Math.max(0, Math.round((todayDate.getTime() - dueDate.getTime()) / 86400000));
+}
+
 function installmentIsPaid(installment: any) {
   // Estornos são créditos aplicados diretamente na fatura, não valores
   // que precisam ser pagos. Por isso, nunca devem aparecer no sino.
@@ -258,7 +264,12 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
                           {fmtDate(t.due_at)}{t.person ? ` · ${t.person}` : ""}
                         </div>
                       </div>
-                      <span className="text-sm font-semibold tabular-nums text-destructive">{brl(Number(t.amount))}</span>
+                      <div className="shrink-0 flex items-center gap-2">
+                        <span className="rounded-full bg-destructive/15 px-2 py-1 text-[11px] font-medium text-destructive">
+                          {daysLate(t.due_at, today) === 0 ? "Hoje" : `Venceu há ${daysLate(t.due_at, today)}d`}
+                        </span>
+                        <span className="text-sm font-semibold tabular-nums text-destructive">{brl(Number(t.amount))}</span>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -284,7 +295,12 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
                           {fmtDate(i.due_at)}{i.cartoes?.name ? ` · ${i.cartoes.name}` : ""}
                         </div>
                       </div>
-                      <span className="text-sm font-semibold tabular-nums text-destructive">{brl(Number(i.amount))}</span>
+                      <div className="shrink-0 flex items-center gap-2">
+                        <span className="rounded-full bg-destructive/15 px-2 py-1 text-[11px] font-medium text-destructive">
+                          {daysLate(i.due_at, today) === 0 ? "Hoje" : `Venceu há ${daysLate(i.due_at, today)}d`}
+                        </span>
+                        <span className="text-sm font-semibold tabular-nums text-destructive">{brl(Number(i.amount))}</span>
+                      </div>
                     </li>
                   ))}
                 </ul>
