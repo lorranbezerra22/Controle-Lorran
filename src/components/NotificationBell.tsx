@@ -21,9 +21,9 @@ function ymd(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-function daysLate(dueAt: string, today: string) {
+function daysLate(dueAt: string) {
   const dueDate = new Date(`${dueAt}T00:00:00`);
-  const todayDate = new Date(`${today}T00:00:00`);
+  const todayDate = new Date(`${ymd(new Date())}T00:00:00`);
   return Math.max(0, Math.round((todayDate.getTime() - dueDate.getTime()) / 86400000));
 }
 
@@ -266,7 +266,7 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
                       </div>
                       <div className="shrink-0 flex items-center gap-2">
                         <span className="rounded-full bg-destructive/15 px-2 py-1 text-[11px] font-medium text-destructive">
-                          {daysLate(t.due_at, today) === 0 ? "Hoje" : `Venceu há ${daysLate(t.due_at, today)}d`}
+                          {daysLate(t.due_at) === 0 ? "Hoje" : `Venceu há ${daysLate(t.due_at)}d`}
                         </span>
                         <span className="text-sm font-semibold tabular-nums text-destructive">{brl(Number(t.amount))}</span>
                       </div>
@@ -297,7 +297,7 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
                       </div>
                       <div className="shrink-0 flex items-center gap-2">
                         <span className="rounded-full bg-destructive/15 px-2 py-1 text-[11px] font-medium text-destructive">
-                          {daysLate(i.due_at, today) === 0 ? "Hoje" : `Venceu há ${daysLate(i.due_at, today)}d`}
+                          {daysLate(i.due_at) === 0 ? "Hoje" : `Venceu há ${daysLate(i.due_at)}d`}
                         </span>
                         <span className="text-sm font-semibold tabular-nums text-destructive">{brl(Number(i.amount))}</span>
                       </div>
