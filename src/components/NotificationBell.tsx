@@ -27,6 +27,12 @@ function daysLate(dueAt: string) {
   return Math.max(0, Math.round((todayDate.getTime() - dueDate.getTime()) / 86400000));
 }
 
+function daysUntil(dueAt: string) {
+  const dueDate = new Date(`${dueAt}T00:00:00`);
+  const todayDate = new Date(`${ymd(new Date())}T00:00:00`);
+  return Math.max(0, Math.round((dueDate.getTime() - todayDate.getTime()) / 86400000));
+}
+
 function installmentIsPaid(installment: any) {
   // Estornos são créditos aplicados diretamente na fatura, não valores
   // que precisam ser pagos. Por isso, nunca devem aparecer no sino.
@@ -82,15 +88,22 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
         const dueDate = new Date(y, m, dueDay);
         const diff = Math.round((dueDate.getTime() - new Date(y, m, now.getDate()).getTime()) / 86400000);
         if (diff > RECURRING_ALERT_DAYS_BEFORE) return null;
-        const hasPending = (installments || []).some(
+        const pendingInstallments = (installments || []).filter(
           (i: any) =>
             i.card_id === c.id &&
             !installmentIsPaid(i) &&
+            Number(i.amount || 0) > 0 &&
+            Math.max(0, Number(i.amount || 0) - Math.max(0, Number(i.paid_amount || 0))) > 0.01 &&
             i.due_at >= monthStart &&
             i.due_at <= monthEnd,
         );
-        if (!hasPending) return null;
-        return { card: c, dueDate, diff };
+        if (pendingInstallments.length === 0) return null;
+        const pendingAmount = pendingInstallments.reduce(
+          (sum: number, i: any) =>
+            sum + Math.max(0, Number(i.amount || 0) - Math.max(0, Number(i.paid_amount || 0))),
+          0,
+        );
+        return { card: c, dueDate, diff, pendingAmount };
       })
       .filter(Boolean) as { card: any; dueDate: Date; diff: number }[];
 
@@ -195,7 +208,7 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
                   Vencimento de cartões
                 </h4>
                 <ul className="space-y-2">
-                  {cardAlerts.map(({ card, dueDate, diff }) => (
+                  {cardAlerts.map(({ card, dueDate, diff, pendingAmount }) => (
                     <li
                       key={card.id}
                       className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/60 px-3 py-2.5"
@@ -206,17 +219,22 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
                           {card.bank ? `${card.bank} · ` : ""}Vence dia {card.due_day} ({fmtDate(ymd(dueDate))})
                         </div>
                       </div>
-                      <span
-                        className={`text-[11px] px-2 py-1 rounded-full font-medium ${
-                          diff < 0
-                            ? "bg-destructive/15 text-destructive"
-                            : diff === 0
-                            ? "bg-primary/15 text-primary"
-                            : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {diff < 0 ? `Venceu há ${Math.abs(diff)}d` : diff === 0 ? "Hoje" : `Em ${diff}d`}
-                      </span>
+                      <div className="shrink-0 flex items-center gap-2">
+                        <span
+                          className={`text-[11px] px-2 py-1 rounded-full font-medium ${
+                            diff < 0
+                              ? "bg-destructive/15 text-destructive"
+                              : diff === 0
+                              ? "bg-primary/15 text-primary"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {diff < 0 ? `Venceu há ${Math.abs(diff)}d` : diff === 0 ? "Hoje" : `Em ${diff}d`}
+                        </span>
+                        <span className={`text-sm font-semibold tabular-nums ${diff < 0 ? "text-destructive" : "text-foreground"}`}>
+                          {brl(pendingAmount)}
+                        </span>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -240,7 +258,12 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
                           {fmtDate(t.due_at)}{t.person ? ` · ${t.person}` : ""}
                         </div>
                       </div>
-                      <span className="text-sm font-semibold tabular-nums">{brl(Number(t.amount))}</span>
+                      <div className="shrink-0 flex items-center gap-2">
+                        <span className="rounded-full bg-warning/15 px-2 py-1 text-[11px] font-medium text-warning">
+                          {daysUntil(t.due_at) === 0 ? "Hoje" : `Em ${daysUntil(t.due_at)}d`}
+                        </span>
+                        <span className="text-sm font-semibold tabular-nums">{brl(Number(t.amount))}</span>
+                      </div>
                     </li>
                   ))}
                 </ul>
