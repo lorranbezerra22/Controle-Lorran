@@ -660,9 +660,9 @@ function Dashboard() {
   type CatItem = (typeof catData)[number];
   const [openCat, setOpenCat] = useState<null | CatItem>(null);
   const [openPeopleAn, setOpenPeopleAn] = useLsBool("peopleAn", true);
-  const [peopleTab, setPeopleTab] = useState<"totais" | "cartoes">(() => {
+  const [peopleTab, setPeopleTab] = useState<"totais" | "cartoes" | "pagamentos">(() => {
     if (typeof window === "undefined") return "totais";
-    return (window.localStorage.getItem("dash:peopleTab") as "totais" | "cartoes") || "totais";
+    return (window.localStorage.getItem("dash:peopleTab") as "totais" | "cartoes" | "pagamentos") || "totais";
   });
   useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dash:peopleTab", peopleTab); }, [peopleTab]);
   const [openLorran, setOpenLorran] = useLsBool("card:lorran", true);
@@ -1158,6 +1158,7 @@ function Dashboard() {
                 {([
                   { id: "totais", label: "Totais", icon: Activity },
                   { id: "cartoes", label: "Cartões", icon: CreditCard },
+                  { id: "pagamentos", label: "Pago e restante", icon: Wallet },
                 ] as const).map((t) => {
                   const active = peopleTab === t.id;
                   const Icon = t.icon;
@@ -1221,7 +1222,7 @@ function Dashboard() {
                     </div>
                   );
                 })()
-              ) : (
+              ) : peopleTab === "cartoes" ? (
                 peopleAnalytics.byCard.length === 0 ? (
                   <div className="text-sm text-muted-foreground text-center py-10">Sem compras no cartão no período</div>
                 ) : (
@@ -1260,6 +1261,44 @@ function Dashboard() {
 
                       </li>
                     ))}
+                  </ul>
+                )
+              ) : (
+                peopleAnalytics.totals.length === 0 ? (
+                  <div className="text-sm text-muted-foreground text-center py-10">Sem pagamentos no período</div>
+                ) : (
+                  <ul className="space-y-3">
+                    {peopleAnalytics.totals.map((p) => {
+                      const { totalPago, totalRestante } = computePaidRest(p.name, monthTx, monthInst, adjMap);
+                      const totalConsiderado = totalPago + totalRestante;
+                      const pctPago = totalConsiderado > 0 ? (totalPago / totalConsiderado) * 100 : 0;
+                      return (
+                        <li key={p.name} className="rounded-lg border border-border/50 bg-background/40 p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+                              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: colorForPerson(p.name) }} />
+                              <span className="truncate">{p.name}</span>
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              Total considerado: <strong className="tabular-nums text-foreground">{brl(totalConsiderado)}</strong>
+                            </span>
+                          </div>
+                          <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-muted" aria-label={`${pctPago.toFixed(0)}% pago`}>
+                            <div className="h-full rounded-full bg-success transition-all" style={{ width: `${Math.min(100, pctPago)}%` }} />
+                          </div>
+                          <div className="mt-2 grid grid-cols-2 gap-3 text-xs">
+                            <div>
+                              <span className="text-muted-foreground">Já pagou</span>
+                              <div className="mt-0.5 font-semibold tabular-nums text-success">{brl(totalPago)}</div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-muted-foreground">Falta pagar</span>
+                              <div className={`mt-0.5 font-semibold tabular-nums ${totalRestante > 0 ? "text-destructive" : "text-success"}`}>{brl(totalRestante)}</div>
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                 )
               )}
