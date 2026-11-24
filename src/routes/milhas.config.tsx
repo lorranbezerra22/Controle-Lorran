@@ -1,3 +1,4 @@
+import { ClubeTab } from "./milhas.ganhos";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMilhasData } from "@/context/MilhasDataContext";
@@ -133,6 +134,11 @@ function SettingsPage() {
           )}
         </div>
       </div>
+
+      <section className="space-y-4 rounded-2xl border border-border bg-card p-4 sm:p-5">
+        <h2 className="text-base font-semibold">Clubes de assinatura</h2>
+        <ClubeTab />
+      </section>
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent>

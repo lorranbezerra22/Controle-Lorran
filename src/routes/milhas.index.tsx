@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMilhasData } from "@/context/MilhasDataContext";
 import { brlM, numM } from "@/lib/milhas-storage";
@@ -9,9 +9,15 @@ import {
   RadialBar, RadialBarChart, PolarAngleAxis,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { Coins, TrendingUp, ArrowRightLeft, Wallet, Plane, SlidersHorizontal, X, Trophy } from "lucide-react";
+import { Coins, TrendingUp, Wallet, Plane, SlidersHorizontal, X, Trophy } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { SOURCE_LABEL, type EarningSource } from "@/lib/milhas-storage";
+import { MilhasConferencia, MilhasPendencias } from "@/components/MilhasOperacao";
+import { KpiTile } from "@/components/KpiTile";
+import { PageHeader } from "@/components/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { isPendingEarning } from "@/lib/milhas-clubes";
 import { MilhasNotificationBell } from "@/components/MilhasNotificationBell";
 
 const formatMonth = (key: string) => { const [y, m] = key.split("-"); return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }); };
@@ -21,26 +27,8 @@ export const Route = createFileRoute("/milhas/")({
   head: () => ({ meta: [{ title: "Dashboard — CRM Milhas" }] }),
 });
 
-function StatCard({ icon: Icon, label, value, hint }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string; hint?: string }) {
-  return (
-    <div className="bg-card border border-border p-6 relative overflow-hidden rounded-xl">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs tracking-[0.15em] uppercase text-muted-foreground mb-2">{label}</p>
-          <p className="font-[var(--font-display)] text-3xl text-foreground">{value}</p>
-          {hint && <p className="text-xs text-muted-foreground mt-2">{hint}</p>}
-        </div>
-        <div className="w-10 h-10 rounded-full bg-gold/10 flex items-center justify-center">
-          <Icon className="w-5 h-5 text-gold" />
-        </div>
-      </div>
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gold" />
-    </div>
-  );
-}
-
 function MilhasDashboard() {
-  const { programs, earnings, transfers, redemptions } = useMilhasData();
+  const { programs, earnings, redemptions } = useMilhasData();
 
 
 
@@ -68,7 +56,7 @@ function MilhasDashboard() {
   const [showFilters, setShowFilters] = useState<boolean>(false);
 
   const filteredEarnings = useMemo(
-    () => earnings.filter((e) => programFilter === "all" || e.programId === programFilter),
+    () => earnings.filter((e) => !isPendingEarning(e.note) && (programFilter === "all" || e.programId === programFilter)),
     [earnings, programFilter]
   );
 
@@ -79,7 +67,6 @@ function MilhasDashboard() {
   const monthPoints = filteredEarnings
     .filter((e) => (monthFilter === "all" ? e.month.startsWith(String(year)) : e.month === monthFilter))
     .reduce((s, e) => s + e.points, 0);
-  const totalTransferValue = transfers.filter((t) => programFilter === "all" || t.fromProgramId === programFilter).reduce((s, t) => s + t.cashValue, 0);
   const viagensCount = redemptions.filter((r) => r.type === "viagem" && (programFilter === "all" || r.programId === programFilter)).length;
 
   // Custo total investido para gerar milhas (soma dos custos declarados nos ganhos)
@@ -177,7 +164,8 @@ function MilhasDashboard() {
       if (installments < 2) continue;
       if (list.length < installments) continue;
       const completedAt = list.reduce((max, e) => {
-        const t = e.createdAt ? new Date(e.createdAt).getTime() : 0;
+        const registradoEm = e.creditDate ? e.updatedAt : e.createdAt;
+        const t = registradoEm ? new Date(registradoEm).getTime() : 0;
         return t > max ? t : max;
       }, 0);
       if (!completedAt || now - completedAt > THREE_DAYS) continue;
@@ -200,7 +188,8 @@ function MilhasDashboard() {
       .map((e) => {
         const sid = (e.note ?? "").match(/\[SERIE:([^\]]+)\]/)?.[1] ?? "";
         const parc = (e.note ?? "").match(/Parcela\s+(\d+)\s*\/\s*(\d+)/);
-        const t = e.createdAt ? new Date(e.createdAt).getTime() : 0;
+        const registradoEm = e.creditDate ? e.updatedAt : e.createdAt;
+        const t = registradoEm ? new Date(registradoEm).getTime() : 0;
         return { e, sid, parc, t };
       })
       .filter((x) => x.t > 0 && now - x.t <= ONE_DAY && !completedSids.has(x.sid))
@@ -221,39 +210,17 @@ function MilhasDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header + filtros integrados */}
-      <div className="relative bg-gradient-to-br from-card via-card to-card/40 border border-border rounded-2xl p-5 overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, var(--foreground) 1px, transparent 0)", backgroundSize: "22px 22px" }} />
-        <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
-              <span className="text-[10px] uppercase tracking-[0.22em] text-gold">Dashboard · CRM Milhas</span>
-            </div>
-            <h2 className="font-[var(--font-display)] text-2xl md:text-3xl leading-tight">
-              Visão consolidada <span className="text-gold">{year}</span>
-            </h2>
-            <p className="text-xs text-muted-foreground mt-1">
-              {programs.length} programas • {numM(totalPoints)} pts acumulados • {brlM(totalCash)} em patrimônio
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <MilhasNotificationBell credits={recentCredits} />
-            <button
-              onClick={() => setShowFilters((v) => !v)}
-              className={`inline-flex items-center gap-2 text-xs uppercase tracking-wider rounded-lg px-3 py-2 border transition-colors ${showFilters ? "border-gold/60 bg-gold/10 text-gold" : "border-border text-muted-foreground hover:text-foreground hover:border-gold/40"}`}
-            >
-              {showFilters ? <X className="w-3.5 h-3.5" /> : <SlidersHorizontal className="w-3.5 h-3.5" />}
-              {showFilters ? "Ocultar" : "Filtros"}
-              {(programFilter !== "all" || monthFilter !== "all") && !showFilters && (
-                <span className="ml-1 w-1.5 h-1.5 rounded-full bg-gold" />
-              )}
-            </button>
-          </div>
-        </div>
-
+      <PageHeader icon={Wallet} title="Painel de Milhas" subtitle="Saldos, custos registrados e créditos de clube"
+        actions={<>
+          <MilhasNotificationBell credits={recentCredits} />
+          <Button type="button" variant="outline" aria-expanded={showFilters}
+            onClick={() => setShowFilters((value) => !value)}>
+            {showFilters ? <X /> : <SlidersHorizontal />} Filtros
+          </Button>
+        </>}
+      />
         {showFilters && (
-          <div className="relative mt-5 pt-5 border-t border-border/60 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl border border-border bg-card p-4">
             {(() => {
               const activeCls = "border-gold/60 bg-gold/10 text-gold";
               const inactiveCls = "border-border text-muted-foreground hover:text-foreground hover:border-gold/40";
@@ -287,19 +254,27 @@ function MilhasDashboard() {
             })()}
           </div>
         )}
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiTile icon={<Coins className="size-5" />} label="Saldo consolidado" value={totalPoints} format={numM} sub="Pontos e milhas" highlight />
+        <KpiTile icon={<Wallet className="size-5" />} label="Possível venda bruta" value={totalCash} sub="Pelos valores de referência cadastrados" index={1} />
+        <KpiTile icon={<TrendingUp className="size-5" />} label="Custo registrado" value={totalMilesCost} sub="Histórico dos ganhos confirmados" index={2} />
+        <KpiTile icon={<Coins className="size-5" />} label="Pontos creditados no período" value={monthPoints} format={numM}
+          sub={monthFilter === "all" ? String(year) : monthOptions.find((month) => month.key === monthFilter)?.label} index={3} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={Wallet} label="Patrimônio Bruto" value={brlM(totalCash)} hint="Saldo atual em R$" />
-        <StatCard icon={Coins} label="Custo Investido" value={brlM(totalMilesCost)} hint="Custo p/ gerar milhas" />
-        <StatCard icon={TrendingUp} label="Patrimônio Líquido" value={brlM(netPatrimony)} hint="Bruto − custo" />
-        <StatCard icon={Plane} label="Economia c/ Milhas" value={brlM(totalEconomy)} hint={`${viagensCount} viagens • gasto ${brlM(totalTravelSpent)}`} />
-        <StatCard icon={Coins} label="Pontos & Milhas" value={numM(totalPoints)} hint={`${programs.length} programas ativos`} />
-        <StatCard icon={TrendingUp} label={monthFilter === "all" ? `Ano ${year}` : (monthOptions.find((m) => m.key === monthFilter)?.label ?? "")} value={numM(monthPoints)} hint="Pontos acumulados" />
-        <StatCard icon={Plane} label="Viagens Realizadas" value={String(viagensCount)} hint="Resgates em viagem" />
+      <div className="grid items-start gap-4 xl:grid-cols-[1fr_1.15fr]">
+        <MilhasPendencias modo="painel" programaId={programFilter === "all" ? undefined : programFilter} />
+        <MilhasConferencia programas={filteredPrograms} />
       </div>
-
-
+      <details className="rounded-2xl border border-border bg-card px-4 py-3 sm:px-5">
+        <summary className="cursor-pointer font-semibold">Resultados e viagens</summary>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <KpiTile icon={<TrendingUp className="size-5" />} label="Patrimônio líquido" value={netPatrimony} sub="Venda bruta estimada menos custo registrado" />
+          <KpiTile icon={<Plane className="size-5" />} label="Economia com milhas" value={totalEconomy} sub={"Custo em viagens: " + brlM(totalTravelSpent)} index={1} />
+          <KpiTile icon={<Plane className="size-5" />} label="Viagens realizadas" value={viagensCount} format={numM} sub="Resgates em viagem" index={2} />
+        </div>
+      </details>
       {completedClubs.length > 0 && (
         <div className="bg-card border border-border rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-4">
@@ -427,54 +402,48 @@ function MilhasDashboard() {
       )}
 
 
-      {programStats.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-end justify-between flex-wrap gap-2">
-            <div>
-              <h3 className="font-[var(--font-display)] text-xl">Programas</h3>
-              <p className="text-xs text-muted-foreground">Clique num card para ver a origem dos pontos e custos</p>
-            </div>
-            <span className="text-[10px] uppercase tracking-[0.2em] text-gold">{programStats.length} ativo{programStats.length !== 1 ? "s" : ""}</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {programStats.map((s) => (
-              <button
-                key={s.program.id}
-                type="button"
-                onClick={() => setDetailsProgramId(s.program.id)}
-                className="text-left relative bg-gradient-to-br from-card via-card to-card/40 border border-border hover:border-gold/60 hover:shadow-[0_8px_32px_rgba(201,169,97,0.15)] transition-all p-5 rounded-2xl overflow-hidden group"
-              >
-                <div className="absolute top-0 left-0 w-1 h-full" style={{ background: brandColor(s.program.name, s.program.color) }} />
-                <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, var(--foreground) 1px, transparent 0)", backgroundSize: "20px 20px" }} />
-                <div className="relative pl-2">
-                  <div className="flex items-center gap-3 mb-3">
-                    <BankIcon bank={s.program.name} size={28} square />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{s.program.name}</p>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{s.program.category}</p>
-                    </div>
-                  </div>
-                  <p className="font-[var(--font-display)] text-2xl text-gold tabular-nums">
-                    {numM(s.totalPoints)}<span className="text-xs text-muted-foreground ml-1">pts</span>
-                  </p>
-                  <div className="mt-3 pt-3 border-t border-border/60 grid grid-cols-2 gap-2 text-[11px]">
-                    <div>
-                      <p className="uppercase tracking-wider text-muted-foreground">Investido</p>
-                      <p className="tabular-nums text-foreground">{brlM(s.totalCost)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="uppercase tracking-wider text-muted-foreground">{s.avgPer1k > 0 ? "Preço médio /1k" : "Valor"}</p>
-                      <p className="tabular-nums text-foreground">{s.avgPer1k > 0 ? brlM(s.avgPer1k) : brlM(s.cashValue)}</p>
-                    </div>
-                  </div>
-                  <div className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground/70">{s.count} lançamento{s.count !== 1 ? "s" : ""} • saldo {numM(s.totalPoints)}</div>
-                </div>
-              </button>
-            ))}
-          </div>
+      <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-card)]">
+        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3 sm:px-5">
+          <h2 className="text-base font-semibold">Programas</h2>
+          <Button variant="ghost" size="sm" asChild><Link to="/milhas/config">Configurações</Link></Button>
         </div>
-      )}
-
+        {filteredPrograms.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-muted-foreground">Cadastre um programa em Configurações para começar.</p>
+        ) : (
+          <Table className="min-w-[640px]">
+            <TableHeader className="bg-muted/25">
+              <TableRow>
+                <TableHead scope="col" className="pl-5">Programa</TableHead>
+                <TableHead scope="col" className="text-right">Saldo</TableHead>
+                <TableHead scope="col" className="text-right">Custo registrado</TableHead>
+                <TableHead scope="col" className="text-right">CPM de aquisição</TableHead>
+                <TableHead scope="col" className="text-right">Possível venda bruta</TableHead>
+                <TableHead scope="col" className="pr-5 text-right">Detalhes</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {programStats.filter(({ program }) => programFilter === "all" || program.id === programFilter).map((item) => (
+                <TableRow key={item.program.id}>
+                  <TableCell className="py-3 pl-5 font-semibold">
+                    <span className="flex items-center gap-2">
+                      <BankIcon bank={item.program.name} size={28} square /> {item.program.name}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{numM(item.totalPoints)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{brlM(item.totalCost)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{item.count ? brlM(item.avgPer1k) : "—"}</TableCell>
+                  <TableCell className="text-right tabular-nums">{brlM(item.cashValue)}</TableCell>
+                  <TableCell className="pr-5 text-right">
+                    <Button type="button" variant="outline" size="sm" onClick={() => setDetailsProgramId(item.program.id)}>
+                      Ver detalhes
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </section>
       <Dialog open={!!detailsProgramId} onOpenChange={(o) => !o && setDetailsProgramId(null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           {detailsProgram && (

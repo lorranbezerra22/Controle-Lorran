@@ -1,7 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
-import { toast } from "sonner";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { createContext, useCallback, useContext, useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 import { useSession } from "@/lib/auth";
 import {
   Earning,
@@ -11,18 +11,22 @@ import {
   Transfer,
   milhasStorage,
 } from "@/lib/milhas-storage";
+import { isPendingEarning, mesDoBanco, type PrevisaoDeClube } from "@/lib/milhas-clubes";
 import { brandColor } from "@/lib/banks";
 
 // ------------------------------------------------------------------
 // Mapping helpers between DB (snake_case) e domínio (camelCase)
 // ------------------------------------------------------------------
-const rowToProgram = (r: any): Program => ({
+const rowToProgram = (r: any, userId?: string): Program => ({
   id: r.id,
   name: r.name,
   category: r.category,
   balance: Number(r.balance) || 0,
   valuePerThousand: Number(r.value_per_thousand) || 0,
   monthlyGoal: r.monthly_goal != null ? Number(r.monthly_goal) : undefined,
+  appBalance: r.saldo_app != null ? Number(r.saldo_app) : undefined,
+  appBalanceDate: r.saldo_app_conferido_em ?? undefined,
+  canEdit: Boolean(userId && r.user_id === userId),
   color: r.color,
   createdAt: r.created_at,
 });
@@ -30,7 +34,9 @@ const rowToProgram = (r: any): Program => ({
 const rowToEarning = (r: any): Earning => ({
   id: r.id,
   programId: r.program_id,
-  month: r.month,
+  month: r.month.slice(0, 7),
+  creditDate: r.data_credito ?? undefined,
+  updatedAt: r.updated_at,
   points: Number(r.points) || 0,
   source: r.source,
   cost: r.cost != null ? Number(r.cost) : undefined,
@@ -85,6 +91,8 @@ interface DataContextValue {
   addEarning: (e: Omit<Earning, "id" | "createdAt">) => Promise<void>;
   updateEarning: (id: string, patch: Partial<Omit<Earning, "id" | "createdAt">>) => Promise<void>;
   deleteEarning: (id: string) => Promise<void>;
+  confirmClubCredit: (id: string, date: string, points: number) => Promise<void>;
+  saveClubForecast: (programId: string, series: string, forecasts: PrevisaoDeClube[]) => Promise<void>;
   addTransfer: (t: Omit<Transfer, "id" | "createdAt" | "pointsReceived" | "cashValue">) => Promise<void>;
   deleteTransfer: (id: string) => Promise<void>;
   addRedemption: (r: Omit<Redemption, "id" | "createdAt">) => Promise<void>;
@@ -111,7 +119,6 @@ type EarningBalanceInput = Pick<
 >;
 
 const normalizeProgramName = (value?: string) => (value ?? "").trim().toLowerCase();
-const isPendingEarning = (note?: string) => (note ?? "").includes("[PENDING]");
 
 const getTransferOriginName = (note?: string) => {
   const match = (note ?? "").match(/Origem:\s*([^•]+)/i);
@@ -139,7 +146,7 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
         .select("*")
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return (data ?? []).map(rowToProgram);
+      return (data ?? []).map((row) => rowToProgram(row, userId));
     },
   });
 
@@ -199,32 +206,18 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
   const adjustBalance = useCallback(
     async (programId: string, delta: number) => {
       if (!delta) return;
-      const { data: currentRow, error: readError } = await supabase
-        .from("milhas_programas")
-        .select("*")
-        .eq("id", programId)
-        .single();
-      if (readError || !currentRow) {
-        throw new Error("Carteira do programa não encontrada para atualizar o saldo.");
-      }
-
-      const current = rowToProgram(currentRow);
-      const next = Math.max(0, current.balance + delta);
-      const { data: updatedRow, error } = await supabase
-        .from("milhas_programas")
-        .update({ balance: next })
-        .eq("id", programId)
-        .select("*")
-        .single();
-      if (error) throw error;
-      const updated = rowToProgram(updatedRow);
+      const { data, error } = await supabase.rpc("milhas_ajustar_saldo", {
+        p_programa_id: programId,
+        p_delta: delta,
+      });
+      if (error || !data) throw error ?? new Error("Saldo indisponível.");
+      const updated = rowToProgram(data, userId);
       qc.setQueryData<Program[]>(QK.programs, (existing = []) =>
         existing.map((program) => (program.id === programId ? updated : program))
       );
     },
-    [qc]
+    [qc, userId]
   );
-
   const getEarningBalanceMovements = useCallback(
     (earning: EarningBalanceInput): BalanceMovement[] => {
       if (isPendingEarning(earning.note)) return [];
@@ -283,21 +276,26 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
 
   const updateProgram: DataContextValue["updateProgram"] = useCallback(
     async (id, patch) => {
-      const dbPatch: Record<string, any> = {};
+      const dbPatch: TablesUpdate<"milhas_programas"> = {};
       if (patch.name !== undefined) dbPatch.name = patch.name;
       if (patch.category !== undefined) dbPatch.category = patch.category;
       if (patch.balance !== undefined) dbPatch.balance = patch.balance;
       if (patch.valuePerThousand !== undefined) dbPatch.value_per_thousand = patch.valuePerThousand;
       if (patch.monthlyGoal !== undefined) dbPatch.monthly_goal = patch.monthlyGoal;
+      if (patch.appBalance !== undefined) dbPatch.saldo_app = patch.appBalance;
+      if (patch.appBalanceDate !== undefined) dbPatch.saldo_app_conferido_em = patch.appBalanceDate;
       if (patch.name !== undefined) {
         const current = programs.find((program) => program.id === id);
         dbPatch.color = brandColor(patch.name, patch.color ?? current?.color ?? PROGRAM_COLORS[0]);
       } else if (patch.color !== undefined) dbPatch.color = patch.color;
-      const { error } = await supabase.from("milhas_programas").update(dbPatch as any).eq("id", id);
+      const { data, error } = await supabase.from("milhas_programas").update(dbPatch).eq("id", id).select("*").single();
       if (error) throw error;
+      qc.setQueryData<Program[]>(QK.programs, (existing = []) =>
+        existing.map((program) => (program.id === id ? rowToProgram(data, userId) : program))
+      );
       invalidate(["programs"]);
     },
-    [programs, invalidate]
+    [programs, qc, userId, invalidate]
   );
 
   const deleteProgram: DataContextValue["deleteProgram"] = useCallback(
@@ -318,7 +316,8 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
       const { error } = await supabase.from("milhas_ganhos").insert({
         user_id: userId,
         program_id: e.programId,
-        month: e.month,
+        month: mesDoBanco(e.month),
+      data_credito: e.creditDate ?? null,
         points: e.points,
         source: e.source,
         cost: e.cost ?? null,
@@ -339,16 +338,17 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
       if (!target) return;
       const newPoints = patch.points ?? target.points;
       const newProgramId = patch.programId ?? target.programId;
-      const dbPatch: Record<string, any> = {};
+      const dbPatch: TablesUpdate<"milhas_ganhos"> = {};
       if (patch.programId !== undefined) dbPatch.program_id = patch.programId;
-      if (patch.month !== undefined) dbPatch.month = patch.month;
+      if (patch.month !== undefined) dbPatch.month = mesDoBanco(patch.month);
+      if (patch.creditDate !== undefined) dbPatch.data_credito = patch.creditDate;
       if (patch.points !== undefined) dbPatch.points = patch.points;
       if (patch.source !== undefined) dbPatch.source = patch.source;
       if (patch.cost !== undefined) dbPatch.cost = patch.cost ?? null;
       if (patch.parity !== undefined) dbPatch.parity = patch.parity ?? null;
       if (patch.bonusPercent !== undefined) dbPatch.bonus_percent = patch.bonusPercent ?? null;
       if (patch.note !== undefined) dbPatch.note = patch.note ?? null;
-      const { error } = await supabase.from("milhas_ganhos").update(dbPatch as any).eq("id", id);
+      const { error } = await supabase.from("milhas_ganhos").update(dbPatch).eq("id", id);
       if (error) throw error;
       await applyBalanceMovements(getEarningBalanceMovements(target), -1);
       await applyBalanceMovements(
@@ -375,56 +375,34 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
     [earnings, applyBalanceMovements, getEarningBalanceMovements, invalidate]
   );
 
-  // ------------------------------------------------------------------
-  // Materialização automática de parcelas de clube + alerta de conclusão
-  // ------------------------------------------------------------------
-  const materializedRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (!earnings.length) return;
-    const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-    for (const e of earnings) {
-      const note = e.note ?? "";
-      if (!note.includes("[PENDING]")) continue;
-      const due = note.match(/\[DUE:(\d{4}-\d{2}-\d{2})\]/)?.[1];
-      if (!due || due > today) continue;
-      if (materializedRef.current.has(e.id)) continue;
-      materializedRef.current.add(e.id);
+  const confirmClubCredit: DataContextValue["confirmClubCredit"] = useCallback(
+    async (id, date, points) => {
+      const { error } = await supabase.rpc("milhas_confirmar_credito_clube", {
+        p_ganho_id: id,
+        p_data_credito: date,
+        p_pontos: points,
+      });
+      if (error) throw new Error(error.message);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: QK.programs }),
+        qc.invalidateQueries({ queryKey: QK.earnings }),
+      ]);
+    },
+    [qc]
+  );
 
-      const cleaned = note
-        .replace(/\s*\[PENDING\]\s*/g, "")
-        .replace(/\s*\[DUE:\d{4}-\d{2}-\d{2}\]\s*/g, "")
-        .replace(/\s*•\s*•\s*/g, " • ")
-        .replace(/^\s*•\s*/, "")
-        .replace(/\s*•\s*$/, "")
-        .trim();
-
-      const parcela = cleaned.match(/Parcela\s+(\d+)\s*\/\s*(\d+)/);
-      const isLast = parcela && parcela[1] === parcela[2];
-      const programName = programs.find((p) => p.id === e.programId)?.name ?? "Programa";
-
-      (async () => {
-        try {
-          await updateEarning(e.id, { note: cleaned });
-          if (isLast) {
-            toast.success(`🎉 Clube ${programName} concluído!`, {
-              description: `Última parcela recebida: ${e.points.toLocaleString("pt-BR")} pts creditados.`,
-              duration: 8000,
-            });
-          } else {
-            toast(`Parcela do clube ${programName} creditada`, {
-              description: `${e.points.toLocaleString("pt-BR")} pts adicionados ao saldo.`,
-            });
-          }
-        } catch (err) {
-          materializedRef.current.delete(e.id);
-          console.error("[Milhas] Falha ao materializar parcela:", err);
-        }
-      })();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [earnings, programs]);
-
-
+  const saveClubForecast: DataContextValue["saveClubForecast"] = useCallback(
+    async (programId, series, forecasts) => {
+      const { error } = await supabase.rpc("milhas_salvar_previsao_clube", {
+        p_programa_id: programId,
+        p_serie: series,
+        p_previsoes: forecasts,
+      });
+      if (error) throw new Error(error.message);
+      await qc.invalidateQueries({ queryKey: QK.earnings });
+    },
+    [qc]
+  );
   // ------------------------------------------------------------------
   // Transfers
   // ------------------------------------------------------------------
@@ -592,7 +570,8 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
             .map((e) => ({
               user_id: userId,
               program_id: idMap.get(e.programId)!,
-              month: e.month,
+              month: mesDoBanco(e.month),
+              data_credito: e.creditDate ?? null,
               points: e.points,
               source: e.source,
               cost: e.cost ?? null,
@@ -667,6 +646,8 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
       addEarning,
       updateEarning,
       deleteEarning,
+      confirmClubCredit,
+      saveClubForecast,
       addTransfer,
       deleteTransfer,
       addRedemption,
@@ -688,6 +669,8 @@ export const MilhasDataProvider = ({ children }: { children: React.ReactNode }) 
       addEarning,
       updateEarning,
       deleteEarning,
+      confirmClubCredit,
+      saveClubForecast,
       addTransfer,
       deleteTransfer,
       addRedemption,

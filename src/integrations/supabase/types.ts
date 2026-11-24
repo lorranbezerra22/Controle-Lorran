@@ -532,6 +532,7 @@ export type Database = {
       milhas_ganhos: {
         Row: {
           bonus_percent: number | null
+          data_credito: string | null
           cost: number | null
           created_at: string
           id: string
@@ -546,6 +547,7 @@ export type Database = {
         }
         Insert: {
           bonus_percent?: number | null
+          data_credito?: string | null
           cost?: number | null
           created_at?: string
           id?: string
@@ -560,6 +562,7 @@ export type Database = {
         }
         Update: {
           bonus_percent?: number | null
+          data_credito?: string | null
           cost?: number | null
           created_at?: string
           id?: string
@@ -589,6 +592,8 @@ export type Database = {
           color: string
           created_at: string
           id: string
+          saldo_app: number | null
+          saldo_app_conferido_em: string | null
           monthly_goal: number | null
           name: string
           updated_at: string
@@ -601,6 +606,8 @@ export type Database = {
           color?: string
           created_at?: string
           id?: string
+          saldo_app?: number | null
+          saldo_app_conferido_em?: string | null
           monthly_goal?: number | null
           name: string
           updated_at?: string
@@ -613,6 +620,8 @@ export type Database = {
           color?: string
           created_at?: string
           id?: string
+          saldo_app?: number | null
+          saldo_app_conferido_em?: string | null
           monthly_goal?: number | null
           name?: string
           updated_at?: string
@@ -1391,6 +1400,18 @@ export type Database = {
       }
       is_lorran_or_tayane: { Args: { u_id: string }; Returns: boolean }
       is_shared: { Args: { u_id: string }; Returns: boolean }
+      milhas_ajustar_saldo: {
+        Args: { p_programa_id: string; p_delta: number }
+        Returns: Database["public"]["Tables"]["milhas_programas"]["Row"]
+      }
+      milhas_confirmar_credito_clube: {
+        Args: { p_ganho_id: string; p_data_credito: string; p_pontos: number }
+        Returns: string
+      }
+      milhas_salvar_previsao_clube: {
+        Args: { p_programa_id: string; p_serie: string; p_previsoes: Json }
+        Returns: undefined
+      }
       signup_allowed: { Args: never; Returns: boolean }
       sync_auto_yield_transaction: {
         Args: { p_account_id: string; p_month: string }

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useMilhasData } from "@/context/MilhasDataContext";
 import { EarningSource, SOURCE_LABEL, brlM, numM, uid } from "@/lib/milhas-storage";
 import { Plus, Trash2, Pencil, Check, X, ArrowRight, ArrowLeft, CreditCard, Gift, Users, Repeat } from "lucide-react";
@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { DatePicker, MonthPicker } from "@/components/date-picker";
 import { brandColor } from "@/lib/banks";
 import { BankIcon } from "@/components/BankIcon";
+import { dataSaoPaulo, formatarDataCredito, isPendingEarning, somarMeses, type PrevisaoDeClube } from "@/lib/milhas-clubes";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/milhas/ganhos")({
@@ -16,30 +17,16 @@ export const Route = createFileRoute("/milhas/ganhos")({
 
 const monthKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 const formatMonth = (key: string) => { const [y, m] = key.split("-"); return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }); };
-const BR_TZ = "America/Sao_Paulo";
-const todayISO = () => {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: BR_TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-  return parts; // en-CA => yyyy-MM-dd
-};
-const fmtISO = (iso: string) => {
-  if (!iso) return "";
-  const [y, m, d] = iso.split("-").map(Number);
-  if (!y || !m || !d) return iso;
-  return new Intl.DateTimeFormat("pt-BR", { timeZone: BR_TZ, day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(Date.UTC(y, m - 1, d, 12, 0, 0)));
-};
+const todayISO = dataSaoPaulo;
+const fmtISO = formatarDataCredito;
 const SOURCES: EarningSource[] = ["cartao", "bonificadas"];
 
 export function RegistrosPage() {
-  const [tab, setTab] = useState<"ganhos" | "transferencias" | "clube">("ganhos");
+  const [tab, setTab] = useState<"ganhos" | "transferencias">("ganhos");
   const tabs: { key: typeof tab; label: string }[] = [
     { key: "ganhos", label: "Ganhos" },
     { key: "transferencias", label: "Transferências bonificadas" },
-    { key: "clube", label: "Clube" },
   ];
-
-  // materialização de parcelas pendentes ocorre globalmente no MilhasDataProvider
-  const { earnings } = useMilhasData();
-
 
   return (
     <div className="space-y-6">
@@ -55,7 +42,6 @@ export function RegistrosPage() {
 
       {tab === "ganhos" && <GanhosTab />}
       {tab === "transferencias" && <TransferenciasTab />}
-      {tab === "clube" && <ClubeTab />}
     </div>
   );
 }
@@ -144,15 +130,14 @@ function GanhosTab() {
     }
   };
 
-  // parcelas futuras de clube não entram nos ganhos até a data chegar
-  const isPending = (n?: string) => !!n && n.includes("[PENDING]");
+  // Somente créditos registrados entram no extrato.
 
   // agrupa clube base + créditos de bônus para diluir o custo pelo total de pontos
   const clubGroupPoints = new Map<string, number>();
   const seriesTotals = new Map<string, { points: number; cost: number }>();
   for (const e of earnings) {
     if (e.source !== "clube") continue;
-    if (isPending(e.note)) continue;
+    if (isPendingEarning(e.note)) continue;
     const m = (e.note ?? "").match(/\[BONUS-CLUBE:([^\]]+)\]/);
     const baseId = m ? m[1] : e.id;
     clubGroupPoints.set(baseId, (clubGroupPoints.get(baseId) ?? 0) + e.points);
@@ -166,7 +151,7 @@ function GanhosTab() {
   }
 
   const enriched = earnings
-    .filter((e) => !isPending(e.note))
+    .filter((e) => !isPendingEarning(e.note))
     .filter((e) => filterProgram === "all" || e.programId === filterProgram)
     .map((e) => {
       const p = programs.find((pr) => pr.id === e.programId);
@@ -402,7 +387,7 @@ function GanhosTab() {
                 <label className="text-xs uppercase tracking-wider text-muted-foreground mb-1 block">
                   {form.source === "transferencia" ? "Programa de origem (fidelidade)" : "Programa"}
                 </label>
-                <select value={form.programId} onChange={(e) => setForm({ ...form, programId: e.target.value })} className="w-full border border-border px-3 py-2 text-sm bg-background rounded-md" required>
+                <select value={form.programId} onChange={(e) => setForm({ ...form, programId: e.target.value })} disabled={!!editingId} className="w-full border border-border px-3 py-2 text-sm bg-background rounded-md" required>
                   {programs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
@@ -470,7 +455,7 @@ function GanhosTab() {
           <table className="w-full text-sm">
             <thead className="bg-muted/40">
               <tr className="text-left">
-                {["Programa","Mês","Origem","Pontos","Custo","Preço médio /1k","Valor R$","Obs",""].map((h,i) => <th key={i} className="px-4 py-3 text-xs uppercase tracking-wider text-muted-foreground">{h}</th>)}
+                {["Programa","Competência","Data do crédito","Origem","Pontos","Custo","Preço médio /1k","Valor R$","Obs",""].map((h,i) => <th key={i} className="px-4 py-3 text-xs uppercase tracking-wider text-muted-foreground">{h}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -478,6 +463,7 @@ function GanhosTab() {
                 <tr key={e.id} className="border-t border-border">
                   <td className="px-4 py-3"><div className="flex items-center gap-2"><span className="w-2 h-6" style={{ background: e.programColor }} /><BankIcon bank={e.programName} size={18} square /><span className="font-medium">{e.programName}</span></div></td>
                   <td className="px-4 py-3 text-muted-foreground capitalize">{formatMonth(e.month)}</td>
+                  <td className="px-4 py-3 text-muted-foreground tabular-nums">{e.creditDate ? fmtISO(e.creditDate) : "—"}</td>
                   <td className="px-4 py-3"><span className="px-2 py-0.5 text-[11px] uppercase tracking-wider border border-border text-muted-foreground rounded">{SOURCE_LABEL[e.source]}</span></td>
                   <td className="px-4 py-3 text-right tabular-nums">{numM(e.points)}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{e.displayCost != null ? (e.displayCost === 0 ? <span className="text-gold">Orgânico</span> : brlM(e.displayCost)) : "—"}</td>
@@ -646,18 +632,9 @@ const CLUBE_PLAN_LABEL: Record<ClubePlan, string> = {
   anual_parcelado: "Anual parcelado",
 };
 
-const planMonths = (_plan: ClubePlan, installments: number) => Math.max(1, installments || 1);
-
-const SERIE_TAG = (sid: string) => `[SERIE:${sid}]`;
 const getSeriesId = (note: string | undefined) => note?.match(/\[SERIE:([^\]]+)\]/)?.[1] ?? null;
-const addMonthsISO = (iso: string, i: number) => {
-  const [y, m, d] = iso.split("-").map(Number);
-  const dt = new Date(y, (m - 1) + i, d);
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
-};
-
-function parseClubeNote(note: string | undefined): { plan: ClubePlan; promoName: string; installments: number; dueDate: string; pointsPerMonth: number; bonusExpected: number; bonusCredited: number; costPerInstallment: number; rest: string } {
-  const out = { plan: "mensal" as ClubePlan, promoName: "", installments: 12, dueDate: "", pointsPerMonth: 0, bonusExpected: 0, bonusCredited: 0, costPerInstallment: 0, rest: "" };
+function parseClubeNote(note: string | undefined): { plan: ClubePlan; promoName: string; installments: number; dueDate: string; pointsPerMonth: number; bonusExpected: number; bonusCredited: number; costPerInstallment: number; firstPoints: number; creditMonths: number; rest: string } {
+  const out = { plan: "mensal" as ClubePlan, promoName: "", installments: 12, dueDate: "", pointsPerMonth: 0, bonusExpected: 0, bonusCredited: 0, costPerInstallment: 0, firstPoints: 0, creditMonths: 0, rest: "" };
   if (!note) return out;
   const parts = note.split(" • ");
   const remaining: string[] = [];
@@ -666,6 +643,8 @@ function parseClubeNote(note: string | undefined): { plan: ClubePlan; promoName:
     const mPromo = p.match(/^Promo:\s*(.+)$/);
     const mInst = p.match(/^(\d+)x$/);
     const mVence = p.match(/^Vence:\s*(\d{2})\/(\d{2})\/(\d{4})$/);
+    const mFirstPoints = p.match(/^Crédito inicial:\s*([\d.]+)$/);
+    const mMonths = p.match(/^(\d+) meses de crédito$/);
     const mPPM = p.match(/^([\d.]+)\s*pts\/mês$/);
     const mBonusExp = p.match(/^Bônus previsto:\s*([\d.]+)$/);
     const mBonusCred = p.match(/^Bônus creditado:\s*([\d.]+)$/);
@@ -676,11 +655,13 @@ function parseClubeNote(note: string | undefined): { plan: ClubePlan; promoName:
     } else if (mPromo) out.promoName = mPromo[1].trim();
     else if (mInst) out.installments = Number(mInst[1]);
     else if (mVence) out.dueDate = `${mVence[3]}-${mVence[2]}-${mVence[1]}`;
+    else if (mFirstPoints) out.firstPoints = Number(mFirstPoints[1].replace(/\./g, ""));
+    else if (mMonths) out.creditMonths = Number(mMonths[1]);
     else if (mPPM) out.pointsPerMonth = Number(mPPM[1].replace(/\./g, ""));
     else if (mBonusExp) out.bonusExpected = Number(mBonusExp[1].replace(/\./g, ""));
     else if (mBonusCred) out.bonusCredited = Number(mBonusCred[1].replace(/\./g, ""));
     else if (mCostInst) out.costPerInstallment = Number(mCostInst[1].replace(/\./g, "").replace(",", "."));
-    else if (/^\[SERIE:[^\]]+\]$/.test(p)) { /* strip */ }
+    else if (/^\[(?:SERIE:[^\]]+|PENDING|DUE:[^\]]+)\]$/.test(p)) { /* strip */ }
     else if (/^Parcela\s+\d+\/\d+$/.test(p)) { /* strip */ }
     else remaining.push(p);
   }
@@ -688,12 +669,14 @@ function parseClubeNote(note: string | undefined): { plan: ClubePlan; promoName:
   return out;
 }
 
-export function buildClubeNote(opts: { plan: ClubePlan; promoName: string; installments: number; dueDate: string; pointsPerMonth: number; bonusExpected: number; bonusCredited: number; extra: string }) {
+export function buildClubeNote(opts: { plan: ClubePlan; promoName: string; installments: number; creditMonths: number; firstPoints: number; dueDate: string; pointsPerMonth: number; bonusExpected: number; bonusCredited: number; extra: string }) {
   return [
     `Clube: ${CLUBE_PLAN_LABEL[opts.plan]}`,
     opts.promoName ? `Promo: ${opts.promoName}` : "",
-    opts.plan === "anual_parcelado" ? `${opts.installments}x` : "",
+    opts.plan !== "anual" ? `${opts.installments}x` : "",
     `${numM(opts.pointsPerMonth)} pts/mês`,
+    opts.creditMonths > 0 ? String(opts.creditMonths) + " meses de crédito" : "",
+    opts.firstPoints > 0 ? "Crédito inicial: " + numM(opts.firstPoints) : "",
     opts.bonusExpected > 0 ? `Bônus previsto: ${numM(opts.bonusExpected)}` : "",
     opts.bonusCredited > 0 ? `Bônus creditado: ${numM(opts.bonusCredited)}` : "",
     opts.dueDate ? `Vence: ${fmtISO(opts.dueDate)}` : "",
@@ -703,10 +686,12 @@ export function buildClubeNote(opts: { plan: ClubePlan; promoName: string; insta
 
 export { parseClubeNote };
 
-function ClubeTab() {
+export function ClubeTab() {
   const [detailsSid, setDetailsSid] = useState<string | null>(null);
-  const { programs, earnings, addEarning, updateEarning, deleteEarning } = useMilhasData();
-  const clubePrograms = programs;
+  const { programs, earnings, saveClubForecast } = useMilhasData();
+  const clubePrograms = programs.filter((program) => program.canEdit);
+  const [saving, setSaving] = useState(false);
+  const draftSeries = useRef("");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const emptyForm = () => ({
@@ -717,6 +702,8 @@ function ClubeTab() {
     bonusPoints: 0,
     cost: 0,
     installments: 12,
+    creditMonths: 12,
+    firstPoints: 0,
     promoName: "",
     note: "",
     extras: [] as { month: string; points: number }[],
@@ -726,11 +713,11 @@ function ClubeTab() {
 
   const noWheel = (e: React.WheelEvent<HTMLInputElement>) => (e.target as HTMLInputElement).blur();
 
-  const months = planMonths(form.plan, form.installments);
-  const basePoints = form.pointsPerMonth * months;
-  const costPerMonth = months > 0 ? form.cost / months : 0;
+  const months = form.creditMonths;
+  const basePoints = (form.firstPoints || form.pointsPerMonth) + form.pointsPerMonth * Math.max(0, months - 1);
 
   const openNew = () => {
+    draftSeries.current = uid();
     setEditingId(null);
     setForm(emptyForm());
     setShowForm(true);
@@ -738,7 +725,7 @@ function ClubeTab() {
 
   const openEdit = (id: string) => {
     const e = earnings.find((x) => x.id === id);
-    if (!e) return;
+    if (!e || !isPendingEarning(e.note)) return;
     const sid = getSeriesId(e.note);
     // se for parte de uma série, usa a âncora (com bonusExpected)
     const anchor = sid
@@ -748,7 +735,6 @@ function ClubeTab() {
       : e;
     const parsed = parseClubeNote(anchor.note);
     setEditingId(anchor.id);
-    const m = planMonths(parsed.plan, parsed.installments);
     const ppm = parsed.pointsPerMonth || anchor.points;
     // custo total = soma da série (ou custo da entrada única)
     const totalCost = sid
@@ -767,7 +753,9 @@ function ClubeTab() {
       pointsPerMonth: ppm,
       bonusPoints: parsed.bonusExpected,
       cost: totalCost,
-      installments: parsed.installments || m,
+      installments: parsed.installments,
+      creditMonths: parsed.creditMonths || seriesEarnings.filter((item) => !item.note?.includes("[EXTRA]")).length || 1,
+      firstPoints: parsed.firstPoints,
       promoName: parsed.promoName,
       note: parsed.rest,
       extras,
@@ -775,90 +763,62 @@ function ClubeTab() {
     setShowForm(true);
   };
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.programId || form.pointsPerMonth <= 0) return;
-    const months = planMonths(form.plan, form.installments);
-    const prev = editingId ? parseClubeNote(earnings.find((x) => x.id === editingId)?.note) : null;
-    const existingSid = editingId ? getSeriesId(earnings.find((x) => x.id === editingId)?.note) : null;
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (saving || !form.programId || !form.dueDate || form.pointsPerMonth <= 0 || !Number.isInteger(months) || months < 1 || months > 60) return;
+    const anterior = earnings.find((item) => item.id === editingId);
+    const sid = getSeriesId(anterior?.note) ?? draftSeries.current;
+    if (!sid) return;
 
-    const sid = existingSid || uid();
-    const costPerMonth = months > 0 ? form.cost / months : form.cost;
-    const today = todayISO();
+    const centavos = Math.round(form.cost * 100);
+    const custoBase = Math.floor(centavos / months);
+    const sobra = centavos % months;
+    const forecasts: PrevisaoDeClube[] = Array.from({ length: months }, (_, index) => {
+      const data = somarMeses(form.dueDate, index);
+      return {
+        data_prevista: data,
+        pontos: index === 0 ? form.firstPoints || form.pointsPerMonth : form.pointsPerMonth,
+        custo: (custoBase + Number(index < sobra)) / 100,
+        descricao: buildClubeNote({
+          plan: form.plan,
+          promoName: form.promoName,
+          installments: form.installments,
+          firstPoints: index === 0 ? form.firstPoints : 0,
+          creditMonths: months,
+          dueDate: data,
+          pointsPerMonth: form.pointsPerMonth,
+          bonusExpected: index === 0 ? form.bonusPoints : 0,
+          bonusCredited: 0,
+          extra: index === 0 ? form.note : "Parcela " + (index + 1) + "/" + months,
+        }),
+      };
+    });
+    for (const extra of form.extras) {
+      if (!extra.month || extra.points <= 0) continue;
+      forecasts.push({
+        data_prevista: somarMeses(extra.month + "-" + form.dueDate.slice(8, 10), 0),
+        pontos: extra.points,
+        custo: 0,
+        descricao: "[EXTRA] • Bônus extra" + (form.promoName ? " — " + form.promoName : ""),
+      });
+    }
+
+    setSaving(true);
     try {
-      // ao editar, remove todas as parcelas antigas da série antes de recriar
-      if (existingSid) {
-        for (const item of earnings.filter((x) => getSeriesId(x.note) === existingSid)) {
-          await deleteEarning(item.id);
-        }
-      } else if (editingId) {
-        await deleteEarning(editingId);
-      }
-
-      for (let i = 0; i < months; i++) {
-        const isoDate = addMonthsISO(form.dueDate, i);
-        const month = isoDate.slice(0, 7);
-        const isAnchor = i === 0;
-        const isFuture = isoDate > today;
-        const parts = [
-          SERIE_TAG(sid),
-          isFuture ? "[PENDING]" : "",
-          isFuture ? `[DUE:${isoDate}]` : "",
-          buildClubeNote({
-            plan: form.plan,
-            promoName: form.promoName,
-            installments: form.installments,
-            dueDate: isoDate,
-            pointsPerMonth: form.pointsPerMonth,
-            bonusExpected: isAnchor ? form.bonusPoints : 0,
-            bonusCredited: isAnchor ? (prev?.bonusCredited ?? 0) : 0,
-            extra: isAnchor ? form.note : `Parcela ${i + 1}/${months}`,
-          }),
-        ];
-        await addEarning({
-          programId: form.programId,
-          month,
-          points: form.pointsPerMonth,
-          source: "clube" as const,
-          cost: costPerMonth >= 0 ? costPerMonth : undefined,
-          note: parts.filter(Boolean).join(" • "),
-        });
-      }
-
-      // bônus extras: entradas avulsas em meses específicos, cost=0 (custo dilui via série)
-      for (const ex of form.extras) {
-        if (!ex.month || !ex.points || ex.points <= 0) continue;
-        const dueDay = (form.dueDate || "").slice(8, 10) || "01";
-        const isoDate = `${ex.month}-${dueDay}`;
-        const isFuture = isoDate > today;
-        const parts = [
-          SERIE_TAG(sid),
-          "[EXTRA]",
-          isFuture ? "[PENDING]" : "",
-          isFuture ? `[DUE:${isoDate}]` : "",
-          `Bônus extra${form.promoName ? ` — ${form.promoName}` : ""}`,
-        ];
-        await addEarning({
-          programId: form.programId,
-          month: ex.month,
-          points: ex.points,
-          source: "clube" as const,
-          cost: 0,
-          note: parts.filter(Boolean).join(" • "),
-        });
-      }
-
+      await saveClubForecast(form.programId, sid, forecasts);
       setForm(emptyForm());
       setEditingId(null);
       setShowForm(false);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Não foi possível salvar o clube.");
+      toast.success("Previsões do clube salvas.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar o clube.");
+    } finally {
+      setSaving(false);
     }
   };
-
   // agrupa parcelas por série no resumo do Clube (mostra uma linha por promoção)
   const clubeEarnings = (() => {
-    const filtered = earnings.filter((e) => e.source === "clube" && !(e.note ?? "").includes("[BONUS-CLUBE:"));
+    const filtered = earnings.filter((e) => e.source === "clube" && !(e.note ?? "").includes("[BONUS-CLUBE:")).sort((a, b) => Number(!!a.note?.includes("[EXTRA]")) - Number(!!b.note?.includes("[EXTRA]")) || a.month.localeCompare(b.month));
     const seen = new Set<string>();
     const bySeries = new Map<string, { totalPoints: number; totalCost: number; count: number }>();
     for (const e of filtered) {
@@ -901,7 +861,7 @@ function ClubeTab() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <p className="text-sm text-muted-foreground max-w-xl">
-          Registre cada promoção do clube. Na data de vencimento, os pontos entram automaticamente em Ganhos (mês do vencimento).
+          Cadastre a previsão do clube. Confirme os pontos em Registros quando aparecerem no extrato.
         </p>
         <button onClick={openNew} disabled={clubePrograms.length === 0} className="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 text-sm font-medium rounded-full shadow-md transition-colors disabled:opacity-40">
           <Plus className="w-4 h-4" /> Novo Clube
@@ -914,17 +874,17 @@ function ClubeTab() {
         </div>
       )}
 
-      <Dialog open={showForm} onOpenChange={(o) => { setShowForm(o); if (!o) setEditingId(null); }}>
+      <Dialog open={showForm} onOpenChange={(o) => { if (!saving) { setShowForm(o); if (!o) setEditingId(null); } }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? "Editar Clube" : "Novo Clube"}</DialogTitle>
-            <DialogDescription>Cadastre a promoção do clube. Os pontos entram em Ganhos no mês do vencimento.</DialogDescription>
+            <DialogDescription>Informe o plano e as datas previstas de crédito. A cobrança fica como referência do contrato.</DialogDescription>
           </DialogHeader>
           {clubePrograms.length > 0 && (
             <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-6 gap-4">
               <div className="md:col-span-3">
                 <label className="text-xs uppercase tracking-wider text-muted-foreground mb-1 block">Programa</label>
-                <select value={form.programId} onChange={(e) => setForm({ ...form, programId: e.target.value })} className="w-full border border-border px-3 py-2 text-sm bg-background rounded-md" required>
+                <select value={form.programId} onChange={(e) => setForm({ ...form, programId: e.target.value })} disabled={!!editingId} className="w-full border border-border px-3 py-2 text-sm bg-background rounded-md" required>
                   {clubePrograms.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
@@ -939,11 +899,11 @@ function ClubeTab() {
                 <input type="text" value={form.promoName} onChange={(e) => setForm({ ...form, promoName: e.target.value })} placeholder="Ex.: Clube Livelo 100%" className="w-full border border-border px-3 py-2 text-sm bg-background rounded-md" />
               </div>
               <div className="md:col-span-3">
-                <label className="text-xs uppercase tracking-wider text-muted-foreground mb-1 block">Data de vencimento</label>
-                <DatePicker value={form.dueDate} onChange={(d) => setForm({ ...form, dueDate: d })} placeholder="Data de vencimento" />
+                <label className="text-xs uppercase tracking-wider text-muted-foreground mb-1 block">Primeiro crédito previsto</label>
+                <DatePicker value={form.dueDate} onChange={(d) => setForm({ ...form, dueDate: d })} placeholder="Primeiro crédito previsto" />
               </div>
               <div className="md:col-span-2">
-                <label className="text-xs uppercase tracking-wider text-muted-foreground mb-1 block">Pontos por mês (fixo)</label>
+                <label className="text-xs uppercase tracking-wider text-muted-foreground mb-1 block">Pontos por mês</label>
                 <input type="number" onWheel={noWheel} value={form.pointsPerMonth || ""} onChange={(e) => setForm({ ...form, pointsPerMonth: Number(e.target.value) })} className="w-full border border-border px-3 py-2 text-sm bg-background rounded-md" min={1} required />
               </div>
               <div className="md:col-span-2">
@@ -955,10 +915,20 @@ function ClubeTab() {
                 <input type="number" step="0.01" onWheel={noWheel} value={form.cost} onChange={(e) => setForm({ ...form, cost: Number(e.target.value) })} className="w-full border border-border px-3 py-2 text-sm bg-background rounded-md" min={0} />
                 {form.cost > 0 && (basePoints + form.bonusPoints + extrasTotal) > 0 && <p className="text-[11px] text-gold mt-1">{brlM((form.cost / (basePoints + form.bonusPoints + extrasTotal)) * 1000)} /1k</p>}
               </div>
+              <div className="md:col-span-2">
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Meses com crédito</label>
+                <input type="number" onWheel={noWheel} value={form.creditMonths} onChange={(e) => setForm({ ...form, creditMonths: Number(e.target.value) })}
+                  className="w-full border border-border px-3 py-2 text-sm bg-background rounded-md" min={1} max={60} required />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Pontos no primeiro crédito</label>
+                <input type="number" onWheel={noWheel} value={form.firstPoints || ""} onChange={(e) => setForm({ ...form, firstPoints: Number(e.target.value) })}
+                  className="w-full border border-border px-3 py-2 text-sm bg-background rounded-md" min={1} placeholder="Mesmo valor mensal" />
+              </div>
               {(form.plan === "anual_parcelado" || form.plan === "mensal") && (
                 <div className="md:col-span-2">
-                  <label className="text-xs uppercase tracking-wider text-muted-foreground mb-1 block">Parcelas</label>
-                  <input type="number" onWheel={noWheel} value={form.installments} onChange={(e) => setForm({ ...form, installments: Number(e.target.value) })} className="w-full border border-border px-3 py-2 text-sm bg-background rounded-md" min={1} max={24} />
+                  <label className="text-xs uppercase tracking-wider text-muted-foreground mb-1 block">Parcelas de cobrança</label>
+                  <input type="number" onWheel={noWheel} value={form.installments} onChange={(e) => setForm({ ...form, installments: Number(e.target.value) })} className="w-full border border-border px-3 py-2 text-sm bg-background rounded-md" min={1} max={60} required />
                 </div>
               )}
 
@@ -988,13 +958,13 @@ function ClubeTab() {
               </div>
 
               <div className="md:col-span-6 bg-muted/40 rounded-lg p-3 text-xs space-y-1">
-                <div className="flex justify-between"><span className="text-muted-foreground">Duração:</span><span className="tabular-nums">{months} {months === 1 ? "mês" : "meses"} ({form.installments}x)</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Pontos fixos ({numM(form.pointsPerMonth)}/mês × {months}):</span><span className="tabular-nums">{numM(basePoints)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Duração:</span><span className="tabular-nums">{months} {months === 1 ? "mês" : "meses"}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Pontos previstos no calendário:</span><span className="tabular-nums">{numM(basePoints)}</span></div>
                 {form.bonusPoints > 0 && <div className="flex justify-between text-muted-foreground"><span>Bônus previsto:</span><span className="tabular-nums">+{numM(form.bonusPoints)}</span></div>}
                 {extrasTotal > 0 && <div className="flex justify-between text-muted-foreground"><span>Bônus extras ({form.extras.filter((e) => e.points > 0).length}x):</span><span className="tabular-nums">+{numM(extrasTotal)}</span></div>}
                 <div className="flex justify-between font-semibold border-t border-border pt-1"><span>Total de milhas a receber:</span><span className="tabular-nums text-gold">{numM(basePoints + form.bonusPoints + extrasTotal)}</span></div>
                 {form.cost > 0 && <div className="flex justify-between text-muted-foreground"><span>Valor pago total:</span><span className="tabular-nums">{brlM(form.cost)}</span></div>}
-                {form.cost > 0 && form.installments > 1 && <div className="flex justify-between text-muted-foreground"><span>Valor por parcela:</span><span className="tabular-nums">{brlM(form.cost / Math.max(1, form.installments))}</span></div>}
+                {form.cost > 0 && form.plan !== "anual" && form.installments > 1 && <div className="flex justify-between text-muted-foreground"><span>Valor por parcela:</span><span className="tabular-nums">{brlM(form.cost / Math.max(1, form.installments))}</span></div>}
                 {form.cost > 0 && (basePoints + form.bonusPoints + extrasTotal) > 0 && <div className="flex justify-between font-semibold"><span>Custo do milheiro:</span><span className="tabular-nums text-gold">{brlM((form.cost / (basePoints + form.bonusPoints + extrasTotal)) * 1000)} /1k</span></div>}
               </div>
 
@@ -1064,11 +1034,10 @@ function ClubeTab() {
         onClose={() => setDetailsSid(null)}
         onEdit={(id) => { setDetailsSid(null); openEdit(id); }}
         onDeleteSeries={async (seriesId) => {
-          if (!confirm("Excluir toda a promoção do clube (todas as parcelas)?")) return;
+          const programa = earnings.find((item) => getSeriesId(item.note) === seriesId)?.programId;
+          if (!programa || !confirm("Encerrar os créditos ainda previstos para este clube?")) return;
           try {
-            for (const item of earnings.filter((x) => getSeriesId(x.note) === seriesId)) {
-              await deleteEarning(item.id);
-            }
+            await saveClubForecast(programa, seriesId, []);
             setDetailsSid(null);
           } catch (err) {
             toast.error(err instanceof Error ? err.message : "Não foi possível excluir a promoção.");
@@ -1084,7 +1053,7 @@ function ClubeDetailsDialog({ sid, onClose, onEdit, onDeleteSeries }: { sid: str
   if (!sid) return null;
   const seriesAll = earnings.filter((x) => getSeriesId(x.note) === sid).sort((a, b) => a.month.localeCompare(b.month));
   if (seriesAll.length === 0) return null;
-  const anchor = seriesAll[0];
+  const anchor = seriesAll.find((item) => !item.note?.includes("[EXTRA]")) ?? seriesAll[0];
   const parsed = parseClubeNote(anchor.note);
   const program = programs.find((p) => p.id === anchor.programId);
   const anchorIds = new Set(seriesAll.map((s) => s.id));
@@ -1097,6 +1066,9 @@ function ClubeDetailsDialog({ sid, onClose, onEdit, onDeleteSeries }: { sid: str
   const totalBasePlanned = seriesAll.reduce((s, x) => s + x.points, 0);
   const basePaid = seriesAll.filter((x) => !(x.note ?? "").includes("[PENDING]")).reduce((s, x) => s + x.points, 0);
   const basePending = totalBasePlanned - basePaid;
+  const temPrevisoes = seriesAll.some((item) => isPendingEarning(item.note));
+  const podeEditar = program?.canEdit && temPrevisoes;
+  const temCredito = seriesAll.some((item) => !isPendingEarning(item.note));
   const totalCost = seriesAll.reduce((s, x) => s + (x.cost ?? 0), 0);
   const totalPlanned = totalBasePlanned + parsed.bonusExpected;
 
@@ -1146,7 +1118,7 @@ function ClubeDetailsDialog({ sid, onClose, onEdit, onDeleteSeries }: { sid: str
                       <td className="px-3 py-2 capitalize">{formatMonth(x.month)}</td>
                       <td className="px-3 py-2 text-right tabular-nums">{numM(x.points)}</td>
                       <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{x.cost != null ? brlM(x.cost) : "—"}</td>
-                      <td className="px-3 py-2">{pending ? <span className="text-muted-foreground">Aguardando {due ? fmtISO(due) : ""}</span> : <span className="text-gold">Creditado</span>}</td>
+                      <td className="px-3 py-2">{pending ? <span className="text-muted-foreground">Aguardando {due ? fmtISO(due) : ""}</span> : <span className="text-success">{x.creditDate ? "Creditado em " + fmtISO(x.creditDate) : "Creditado"}</span>}</td>
                     </tr>
                   );
                 })}
@@ -1174,8 +1146,8 @@ function ClubeDetailsDialog({ sid, onClose, onEdit, onDeleteSeries }: { sid: str
         )}
 
         <DialogFooter className="flex justify-end gap-2">
-          <button onClick={() => onDeleteSeries(sid)} className="px-4 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-md">Excluir</button>
-          <button onClick={() => onEdit(anchor.id)} className="bg-gold text-navy px-5 py-2 text-sm font-semibold rounded-md">Editar</button>
+          {podeEditar && <button type="button" onClick={() => onDeleteSeries(sid)} className="px-4 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-md">Encerrar previsões</button>}
+          {podeEditar && !temCredito && <button type="button" onClick={() => onEdit(anchor.id)} className="bg-gold text-navy px-5 py-2 text-sm font-semibold rounded-md">Editar</button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>

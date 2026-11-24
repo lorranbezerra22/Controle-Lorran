@@ -5,9 +5,14 @@ import { ResgatesPage } from "./milhas.resgates";
 import { useMilhasData } from "@/context/MilhasDataContext";
 import { numM } from "@/lib/milhas-storage";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { MilhasPendencias } from "@/components/MilhasOperacao";
+import { dataSaoPaulo } from "@/lib/milhas-clubes";
 import { Gift } from "lucide-react";
 
 export const Route = createFileRoute("/milhas/registros")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    credito: typeof search.credito === "string" ? search.credito : undefined,
+  }),
   component: RegistrosUnificado,
   head: () => ({ meta: [{ title: "Registros — CRM Milhas" }] }),
 });
@@ -16,6 +21,8 @@ type Tab = "movimentos" | "resgates";
 
 function RegistrosUnificado() {
   const [tab, setTab] = useState<Tab>("movimentos");
+  const { credito } = Route.useSearch();
+  const navigate = Route.useNavigate();
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "movimentos", label: "Ganhos & Transferências" },
@@ -24,6 +31,11 @@ function RegistrosUnificado() {
 
   return (
     <div className="space-y-6">
+      <MilhasPendencias
+        modo="registros"
+        creditoId={credito}
+        selecionar={(id) => void navigate({ search: { credito: id }, replace: true, resetScroll: false })}
+      />
       <BonusPendenteAlert />
 
       <div className="inline-flex gap-2 flex-wrap">
@@ -52,7 +64,7 @@ function RegistrosUnificado() {
 }
 
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  return dataSaoPaulo();
 }
 
 function BonusPendenteAlert() {
@@ -76,7 +88,7 @@ function BonusPendenteAlert() {
       const program = programs.find((pr) => pr.id === e.programId);
       return { e, parsed: p, credited, remaining, program };
     })
-    .filter((x) => x.remaining > 0);
+    .filter((x) => x.remaining > 0 && x.program?.canEdit);
 
   if (pending.length === 0) return null;
 
@@ -90,6 +102,7 @@ function BonusPendenteAlert() {
       programId: current.e.programId,
       month,
       points: applied,
+      creditDate,
       source: "clube",
       note: `[BONUS-CLUBE:${current.e.id}] Bônus clube${current.parsed.promoName ? ` — ${current.parsed.promoName}` : ""}`,
     });

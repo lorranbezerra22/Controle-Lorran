@@ -12,6 +12,9 @@ export interface Program {
   balance: number;
   valuePerThousand: number;
   monthlyGoal?: number;
+  appBalance?: number;
+  appBalanceDate?: string;
+  canEdit?: boolean;
   color: string;
   createdAt: string;
 }
@@ -29,6 +32,8 @@ export interface Earning {
   id: string;
   programId: string;
   month: string;
+  creditDate?: string;
+  updatedAt?: string;
   points: number;
   source: EarningSource;
   cost?: number;
