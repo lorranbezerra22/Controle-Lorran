@@ -1,24 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useMilhasData } from "@/context/MilhasDataContext";
-import { brlM, numM } from "@/lib/milhas-storage";
+import { ArrowUpRight, ChevronDown, Plane, Settings2, TrendingUp, Trophy, Wallet } from "lucide-react";
 import { BankIcon } from "@/components/BankIcon";
-import { brandColor } from "@/lib/banks";
-import {
-  Area, AreaChart, CartesianGrid, Legend,
-  RadialBar, RadialBarChart, PolarAngleAxis,
-  ResponsiveContainer, Tooltip, XAxis, YAxis,
-} from "recharts";
-import { Coins, TrendingUp, Wallet, Plane, SlidersHorizontal, X, Trophy } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { SOURCE_LABEL, type EarningSource } from "@/lib/milhas-storage";
-import { MilhasConferencia, MilhasPendencias } from "@/components/MilhasOperacao";
 import { KpiTile } from "@/components/KpiTile";
+import { MilhasNotificationBell } from "@/components/MilhasNotificationBell";
+import { MilhasConferencia, MilhasPendencias } from "@/components/MilhasOperacao";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useMilhasData } from "@/context/MilhasDataContext";
+import { brandColor } from "@/lib/banks";
 import { isPendingEarning } from "@/lib/milhas-clubes";
-import { MilhasNotificationBell } from "@/components/MilhasNotificationBell";
+import { brlM, numM, SOURCE_LABEL, type EarningSource } from "@/lib/milhas-storage";
+
+const PROGRAM_FILTER_KEY = "milhas.dash.programFilter";
 
 const formatMonth = (key: string) => { const [y, m] = key.split("-"); return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }); };
 
@@ -28,116 +23,67 @@ export const Route = createFileRoute("/milhas/")({
 });
 
 function MilhasDashboard() {
-  const { programs, earnings, redemptions } = useMilhasData();
-
-
-
-  const availableYears = useMemo(() => {
-    const set = new Set<number>();
-    earnings.forEach((e) => set.add(Number(e.month.slice(0, 4))));
-    set.add(new Date().getFullYear());
-    return Array.from(set).sort((a, b) => b - a);
-  }, [earnings]);
-
-  const ss = (k: string, fb: string) => (typeof window === "undefined" ? fb : window.sessionStorage.getItem(k) ?? fb);
-  const ssSet = (k: string, v: string) => { if (typeof window !== "undefined") window.sessionStorage.setItem(k, v); };
-
-  const [year, _setYear] = useState<number>(() => {
-    const saved = Number(ss("milhas.dash.year", ""));
-    return Number.isFinite(saved) && saved > 0 ? saved : (availableYears[0] ?? new Date().getFullYear());
-  });
-  const setYear = (v: number) => { _setYear(v); ssSet("milhas.dash.year", String(v)); };
-  const now = new Date();
-  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const [monthFilter, _setMonthFilter] = useState<string>(() => ss("milhas.dash.monthFilter", currentMonthKey));
-  const setMonthFilter = (v: string) => { _setMonthFilter(v); ssSet("milhas.dash.monthFilter", v); };
-  const [programFilter, _setProgramFilter] = useState<string>(() => ss("milhas.dash.programFilter", "all"));
-  const setProgramFilter = (v: string) => { _setProgramFilter(v); ssSet("milhas.dash.programFilter", v); };
-  const [showFilters, setShowFilters] = useState<boolean>(false);
-
-  const filteredEarnings = useMemo(
-    () => earnings.filter((e) => !isPendingEarning(e.note) && (programFilter === "all" || e.programId === programFilter)),
-    [earnings, programFilter]
+  const { programs, earnings, redemptions, loading } = useMilhasData();
+  const [selectedProgram, setSelectedProgram] = useState(() =>
+    typeof window === "undefined" ? "all" : window.sessionStorage.getItem(PROGRAM_FILTER_KEY) ?? "all",
   );
+  const [detailsProgramId, setDetailsProgramId] = useState<string | null>(null);
+  const programFilter = programs.some((program) => program.id === selectedProgram)
+    ? selectedProgram
+    : "all";
+  const changeProgram = (id: string) => {
+    setSelectedProgram(id);
+    window.sessionStorage.setItem(PROGRAM_FILTER_KEY, id);
+  };
 
-  const filteredPrograms = programs.filter((p) => programFilter === "all" || p.id === programFilter);
-  const totalPoints = filteredPrograms.reduce((s, p) => s + p.balance, 0);
-  const totalCash = filteredPrograms.reduce((s, p) => s + (p.balance / 1000) * p.valuePerThousand, 0);
-
-  const monthPoints = filteredEarnings
-    .filter((e) => (monthFilter === "all" ? e.month.startsWith(String(year)) : e.month === monthFilter))
-    .reduce((s, e) => s + e.points, 0);
-  const viagensCount = redemptions.filter((r) => r.type === "viagem" && (programFilter === "all" || r.programId === programFilter)).length;
-
-  // Custo total investido para gerar milhas (soma dos custos declarados nos ganhos)
-  const totalMilesCost = filteredEarnings.reduce((s, e) => s + (e.cost ?? 0), 0);
-  // Patrimônio líquido = valor em R$ do saldo atual - custo investido
-  const netPatrimony = totalCash - totalMilesCost;
-  // Economia acumulada com resgates (preço em dinheiro - custo real da emissão)
-  const filteredRedemptions = redemptions.filter((r) => programFilter === "all" || r.programId === programFilter);
-  const totalEconomy = filteredRedemptions.reduce(
-    (s, r) => s + ((r.cashEquivalent ?? 0) - ((r.milesCost ?? 0) + (r.taxes ?? 0))),
-    0
-  );
-  const totalTravelSpent = filteredRedemptions
-    .filter((r) => r.type === "viagem")
-    .reduce((s, r) => s + ((r.milesCost ?? 0) + (r.taxes ?? 0)), 0);
-
-  const monthOptions = useMemo(() => {
-    const monthsPt = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-    return [
-      { key: "all", label: `Ano todo (${year})` },
-      ...monthsPt.map((label, idx) => ({
-        key: `${year}-${String(idx + 1).padStart(2, "0")}`,
-        label: `${label}/${String(year).slice(2)}`,
-      })),
-    ];
-  }, [year]);
-
-
-
-  const yearData = useMemo(() => {
-    const monthsPt = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-    return monthsPt.map((label, idx) => {
-      const key = `${year}-${String(idx + 1).padStart(2, "0")}`;
-      const y = filteredEarnings.filter((e) => e.month === key);
+  const confirmedEarnings = useMemo(() => earnings.filter((e) => !isPendingEarning(e.note)), [earnings]);
+  const programStats = useMemo(() => {
+    return programs.map((program) => {
+      const list = confirmedEarnings.filter((e) => e.programId === program.id);
+      const bySource: Partial<Record<EarningSource, { points: number; cost: number; count: number }>> = {};
+      let totalCost = 0;
+      let creditedPoints = 0;
+      for (const entry of list) {
+        const cost = entry.cost ?? 0;
+        const source = (bySource[entry.source] ??= { points: 0, cost: 0, count: 0 });
+        source.points += entry.points;
+        source.cost += cost;
+        source.count++;
+        totalCost += cost;
+        creditedPoints += entry.points;
+      }
       return {
-        month: label,
-        cartao: y.filter((e) => e.source === "cartao").reduce((s, e) => s + e.points, 0),
-        bonificadas: y.filter((e) => e.source === "bonificadas").reduce((s, e) => s + e.points, 0),
-        clube: y.filter((e) => e.source === "clube").reduce((s, e) => s + e.points, 0),
+        program,
+        totalPoints: program.balance,
+        totalCost,
+        bySource,
+        creditedPoints,
+        cashValue: (program.balance / 1000) * program.valuePerThousand,
+        avgPer1k: creditedPoints > 0 ? (totalCost / creditedPoints) * 1000 : null,
       };
     });
-  }, [filteredEarnings, year]);
+  }, [confirmedEarnings, programs]);
 
-  const yearTotals = useMemo(() => {
-    const cartao = yearData.reduce((s, m) => s + m.cartao, 0);
-    const bonificadas = yearData.reduce((s, m) => s + m.bonificadas, 0);
-    const clube = yearData.reduce((s, m) => s + m.clube, 0);
-    return { cartao, bonificadas, clube, total: cartao + bonificadas + clube };
-  }, [yearData]);
+  const visibleStats = programStats.filter(({ program }) => programFilter === "all" || program.id === programFilter);
+  const filteredPrograms = visibleStats.map(({ program }) => program);
+  const totalCash = visibleStats.reduce((sum, item) => sum + item.cashValue, 0);
+  const totalMilesCost = visibleStats.reduce((sum, item) => sum + item.totalCost, 0);
+  const netPatrimony = totalCash - totalMilesCost;
+  const filteredRedemptions = redemptions.filter((r) => programFilter === "all" || r.programId === programFilter);
+  const travelRedemptions = filteredRedemptions.filter((r) => r.type === "viagem");
+  const totalEconomy = filteredRedemptions.reduce(
+    (sum, r) => sum + ((r.cashEquivalent ?? 0) - ((r.milesCost ?? 0) + (r.taxes ?? 0))),
+    0,
+  );
+  const totalTravelSpent = travelRedemptions.reduce(
+    (sum, r) => sum + ((r.milesCost ?? 0) + (r.taxes ?? 0)),
+    0,
+  );
 
-  const [detailsProgramId, setDetailsProgramId] = useState<string | null>(null);
-  const programStats = useMemo(() => {
-    return programs.map((p) => {
-      const list = earnings.filter((e) => e.programId === p.id && !(e.note ?? "").includes("[PENDING]"));
-      const totalPoints = p.balance;
-      const totalCost = list.reduce((s, e) => s + (e.cost ?? 0), 0);
-      const bySource: Record<string, { points: number; cost: number; count: number }> = {};
-      list.forEach((e) => {
-        bySource[e.source] = bySource[e.source] ?? { points: 0, cost: 0, count: 0 };
-        bySource[e.source].points += e.points;
-        bySource[e.source].cost += e.cost ?? 0;
-        bySource[e.source].count += 1;
-      });
-      const cashValue = (totalPoints / 1000) * p.valuePerThousand;
-      const creditedPoints = list.reduce((s, e) => s + e.points, 0);
-      const avgPer1k = creditedPoints > 0 && totalCost > 0 ? (totalCost / creditedPoints) * 1000 : 0;
-      return { program: p, totalPoints, totalCost, bySource, cashValue, avgPer1k, count: list.length };
-    });
-  }, [earnings, programs]);
-  const detailsProgram = detailsProgramId ? programStats.find((s) => s.program.id === detailsProgramId) : null;
-  const detailsEarnings = detailsProgramId ? earnings.filter((e) => e.programId === detailsProgramId && !(e.note ?? "").includes("[PENDING]")).sort((a, b) => b.month.localeCompare(a.month)) : [];
+  const detailsProgram = programStats.find(({ program }) => program.id === detailsProgramId);
+  const detailsEarnings = confirmedEarnings
+    .filter((entry) => entry.programId === detailsProgramId)
+    .sort((a, b) => b.month.localeCompare(a.month));
 
   // Clubes concluídos nos últimos 3 dias (aparecem no dia da conclusão + 3 dias)
   const completedClubs = useMemo(() => {
@@ -206,73 +152,138 @@ function MilhasDashboard() {
       .sort((a, b) => b.t - a.t);
   }, [earnings, programs, completedClubs]);
 
-
-
   return (
     <div className="space-y-6">
-      <PageHeader icon={Wallet} title="Painel de Milhas" subtitle="Saldos, custos registrados e créditos de clube"
-        actions={<>
-          <MilhasNotificationBell credits={recentCredits} />
-          <Button type="button" variant="outline" aria-expanded={showFilters}
-            onClick={() => setShowFilters((value) => !value)}>
-            {showFilters ? <X /> : <SlidersHorizontal />} Filtros
-          </Button>
-        </>}
+      <PageHeader
+        icon={Wallet}
+        title="Painel de Milhas"
+        actions={
+          <>
+            <MilhasNotificationBell credits={recentCredits} />
+            <Button variant="outline" asChild>
+              <Link to="/milhas/config"><Settings2 className="size-4" /> Configurações</Link>
+            </Button>
+          </>
+        }
       />
-        {showFilters && (
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl border border-border bg-card p-4">
-            {(() => {
-              const activeCls = "border-gold/60 bg-gold/10 text-gold";
-              const inactiveCls = "border-border text-muted-foreground hover:text-foreground hover:border-gold/40";
-              const baseSel = "bg-card border rounded-lg px-3 py-1.5 text-sm transition-colors appearance-none focus:outline-none focus:ring-1 focus:ring-gold/40 [&>option]:bg-card [&>option]:text-foreground";
-              const chipBase = "px-3 py-1.5 text-xs rounded-lg border transition-colors inline-flex items-center gap-1.5";
-              return (
-                <>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Ano</span>
-                    <select value={year} onChange={(e) => setYear(Number(e.target.value))} className={`${baseSel} ${activeCls}`}>
-                      {availableYears.map((y) => <option key={y} value={y}>{y}</option>)}
-                    </select>
+
+      <section
+        aria-labelledby="milhas-venda"
+        className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-primary/25 bg-gradient-to-r from-primary/10 via-card to-card px-5 py-4 sm:px-6"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <TrendingUp className="size-5" aria-hidden />
+          </div>
+          <div>
+            <h2 id="milhas-venda" className="text-sm font-semibold sm:text-base">Possível venda bruta</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {programFilter === "all" ? "Todos os programas" : filteredPrograms[0]?.name}
+            </p>
+          </div>
+        </div>
+        <p className="font-[var(--font-display)] text-2xl font-semibold tabular-nums text-primary sm:text-3xl">
+          {loading && visibleStats.length === 0 ? "—" : brlM(totalCash)}
+        </p>
+      </section>
+
+      <section aria-labelledby="milhas-programas" className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="milhas-programas" className="font-[var(--font-display)] text-lg font-semibold">Programas</h2>
+          {programs.length > 1 && (
+            <div className="relative">
+              <label htmlFor="milhas-filtro-programa" className="sr-only">Filtrar programa</label>
+              <select
+                id="milhas-filtro-programa"
+                value={programFilter}
+                onChange={(event) => changeProgram(event.target.value)}
+                className="h-9 appearance-none rounded-xl border border-border bg-card pl-3 pr-9 text-sm focus-visible:outline-2 focus-visible:outline-ring"
+              >
+                <option value="all">Todos os programas</option>
+                {programs.map((program) => <option key={program.id} value={program.id}>{program.name}</option>)}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+            </div>
+          )}
+        </div>
+
+        {visibleStats.length === 0 ? (
+          <div className="rounded-2xl border border-border bg-card px-5 py-6 text-sm text-muted-foreground" role="status">
+            {loading ? "Carregando programas…" : "Cadastre um programa em Configurações para começar."}
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {visibleStats.map((item) => (
+              <article
+                key={item.program.id}
+                aria-labelledby={"programa-" + item.program.id}
+                className="relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border/75 bg-card shadow-[var(--shadow-card)] transition-colors hover:border-primary/40"
+              >
+                <div
+                  aria-hidden
+                  className="absolute inset-x-0 top-0 h-0.5"
+                  style={{ backgroundColor: brandColor(item.program.name, item.program.color) }}
+                />
+                <div className="flex flex-1 flex-col gap-4 px-4 py-4 sm:px-5">
+                  <div className="flex items-center gap-3">
+                    <span aria-hidden className="inline-flex">
+                      <BankIcon bank={item.program.name} size={34} square />
+                    </span>
+                    <h3 id={"programa-" + item.program.id} className="min-w-0 break-words font-semibold">{item.program.name}</h3>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Mês</span>
-                    <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} className={`${baseSel} ${monthFilter !== "all" ? activeCls : "border-border text-foreground"}`}>
-                      {monthOptions.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
-                    </select>
+
+                  <dl className="space-y-4">
+                    <div>
+                      <dt className="text-sm text-muted-foreground">Saldo atual</dt>
+                      <dd className="mt-0.5 break-words font-[var(--font-display)] text-3xl font-semibold tracking-tight tabular-nums text-foreground">
+                        {numM(item.totalPoints)} <span className="font-sans text-sm font-normal tracking-normal text-muted-foreground">pts</span>
+                      </dd>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-3 border-t border-border/60 pt-3">
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Custo registrado</dt>
+                        <dd className="mt-1 break-words text-sm font-medium tabular-nums">{brlM(item.totalCost)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-muted-foreground">CPM de aquisição</dt>
+                        <dd className="mt-1 break-words text-sm font-medium tabular-nums">{item.avgPer1k === null ? "—" : brlM(item.avgPer1k)}</dd>
+                      </div>
+                    </div>
+                  </dl>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 bg-muted/25 px-4 py-3 sm:px-5">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Possível venda bruta</p>
+                    <p className="mt-0.5 font-semibold tabular-nums text-primary">{brlM(item.cashValue)}</p>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Programa</span>
-                    <button onClick={() => setProgramFilter("all")} className={`${chipBase} ${programFilter === "all" ? activeCls : inactiveCls}`}>Todos</button>
-                    {programs.map((p) => (
-                      <button key={p.id} onClick={() => setProgramFilter(p.id)} className={`${chipBase} ${programFilter === p.id ? activeCls : inactiveCls}`}>
-                        <BankIcon bank={p.name} size={14} square />{p.name}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              );
-            })()}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-label={"Ver detalhes de " + item.program.name}
+                    onClick={() => setDetailsProgramId(item.program.id)}
+                  >
+                    Detalhes <ArrowUpRight className="size-3.5" aria-hidden />
+                  </Button>
+                </div>
+              </article>
+            ))}
           </div>
         )}
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiTile icon={<Coins className="size-5" />} label="Saldo consolidado" value={totalPoints} format={numM} sub="Pontos e milhas" highlight />
-        <KpiTile icon={<Wallet className="size-5" />} label="Possível venda bruta" value={totalCash} sub="Pelos valores de referência cadastrados" index={1} />
-        <KpiTile icon={<TrendingUp className="size-5" />} label="Custo registrado" value={totalMilesCost} sub="Histórico dos ganhos confirmados" index={2} />
-        <KpiTile icon={<Coins className="size-5" />} label="Pontos creditados no período" value={monthPoints} format={numM}
-          sub={monthFilter === "all" ? String(year) : monthOptions.find((month) => month.key === monthFilter)?.label} index={3} />
-      </div>
+      </section>
 
       <div className="grid items-start gap-4 xl:grid-cols-[1fr_1.15fr]">
         <MilhasPendencias modo="painel" programaId={programFilter === "all" ? undefined : programFilter} />
         <MilhasConferencia programas={filteredPrograms} />
       </div>
+
       <details className="rounded-2xl border border-border bg-card px-4 py-3 sm:px-5">
         <summary className="cursor-pointer font-semibold">Resultados e viagens</summary>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <KpiTile icon={<TrendingUp className="size-5" />} label="Patrimônio líquido" value={netPatrimony} sub="Venda bruta estimada menos custo registrado" />
           <KpiTile icon={<Plane className="size-5" />} label="Economia com milhas" value={totalEconomy} sub={"Custo em viagens: " + brlM(totalTravelSpent)} index={1} />
-          <KpiTile icon={<Plane className="size-5" />} label="Viagens realizadas" value={viagensCount} format={numM} sub="Resgates em viagem" index={2} />
+          <KpiTile icon={<Plane className="size-5" />} label="Viagens realizadas" value={travelRedemptions.length} format={numM} sub="Resgates em viagem" index={2} />
         </div>
       </details>
       {completedClubs.length > 0 && (
@@ -301,149 +312,6 @@ function MilhasDashboard() {
         </div>
       )}
 
-
-
-
-
-
-      {monthFilter === "all" ? (
-        <div className="relative bg-gradient-to-br from-card via-card to-card/40 border border-border p-6 rounded-2xl overflow-hidden">
-          <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, var(--foreground) 1px, transparent 0)", backgroundSize: "24px 24px" }} />
-          <div className="relative flex items-start justify-between flex-wrap gap-3 mb-6">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
-                <span className="text-[10px] uppercase tracking-[0.2em] text-gold">Live · Ano {year}</span>
-              </div>
-              <h3 className="font-[var(--font-display)] text-xl">Fluxo de acúmulo</h3>
-              <p className="text-xs text-muted-foreground">Pontos gerados por mês, por origem</p>
-            </div>
-            <div className="flex gap-4 text-xs">
-              <div><p className="uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: "#D4B876" }} />Cartão</p><p className="text-lg tabular-nums">{numM(yearTotals.cartao)}</p></div>
-              <div><p className="uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: "#4FD1C5" }} />Bonificadas</p><p className="text-lg tabular-nums">{numM(yearTotals.bonificadas)}</p></div>
-              <div><p className="uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: "#A78BFA" }} />Clube</p><p className="text-lg tabular-nums">{numM(yearTotals.clube)}</p></div>
-              <div className="pl-4 border-l border-border"><p className="uppercase tracking-wider text-gold">Total</p><p className="text-lg tabular-nums text-gold">{numM(yearTotals.total)}</p></div>
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={yearData} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="gCartao" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#D4B876" stopOpacity={0.85} /><stop offset="100%" stopColor="#D4B876" stopOpacity={0.05} /></linearGradient>
-                <linearGradient id="gBonif" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#4FD1C5" stopOpacity={0.9} /><stop offset="100%" stopColor="#4FD1C5" stopOpacity={0.05} /></linearGradient>
-                <linearGradient id="gClube" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#A78BFA" stopOpacity={0.85} /><stop offset="100%" stopColor="#A78BFA" stopOpacity={0.05} /></linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="2 6" stroke="var(--foreground)" strokeOpacity={0.12} vertical={false} />
-              <XAxis dataKey="month" stroke="var(--foreground)" tick={{ fill: "var(--muted-foreground)" }} fontSize={11} axisLine={false} tickLine={false} />
-              <YAxis stroke="var(--foreground)" tick={{ fill: "var(--muted-foreground)" }} fontSize={11} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: "#0F1B2E", border: "1px solid #C9A961", borderRadius: 12, color: "#F5F0E0", boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }} itemStyle={{ color: "#F5F0E0" }} labelStyle={{ color: "#C9A961", fontWeight: 600 }} cursor={{ stroke: "#C9A961", strokeWidth: 1, strokeDasharray: "4 4" }} formatter={(v: number) => numM(v)} />
-              <Legend wrapperStyle={{ color: "var(--foreground)", fontSize: 11, paddingTop: 8 }} iconType="circle" />
-              <Area type="monotone" dataKey="cartao" name="Cartão" stroke="#D4B876" strokeWidth={2.2} fill="url(#gCartao)" activeDot={{ r: 4 }} />
-              <Area type="monotone" dataKey="bonificadas" name="Bonificadas" stroke="#4FD1C5" strokeWidth={2.2} fill="url(#gBonif)" activeDot={{ r: 4 }} />
-              <Area type="monotone" dataKey="clube" name="Clube" stroke="#A78BFA" strokeWidth={2.2} fill="url(#gClube)" activeDot={{ r: 4 }} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      ) : (
-        (() => {
-          const m = yearData.find((d) => `${year}-${String(["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"].indexOf(d.month) + 1).padStart(2, "0")}` === monthFilter);
-          const monthTotal = (m?.cartao ?? 0) + (m?.bonificadas ?? 0) + (m?.clube ?? 0);
-          const radial = [
-            { name: "Clube", value: m?.clube ?? 0, fill: "#A78BFA" },
-            { name: "Bonificadas", value: m?.bonificadas ?? 0, fill: "#4FD1C5" },
-            { name: "Cartão", value: m?.cartao ?? 0, fill: "#D4B876" },
-          ];
-          const max = Math.max(monthTotal, 1);
-          const label = monthOptions.find((o) => o.key === monthFilter)?.label ?? monthFilter;
-          return (
-            <div className="relative bg-gradient-to-br from-card via-card to-card/40 border border-border p-6 rounded-2xl overflow-hidden">
-              <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, var(--foreground) 1px, transparent 0)", backgroundSize: "24px 24px" }} />
-              <div className="relative flex items-start justify-between flex-wrap gap-3 mb-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-gold">Snapshot · {label}</span>
-                  </div>
-                  <h3 className="font-[var(--font-display)] text-xl">Composição do mês</h3>
-                  <p className="text-xs text-muted-foreground">Distribuição de pontos por origem</p>
-                </div>
-              </div>
-              <div className="relative grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                <ResponsiveContainer width="100%" height={260}>
-                  <RadialBarChart innerRadius="35%" outerRadius="100%" data={radial} startAngle={90} endAngle={-270}>
-                    <PolarAngleAxis type="number" domain={[0, max]} tick={false} />
-                    <RadialBar background={{ fill: "var(--muted)", opacity: 0.3 }} dataKey="value" cornerRadius={12} />
-                    <Tooltip contentStyle={{ background: "#0F1B2E", border: "1px solid #C9A961", borderRadius: 12, color: "#F5F0E0", boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }} itemStyle={{ color: "#F5F0E0" }} labelStyle={{ color: "#C9A961", fontWeight: 600 }} formatter={(v: number, _n, p: { payload?: { name?: string } }) => [numM(v), p?.payload?.name ?? ""]} />
-                  </RadialBarChart>
-                </ResponsiveContainer>
-                <div className="space-y-3">
-                  <div className="pb-3 border-b border-border">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Total do mês</p>
-                    <p className="font-[var(--font-display)] text-3xl text-gold tabular-nums">{numM(monthTotal)}</p>
-                  </div>
-                  {radial.map((r) => {
-                    const pct = monthTotal > 0 ? (r.value / monthTotal) * 100 : 0;
-                    return (
-                      <div key={r.name}>
-                        <div className="flex items-center justify-between text-xs mb-1">
-                          <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full" style={{ background: r.fill }} />{r.name}</span>
-                          <span className="tabular-nums text-muted-foreground">{numM(r.value)} · {pct.toFixed(0)}%</span>
-                        </div>
-                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: r.fill }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          );
-        })()
-      )}
-
-
-      <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3 sm:px-5">
-          <h2 className="text-base font-semibold">Programas</h2>
-          <Button variant="ghost" size="sm" asChild><Link to="/milhas/config">Configurações</Link></Button>
-        </div>
-        {filteredPrograms.length === 0 ? (
-          <p className="px-5 py-4 text-sm text-muted-foreground">Cadastre um programa em Configurações para começar.</p>
-        ) : (
-          <Table className="min-w-[640px]">
-            <TableHeader className="bg-muted/25">
-              <TableRow>
-                <TableHead scope="col" className="pl-5">Programa</TableHead>
-                <TableHead scope="col" className="text-right">Saldo</TableHead>
-                <TableHead scope="col" className="text-right">Custo registrado</TableHead>
-                <TableHead scope="col" className="text-right">CPM de aquisição</TableHead>
-                <TableHead scope="col" className="text-right">Possível venda bruta</TableHead>
-                <TableHead scope="col" className="pr-5 text-right">Detalhes</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {programStats.filter(({ program }) => programFilter === "all" || program.id === programFilter).map((item) => (
-                <TableRow key={item.program.id}>
-                  <TableCell className="py-3 pl-5 font-semibold">
-                    <span className="flex items-center gap-2">
-                      <BankIcon bank={item.program.name} size={28} square /> {item.program.name}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{numM(item.totalPoints)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{brlM(item.totalCost)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{item.count ? brlM(item.avgPer1k) : "—"}</TableCell>
-                  <TableCell className="text-right tabular-nums">{brlM(item.cashValue)}</TableCell>
-                  <TableCell className="pr-5 text-right">
-                    <Button type="button" variant="outline" size="sm" onClick={() => setDetailsProgramId(item.program.id)}>
-                      Ver detalhes
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </section>
       <Dialog open={!!detailsProgramId} onOpenChange={(o) => !o && setDetailsProgramId(null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           {detailsProgram && (
@@ -454,24 +322,24 @@ function MilhasDashboard() {
                   {detailsProgram.program.name}
                 </DialogTitle>
                 <DialogDescription>
-                  Detalhes de origem dos pontos e custos • {detailsProgram.program.category}
+                  Origem dos créditos, custos e últimos lançamentos
                 </DialogDescription>
               </DialogHeader>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-2">
                 <div className="bg-muted/40 rounded-lg p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Total pts</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Saldo atual</p>
                   <p className="text-lg font-semibold tabular-nums">{numM(detailsProgram.totalPoints)}</p>
                 </div>
                 <div className="bg-muted/40 rounded-lg p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Custo total</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Custo registrado</p>
                   <p className="text-lg font-semibold tabular-nums">{brlM(detailsProgram.totalCost)}</p>
                 </div>
                 <div className="bg-muted/40 rounded-lg p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Preço /1k</p>
-                  <p className="text-lg font-semibold tabular-nums text-gold">{detailsProgram.avgPer1k > 0 ? brlM(detailsProgram.avgPer1k) : "—"}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">CPM de aquisição</p>
+                  <p className="text-lg font-semibold tabular-nums text-gold">{detailsProgram.avgPer1k === null ? "—" : brlM(detailsProgram.avgPer1k)}</p>
                 </div>
                 <div className="bg-muted/40 rounded-lg p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Valor R$</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Possível venda bruta</p>
                   <p className="text-lg font-semibold tabular-nums">{brlM(detailsProgram.cashValue)}</p>
                 </div>
               </div>
@@ -480,7 +348,7 @@ function MilhasDashboard() {
                 <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Origem dos pontos</p>
                 <div className="space-y-2">
                   {Object.entries(detailsProgram.bySource).map(([src, v]) => {
-                    const pct = detailsProgram.totalPoints > 0 ? (v.points / detailsProgram.totalPoints) * 100 : 0;
+                    const pct = detailsProgram.creditedPoints > 0 ? (v.points / detailsProgram.creditedPoints) * 100 : 0;
                     return (
                       <div key={src} className="border border-border rounded-lg p-3">
                         <div className="flex items-center justify-between text-sm mb-1">
@@ -534,8 +402,6 @@ function MilhasDashboard() {
           )}
         </DialogContent>
       </Dialog>
-
-
 
     </div>
   );
