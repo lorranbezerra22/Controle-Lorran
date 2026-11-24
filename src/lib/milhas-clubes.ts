@@ -2,7 +2,6 @@ import type { Earning, Program } from "@/lib/milhas-storage";
 
 const fusoSaoPaulo = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Sao_Paulo" });
 const hora = 60 * 60 * 1000;
-export const antecedenciaDeCredito = 7;
 
 export function dataSaoPaulo(agora = Date.now()) {
   return fusoSaoPaulo.format(agora);
@@ -60,14 +59,12 @@ export function creditosPendentes(earnings: Earning[], programs: Program[]) {
 
 export type CreditoPendente = ReturnType<typeof creditosPendentes>[number];
 
-export function proximosCreditos(pendentes: CreditoPendente[], agora: number, dias: number | null) {
-  const limite = new Date(Date.parse(dataSaoPaulo(agora) + "T12:00:00Z") + (dias ?? 0) * 24 * hora)
-    .toISOString()
-    .slice(0, 10);
+export function proximosCreditos(pendentes: CreditoPendente[], agora: number) {
+  const hoje = dataSaoPaulo(agora);
   const vistos = new Set<string>();
   return pendentes.filter((pendente) => {
     const grupo = [pendente.programa.id, pendente.serie, pendente.bonus].join(":");
-    if (vistos.has(grupo) || (dias !== null && pendente.data > limite)) return false;
+    if (vistos.has(grupo) && pendente.data > hoje) return false;
     vistos.add(grupo);
     return true;
   });
@@ -86,4 +83,33 @@ export function statusDoCredito(data: string, agora: number) {
   return data < hoje
     ? { estado: "atrasado" as const, texto: "Atrasado há " + duracao }
     : { estado: "previsto" as const, texto: "Em " + duracao };
+}
+
+export function bonusDeClubePendentes(earnings: Earning[], programs: Program[]) {
+  const programas = new Map(programs.map((programa) => [programa.id, programa]));
+  const recebidos = new Map<string, number>();
+  const creditos = earnings.filter(
+    (credito) => credito.source === "clube" && !isPendingEarning(credito.note),
+  );
+
+  for (const credito of creditos) {
+    const id = credito.note?.match(/\[BONUS-CLUBE:([^\]]+)\]/)?.[1];
+    if (id) recebidos.set(id, (recebidos.get(id) ?? 0) + credito.points);
+  }
+
+  return creditos.flatMap((credito) => {
+    const programa = programas.get(credito.programId);
+    if (!programa || credito.note?.includes("[BONUS-CLUBE:")) return [];
+    const campos = (credito.note ?? "").split(" • ");
+    const valor = campos.find((campo) => /^Bônus previsto:\s*[\d.]+$/.test(campo));
+    const previsto = Number(valor?.replace(/[^\d]/g, "") ?? 0);
+    const recebido = recebidos.get(credito.id) ?? 0;
+    const restante = previsto - recebido;
+    if (restante <= 0) return [];
+    const promocao = campos
+      .find((campo) => campo.startsWith("Promo: "))
+      ?.slice(7)
+      .trim();
+    return [{ credito, programa, previsto, recebido, restante, promocao }];
+  });
 }

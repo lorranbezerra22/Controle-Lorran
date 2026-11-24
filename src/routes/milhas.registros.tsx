@@ -1,16 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { RegistrosPage as GanhosTransfPage, parseClubeNote } from "./milhas.ganhos";
+import { RegistrosPage as GanhosTransfPage } from "./milhas.ganhos";
 import { ResgatesPage } from "./milhas.resgates";
 import { useMilhasData } from "@/context/MilhasDataContext";
 import { numM } from "@/lib/milhas-storage";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { MilhasPendencias } from "@/components/MilhasOperacao";
-import { dataSaoPaulo } from "@/lib/milhas-clubes";
+import { bonusDeClubePendentes, dataSaoPaulo } from "@/lib/milhas-clubes";
 import { Gift } from "lucide-react";
 
 export const Route = createFileRoute("/milhas/registros")({
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): { credito?: string } => ({
     credito: typeof search.credito === "string" ? search.credito : undefined,
   }),
   component: RegistrosUnificado,
@@ -32,7 +32,6 @@ function RegistrosUnificado() {
   return (
     <div className="space-y-6">
       <MilhasPendencias
-        modo="registros"
         creditoId={credito}
         selecionar={(id) => void navigate({ search: { credito: id }, replace: true, resetScroll: false })}
       />
@@ -73,38 +72,23 @@ function BonusPendenteAlert() {
   const [amount, setAmount] = useState(0);
   const [creditDate, setCreditDate] = useState(todayISO());
 
-  const creditedByClub = new Map<string, number>();
-  for (const e of earnings) {
-    const m = (e.note ?? "").match(/\[BONUS-CLUBE:([^\]]+)\]/);
-    if (m) creditedByClub.set(m[1], (creditedByClub.get(m[1]) ?? 0) + e.points);
-  }
-
-  const pending = earnings
-    .filter((e) => e.source === "clube" && !(e.note ?? "").includes("[BONUS-CLUBE:") && !(e.note ?? "").includes("[PENDING]"))
-    .map((e) => {
-      const p = parseClubeNote(e.note);
-      const credited = creditedByClub.get(e.id) ?? 0;
-      const remaining = Math.max(0, p.bonusExpected - credited);
-      const program = programs.find((pr) => pr.id === e.programId);
-      return { e, parsed: p, credited, remaining, program };
-    })
-    .filter((x) => x.remaining > 0 && x.program?.canEdit);
+  const pending = bonusDeClubePendentes(earnings, programs);
 
   if (pending.length === 0) return null;
 
-  const current = creditingId ? pending.find((x) => x.e.id === creditingId) : null;
+  const current = creditingId ? pending.find((x) => x.credito.id === creditingId) : null;
 
   const confirmCredit = async () => {
-    if (!current || amount <= 0) return;
-    const applied = Math.min(amount, current.remaining);
+    if (!current?.programa.canEdit || amount <= 0) return;
+    const applied = Math.min(amount, current.restante);
     const month = creditDate.slice(0, 7);
     await addEarning({
-      programId: current.e.programId,
+      programId: current.credito.programId,
       month,
       points: applied,
       creditDate,
       source: "clube",
-      note: `[BONUS-CLUBE:${current.e.id}] Bônus clube${current.parsed.promoName ? ` — ${current.parsed.promoName}` : ""}`,
+      note: `[BONUS-CLUBE:${current.credito.id}] Bônus clube${current.promocao ? ` — ${current.promocao}` : ""}`,
     });
     setCreditingId(null);
     setAmount(0);
@@ -117,23 +101,23 @@ function BonusPendenteAlert() {
         <h3 className="text-sm font-semibold">Bônus de clube pendentes</h3>
       </div>
       <div className="space-y-2">
-        {pending.map(({ e, parsed, credited, remaining, program }) => (
-          <div key={e.id} className="flex flex-wrap items-center justify-between gap-3 bg-card border border-border rounded-lg px-3 py-2 text-sm">
+        {pending.map(({ credito, promocao, recebido, restante, programa, previsto }) => (
+          <div id={"bonus-" + credito.id} key={credito.id} className="flex scroll-mt-6 flex-wrap items-center justify-between gap-3 bg-card border border-border rounded-lg px-3 py-2 text-sm">
             <div className="flex flex-col">
               <span className="font-medium">
-                {program?.name ?? "—"}
-                {parsed.promoName ? <span className="text-muted-foreground"> • {parsed.promoName}</span> : null}
+                {programa.name}
+                {promocao ? <span className="text-muted-foreground"> • {promocao}</span> : null}
               </span>
               <span className="text-xs text-muted-foreground">
-                Previsto {numM(parsed.bonusExpected)} • Creditado {numM(credited)} • <span className="text-gold">Falta {numM(remaining)}</span>
+                Previsto {numM(previsto)} • Creditado {numM(recebido)} • <span className="text-gold">Falta {numM(restante)}</span>
               </span>
             </div>
-            <button
-              onClick={() => { setCreditingId(e.id); setAmount(0); setCreditDate(todayISO()); }}
+            {programa.canEdit && <button
+              onClick={() => { setCreditingId(credito.id); setAmount(0); setCreditDate(todayISO()); }}
               className="bg-gold text-navy px-3 py-1.5 text-xs font-semibold rounded-md"
             >
               Creditar bônus
-            </button>
+            </button>}
           </div>
         ))}
       </div>
@@ -143,7 +127,7 @@ function BonusPendenteAlert() {
           <DialogHeader>
             <DialogTitle>Creditar bônus do clube</DialogTitle>
             <DialogDescription>
-              {current ? `${current.program?.name ?? ""} — falta ${numM(current.remaining)} pts.` : ""}
+              {current ? `${current.programa.name} — falta ${numM(current.restante)} pts.` : ""}
             </DialogDescription>
           </DialogHeader>
           {current && (
@@ -154,14 +138,14 @@ function BonusPendenteAlert() {
                   type="number"
                   value={amount || ""}
                   onChange={(ev) => setAmount(Number(ev.target.value))}
-                  max={current.remaining}
+                  max={current.restante}
                   min={1}
                   className="w-full border border-border px-3 py-2 text-sm bg-background rounded-md"
                   placeholder="0"
                   autoFocus
                 />
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  Programa fixo: <span className="text-foreground">{current.program?.name ?? "—"}</span>
+                  Programa fixo: <span className="text-foreground">{current.programa.name}</span>
                 </p>
               </div>
               <div>
@@ -175,7 +159,7 @@ function BonusPendenteAlert() {
               </div>
               {amount > 0 && (
                 <div className="text-xs bg-muted/40 rounded-md p-2">
-                  Vai sobrar <span className="text-gold font-semibold tabular-nums">{numM(Math.max(0, current.remaining - amount))}</span> pts pendentes.
+                  Vai sobrar <span className="text-gold font-semibold tabular-nums">{numM(Math.max(0, current.restante - amount))}</span> pts pendentes.
                 </div>
               )}
               <div className="flex justify-end gap-2">

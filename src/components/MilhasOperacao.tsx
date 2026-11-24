@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
-import { Bell, CheckCircle2, ChevronRight, ClipboardCheck } from "lucide-react";
+import { Bell, CheckCircle2, ChevronDown, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
 import { BankIcon } from "@/components/BankIcon";
 import { Button } from "@/components/ui/button";
@@ -15,17 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useMilhasData } from "@/context/MilhasDataContext";
 import {
-  antecedenciaDeCredito,
   creditosPendentes,
   dataSaoPaulo,
   formatarDataCredito,
@@ -42,13 +33,9 @@ const estilos = {
 };
 
 export function MilhasPendencias({
-  modo,
-  programaId,
   creditoId,
   selecionar,
 }: {
-  modo: "painel" | "registros";
-  programaId?: string;
   creditoId?: string;
   selecionar?: (id?: string) => void;
 }) {
@@ -58,23 +45,24 @@ export function MilhasPendencias({
     const timer = window.setInterval(() => setAgora(Date.now()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
-  const painel = modo === "painel";
   const pendentes = creditosPendentes(earnings, programs);
-  const visiveis = proximosCreditos(
-    pendentes.filter(({ programa }) => !programaId || programa.id === programaId),
-    agora,
-    painel ? antecedenciaDeCredito : null,
-  );
+  const visiveis = proximosCreditos(pendentes, agora);
   const selecionado = pendentes.find(
-    ({ credito, programa }) => credito.id === creditoId && programa.canEdit,
+    ({ credito, programa }) =>
+      credito.id === creditoId &&
+      programa.canEdit &&
+      credito.month <= dataSaoPaulo(agora).slice(0, 7),
   );
 
   return (
-    <Card className="min-w-0 rounded-2xl shadow-[var(--shadow-card)]">
+    <Card
+      id="creditos-pendentes"
+      className="min-w-0 scroll-mt-6 rounded-2xl shadow-[var(--shadow-card)]"
+    >
       <CardHeader className="flex-row items-center justify-between gap-3 space-y-0 border-b border-border/65 p-4 sm:p-5">
         <CardTitle className="flex items-center gap-2 text-base">
           <Bell className="size-4 text-primary" aria-hidden />
-          {painel ? "Pendências" : "Créditos de clube a registrar"}
+          Créditos de clube a registrar
         </CardTitle>
         <Button asChild variant="ghost" size="sm">
           <Link to="/milhas/config">Configurar clubes</Link>
@@ -83,11 +71,7 @@ export function MilhasPendencias({
       <CardContent className="space-y-2 p-4 sm:p-5" aria-live="polite">
         {visiveis.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            {loading
-              ? "Carregando créditos…"
-              : painel
-                ? "Nenhum crédito próximo ou atrasado."
-                : "Nenhum crédito de clube pendente."}
+            {loading ? "Carregando créditos…" : "Nenhum crédito de clube pendente."}
           </p>
         )}
         {visiveis.map((item) => {
@@ -120,30 +104,22 @@ export function MilhasPendencias({
                   <span className="text-sm text-muted-foreground">
                     Aguardando registro no extrato
                   </span>
-                  {painel ? (
-                    <Button asChild variant="outline" size="sm">
-                      <Link to="/milhas/registros" search={{ credito: credito.id }}>
-                        Abrir extrato <ChevronRight />
-                      </Link>
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={dataSaoPaulo(agora) < credito.month + "-01"}
-                      onClick={() => selecionar?.(credito.id)}
-                    >
-                      Registrar crédito
-                    </Button>
-                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={dataSaoPaulo(agora) < credito.month + "-01"}
+                    onClick={() => selecionar?.(credito.id)}
+                  >
+                    Registrar crédito
+                  </Button>
                 </div>
               )}
             </div>
           );
         })}
       </CardContent>
-      {!painel && selecionado && (
+      {selecionado && (
         <ConfirmarCredito
           key={selecionado.credito.id}
           pendente={selecionado}
@@ -237,107 +213,123 @@ function ConfirmarCredito({ pendente, fechar }: { pendente: CreditoPendente; fec
   );
 }
 
-export function MilhasConferencia({ programas }: { programas: Program[] }) {
+export function MilhasConferencia({
+  programas,
+  programaInicial,
+}: {
+  programas: Program[];
+  programaInicial?: string;
+}) {
   const { loading } = useMilhasData();
-  const [programaId, setProgramaId] = useState<string>();
-  const programa = programas.find((item) => item.id === programaId);
+  const [selecionado, setSelecionado] = useState(programaInicial);
+  const [editando, setEditando] = useState(false);
+  const programa = programas.find((item) => item.id === selecionado) ?? programas[0];
+  const diferenca =
+    programa?.appBalance === undefined ? null : programa.appBalance - programa.balance;
+
   return (
-    <Card className="min-w-0 rounded-2xl shadow-[var(--shadow-card)]">
-      <CardHeader className="border-b border-border/65 p-4 sm:p-5">
+    <Card
+      id="conferencia-de-saldo"
+      className="min-w-0 scroll-mt-6 rounded-2xl shadow-[var(--shadow-card)]"
+    >
+      <CardHeader className="flex flex-wrap items-start justify-between gap-4 space-y-0 border-b border-border/65 p-4 sm:flex-row sm:items-center sm:p-5">
         <CardTitle className="flex items-center gap-2 text-base">
           <ClipboardCheck className="size-4 text-primary" aria-hidden /> Conferência de saldo
         </CardTitle>
+        {programa && (
+          <div className="relative w-full sm:w-auto">
+            <Label htmlFor="milhas-programa-conferencia" className="sr-only">
+              Programa para conferir
+            </Label>
+            <select
+              id="milhas-programa-conferencia"
+              value={programa.id}
+              onChange={(event) => {
+                setEditando(false);
+                setSelecionado(event.target.value);
+              }}
+              className="h-9 w-full appearance-none rounded-xl border border-border bg-card pl-3 pr-9 text-sm focus-visible:outline-2 focus-visible:outline-ring sm:min-w-48"
+            >
+              {programas.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
+          </div>
+        )}
       </CardHeader>
-      <CardContent className="p-0">
-        {programas.length === 0 ? (
-          <p className="p-4 text-sm text-muted-foreground">
+      <CardContent className="space-y-4 p-4 sm:p-5">
+        {programa ? (
+          <>
+            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="min-w-0 rounded-xl bg-muted/35 p-3">
+                <dt className="text-xs text-muted-foreground">Saldo no CRM</dt>
+                <dd className="mt-1 break-words text-lg font-semibold tabular-nums">
+                  {numM(programa.balance)}
+                </dd>
+              </div>
+              <div className="min-w-0 rounded-xl bg-muted/35 p-3">
+                <dt className="text-xs text-muted-foreground">Saldo no aplicativo</dt>
+                <dd className="mt-1 break-words text-lg font-semibold tabular-nums">
+                  {programa.appBalance === undefined ? "—" : numM(programa.appBalance)}
+                </dd>
+              </div>
+              <div className="col-span-2 min-w-0 rounded-xl bg-muted/35 p-3 sm:col-span-1">
+                <dt className="text-xs text-muted-foreground">Diferença (app − CRM)</dt>
+                <dd
+                  className={
+                    "mt-1 flex items-center gap-1.5 text-lg font-semibold tabular-nums " +
+                    (diferenca === null
+                      ? "text-muted-foreground"
+                      : diferenca === 0
+                        ? "text-success"
+                        : "text-destructive")
+                  }
+                >
+                  {diferenca === 0 && <CheckCircle2 className="size-4 shrink-0" aria-hidden />}
+                  {diferenca === null
+                    ? "A conferir"
+                    : diferenca === 0
+                      ? "Confere"
+                      : numM(diferenca)}
+                </dd>
+              </div>
+            </dl>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground">
+                {programa.appBalanceDate ? (
+                  <>
+                    Última conferência em{" "}
+                    <time dateTime={programa.appBalanceDate}>
+                      {formatarDataCredito(programa.appBalanceDate)}
+                    </time>
+                  </>
+                ) : (
+                  "Saldo do aplicativo ainda não registrado."
+                )}
+              </p>
+              {programa.canEdit && (
+                <Button type="button" size="sm" variant="outline" onClick={() => setEditando(true)}>
+                  Atualizar conferência
+                </Button>
+              )}
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">
             {loading
               ? "Carregando saldos…"
               : "Cadastre um programa para conferir o saldo com o aplicativo."}
           </p>
-        ) : (
-          <Table className="min-w-[450px]">
-            <TableHeader className="bg-muted/25">
-              <TableRow>
-                <TableHead scope="col" className="pl-4">
-                  Programa
-                </TableHead>
-                <TableHead scope="col" className="text-right">
-                  CRM
-                </TableHead>
-                <TableHead scope="col" className="text-right">
-                  App
-                </TableHead>
-                <TableHead scope="col" className="pr-4">
-                  Conferência
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {programas.map((item) => {
-                const diferenca =
-                  item.appBalance === undefined ? null : item.appBalance - item.balance;
-                return (
-                  <TableRow key={item.id}>
-                    <TableCell className="py-3 pl-4 font-medium">{item.name}</TableCell>
-                    <TableCell className="text-right tabular-nums">{numM(item.balance)}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {item.appBalance === undefined ? "—" : numM(item.appBalance)}
-                    </TableCell>
-                    <TableCell className="space-y-1 pr-4">
-                      {diferenca === null ? (
-                        <p className="text-muted-foreground">A conferir</p>
-                      ) : (
-                        <p
-                          className={
-                            diferenca === 0
-                              ? "flex items-center gap-1 text-success"
-                              : "text-destructive"
-                          }
-                        >
-                          {diferenca === 0 ? (
-                            <>
-                              <CheckCircle2 className="size-3.5" aria-hidden /> Confere
-                            </>
-                          ) : (
-                            "Diferença (app − CRM): " + numM(diferenca)
-                          )}
-                        </p>
-                      )}
-                      <div className="flex flex-wrap items-center gap-2">
-                        {item.appBalanceDate && (
-                          <time
-                            className="text-xs text-muted-foreground"
-                            dateTime={item.appBalanceDate}
-                          >
-                            {formatarDataCredito(item.appBalanceDate)}
-                          </time>
-                        )}
-                        {item.canEdit && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setProgramaId(item.id)}
-                          >
-                            Atualizar saldo
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
         )}
       </CardContent>
-      {programa && (
-        <ConferirSaldo
-          key={programa.id}
-          programa={programa}
-          fechar={() => setProgramaId(undefined)}
-        />
+      {programa && editando && (
+        <ConferirSaldo key={programa.id} programa={programa} fechar={() => setEditando(false)} />
       )}
     </Card>
   );

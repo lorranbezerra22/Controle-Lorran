@@ -4,7 +4,6 @@ import { ArrowUpRight, ChevronDown, Plane, Settings2, TrendingUp, Trophy, Wallet
 import { BankIcon } from "@/components/BankIcon";
 import { KpiTile } from "@/components/KpiTile";
 import { MilhasNotificationBell } from "@/components/MilhasNotificationBell";
-import { MilhasConferencia, MilhasPendencias } from "@/components/MilhasOperacao";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -272,11 +271,6 @@ function MilhasDashboard() {
           </div>
         )}
       </section>
-
-      <div className="grid items-start gap-4 xl:grid-cols-[1fr_1.15fr]">
-        <MilhasPendencias modo="painel" programaId={programFilter === "all" ? undefined : programFilter} />
-        <MilhasConferencia programas={filteredPrograms} />
-      </div>
 
       <details className="rounded-2xl border border-border bg-card px-4 py-3 sm:px-5">
         <summary className="cursor-pointer font-semibold">Resultados e viagens</summary>

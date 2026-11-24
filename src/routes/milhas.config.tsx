@@ -1,6 +1,7 @@
 import { ClubeTab } from "./milhas.ganhos";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { MilhasConferencia } from "@/components/MilhasOperacao";
 import { useMilhasData } from "@/context/MilhasDataContext";
 import { CATEGORY_LABEL, ProgramCategory, brlM, numM } from "@/lib/milhas-storage";
 import { Banknote, Plus, Wallet, Trash2 } from "lucide-react";
@@ -10,6 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/milhas/config")({
+  validateSearch: (search: Record<string, unknown>): { conferir?: string } => ({
+    conferir: typeof search.conferir === "string" ? search.conferir : undefined,
+  }),
   component: SettingsPage,
   head: () => ({ meta: [{ title: "Configurações — CRM Milhas" }] }),
 });
@@ -18,6 +22,7 @@ const emptyForm = { name: "", category: "fidelidade" as ProgramCategory, balance
 
 function SettingsPage() {
   const { programs, addProgram, updateProgram, deleteProgram } = useMilhasData();
+  const { conferir } = Route.useSearch();
   const fidelidade = programs.filter((p) => p.category === "fidelidade");
   const milhagem = programs.filter((p) => p.category === "milhagem");
   const [showForm, setShowForm] = useState(false);
@@ -134,6 +139,8 @@ function SettingsPage() {
           )}
         </div>
       </div>
+
+      <MilhasConferencia key={conferir ?? "todos"} programas={programs} programaInicial={conferir} />
 
       <section className="space-y-4 rounded-2xl border border-border bg-card p-4 sm:p-5">
         <h2 className="text-base font-semibold">Clubes de assinatura</h2>
