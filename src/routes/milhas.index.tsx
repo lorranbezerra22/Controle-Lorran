@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMilhasData } from "@/context/MilhasDataContext";
 import { brlM, numM } from "@/lib/milhas-storage";
@@ -12,14 +12,32 @@ import {
 import { Coins, TrendingUp, ArrowRightLeft, Wallet, Plane, SlidersHorizontal, X, Trophy } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { SOURCE_LABEL, type EarningSource } from "@/lib/milhas-storage";
+import { MilhasPiloto } from "@/components/MilhasPiloto";
 import { MilhasNotificationBell } from "@/components/MilhasNotificationBell";
 
 const formatMonth = (key: string) => { const [y, m] = key.split("-"); return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" }); };
 
 export const Route = createFileRoute("/milhas/")({
-  component: MilhasDashboard,
+  validateSearch: (search: Record<string, unknown>) => ({
+    previa: search.previa === "smiles" ? "smiles" as const : undefined,
+  }),
+  component: MilhasDashboardRoute,
   head: () => ({ meta: [{ title: "Dashboard — CRM Milhas" }] }),
 });
+
+function MilhasDashboardRoute() {
+  const { previa } = Route.useSearch();
+  if (previa !== "smiles") return <MilhasDashboard />;
+
+  return (
+    <div className="space-y-4">
+      <Link to="/milhas" search={{ previa: undefined }} className="text-sm font-medium text-primary underline-offset-4 hover:underline">
+        Voltar ao CRM de Milhas
+      </Link>
+      <MilhasPiloto />
+    </div>
+  );
+}
 
 function StatCard({ icon: Icon, label, value, hint }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string; hint?: string }) {
   return (
@@ -238,6 +256,9 @@ function MilhasDashboard() {
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <Link to="/milhas" search={{ previa: "smiles" }} className="rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-muted">
+              Prévia Smiles
+            </Link>
             <MilhasNotificationBell credits={recentCredits} />
             <button
               onClick={() => setShowFilters((v) => !v)}
