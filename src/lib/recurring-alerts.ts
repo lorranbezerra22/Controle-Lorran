@@ -13,8 +13,6 @@ export type RecurringAlert = {
   daysUntil: number;
 };
 
-const STORAGE_KEY = "cartoes:recorrentes";
-
 export const RECURRING_ALERT_DAYS_BEFORE = 5;
 
 const localISO = (date: Date) =>
@@ -26,18 +24,8 @@ const monthISO = (date: Date) =>
 const clampDay = (year: number, month: number, day: number) =>
   Math.min(Math.max(day, 1), new Date(year, month + 1, 0).getDate());
 
-export function readRecurringTemplates(): RecurringAlertTemplate[] {
-  if (typeof window === "undefined") return [];
-
-  try {
-    return JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
 export function getRecurringAlerts(
-  templates: RecurringAlertTemplate[] = readRecurringTemplates(),
+  templates: RecurringAlertTemplate[],
   now = new Date(),
   daysBefore = RECURRING_ALERT_DAYS_BEFORE,
 ): RecurringAlert[] {
@@ -67,7 +55,8 @@ export function getRecurringAlerts(
     const month = monthISO(occurrence);
 
     if (daysUntil < 0 || daysUntil > daysBefore) continue;
-    if (template.confirmedMonths?.includes(month)) continue;
+    const invoiceMonth = monthISO(new Date(occurrence.getFullYear(), occurrence.getMonth() + 1, 1));
+    if (template.confirmedMonths?.includes(invoiceMonth)) continue;
 
     alerts.push({
       template,

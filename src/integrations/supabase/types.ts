@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      cartao_recorrentes: {
+        Row: { user_id: string; templates: Json; updated_at: string }
+        Insert: { user_id: string; templates?: Json; updated_at?: string }
+        Update: { user_id?: string; templates?: Json; updated_at?: string }
+        Relationships: []
+      }
       cartao_compras: {
         Row: {
           brand: string | null
@@ -1393,6 +1399,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      confirmar_compra_planejada: {
+        Args: { p_id: string; p_mes: string; p_remover?: boolean }
+        Returns: Database["public"]["Tables"]["cartao_recorrentes"]["Row"]
+      }
       can_view: { Args: { row_uid: string }; Returns: boolean }
       generate_recurrences: {
         Args: { target_month: number; target_year: number }

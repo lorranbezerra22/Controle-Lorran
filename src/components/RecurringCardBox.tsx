@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Plus,
   RefreshCw,
@@ -10,7 +10,14 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  changeRecurringLaunch,
+  importRecurringTemplates,
+  loadRecurringAccount,
+  saveRecurringTemplates,
+  type RecurringAccount,
+  type RecurringTemplate,
+} from "@/lib/recurring-templates";
 import { brl, fmtDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,66 +30,25 @@ import { PersonSelect } from "@/components/person-select";
 import { BankIcon } from "@/components/BankIcon";
 import { toast } from "sonner";
 
-type RecurringTemplate = {
-  id: string;
-  description: string;
-  cardId: string;
-  categoryId: string;
-  person: string;
-  splitPeople?: string[];
-  splitCustom?: boolean;
-  splitAmounts?: Record<string, number>;
-  splitCategoryIds?: Record<string, string>;
-  brand?: string;
-  amount: number;
-  installments: number;
-  purchaseDay: number;
-  active: boolean;
-  createdAt: string;
-  confirmedMonths: string[];
-  launchedMonth?: string;
-};
-
 type Props = {
   cards: any[];
   cats: any[];
   onCreated: () => void;
 };
 
-const STORAGE_KEY = "cartoes:recorrentes";
-
-const localISO = (date: Date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-
 const monthISO = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-
-const clampDay = (year: number, month: number, day: number) =>
-  Math.min(day, new Date(year, month + 1, 0).getDate());
 
 function nextMonthISO() {
   const date = new Date();
   return monthISO(new Date(date.getFullYear(), date.getMonth() + 1, 1));
 }
 
-function readTemplates(): RecurringTemplate[] {
-  if (typeof window === "undefined") return [];
-  try {
-    return JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-async function writeTemplates(templates: RecurringTemplate[]) {
-  // Os lançamentos ficam guardados neste dispositivo até serem removidos.
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
-  window.dispatchEvent(new Event("recurring-templates-changed"));
-}
-
 export function RecurringCardBox({ cards, cats, onCreated }: Props) {
   const [open, setOpen] = useState(false);
-  const [templates, setTemplates] = useState<RecurringTemplate[]>([]);
+  const [account, setAccount] = useState<RecurringAccount | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const templates = account?.templates ?? [];
   const [targetMonth, setTargetMonth] = useState(nextMonthISO);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -108,19 +74,22 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
     if (!open) return;
 
     let cancelled = false;
-
-    const saved = readTemplates().map((template) => ({
-      ...template,
-      launchedMonth:
-        template.launchedMonth || template.confirmedMonths?.slice(-1)[0],
-    }));
-
-    setTemplates(saved);
-
+    const openList = async () => {
+      setAccount(null);
+      setLoadFailed(false);
+      try {
+        const saved = await loadRecurringAccount();
+        const imported = await importRecurringTemplates(saved, cards);
+        if (!cancelled) setAccount(imported);
+      } catch {
+        if (!cancelled) setLoadFailed(true);
+      }
+    };
+    void openList();
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, cards]);
 
   useEffect(() => {
     if (!form.cardId && cards[0]?.id) {
@@ -128,10 +97,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
     }
   }, [cards, form.cardId]);
 
-  const activeTemplates = useMemo(
-    () => templates.filter((template) => template.active),
-    [templates],
-  );
+  const activeTemplates = templates.filter((template) => template.active);
 
   const selectedCard = cards.find((card) => card.id === form.cardId);
   const isSplit = form.splitMode && form.splitPeople.length >= 2;
@@ -150,14 +116,18 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
     });
   };
 
-  const addTemplate = (event: React.FormEvent) => {
+  const addTemplate = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!account || saving) return;
 
     const amount = Number(form.amount);
     if (!form.description.trim()) return toast.error("Informe a descrição.");
     if (!form.cardId) return toast.error("Selecione um cartão.");
     if (!Number.isFinite(amount) || amount <= 0) return toast.error("Informe um valor válido.");
-    if (form.installments < 1) return toast.error("Informe a quantidade de parcelas.");
+    if (!Number.isInteger(form.installments) || form.installments < 1) return toast.error("Informe a quantidade de parcelas.");
+    if (!Number.isInteger(form.purchaseDay) || form.purchaseDay < 1 || form.purchaseDay > 31) {
+      return toast.error("Informe um dia de compra entre 1 e 31.");
+    }
     if (isSplit && form.splitPeople.length < 2) {
       return toast.error("Selecione pelo menos duas pessoas.");
     }
@@ -173,6 +143,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
       }
     }
 
+    const previous = templates.find((template) => template.id === editingId);
     const next: RecurringTemplate = {
       id: editingId || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
       description: form.description.trim(),
@@ -188,45 +159,39 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
       installments: Number(form.installments),
       purchaseDay: Number(form.purchaseDay),
       active: true,
-      createdAt: editingId
-        ? templates.find((template) => template.id === editingId)?.createdAt || new Date().toISOString()
-        : new Date().toISOString(),
-      confirmedMonths: editingId
-        ? templates.find((template) => template.id === editingId)?.confirmedMonths || []
-        : [],
+      createdAt: previous?.createdAt ?? new Date().toISOString(),
+      confirmedMonths: previous?.confirmedMonths ?? [],
+      launchIds: previous?.launchIds,
     };
 
     const updated = editingId
       ? templates.map((template) => (template.id === editingId ? next : template))
       : [...templates, next];
 
-    setTemplates(updated);
-    void writeTemplates(updated)
-      .then(() => {
-        setEditingId(null);
-        setForm((current) => ({
-          ...current,
-          description: "",
-          amount: "",
-          categoryId: "",
-          person: "",
-          splitMode: false,
-          splitPeople: [],
-          splitCustom: false,
-          splitAmounts: {},
-          splitCategoryIds: {},
-          brand: "",
-          installments: 1,
-        }));
-        toast.success(
-          editingId
-            ? "Lançamento planejado atualizado."
-            : "Compra guardada neste dispositivo.",
-        );
-      })
-      .catch((error: any) => {
-        toast.error(error.message || "Não foi possível guardar a compra.");
-      });
+    setSaving(true);
+    try {
+      setAccount(await saveRecurringTemplates(account, updated));
+      setEditingId(null);
+      setForm((current) => ({
+        ...current,
+        description: "",
+        amount: "",
+        categoryId: "",
+        person: "",
+        splitMode: false,
+        splitPeople: [],
+        splitCustom: false,
+        splitAmounts: {},
+        splitCategoryIds: {},
+        brand: "",
+        installments: 1,
+      }));
+      toast.success(editingId ? "Compra planejada atualizada." : "Compra planejada guardada na sua conta.");
+    } catch (error: any) {
+      toast.error(error.message || "Não foi possível guardar a compra.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const editTemplate = (template: RecurringTemplate) => {
@@ -251,256 +216,41 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
     setFormExpanded(true);
   };
 
-  const removeTemplate = (id: string) => {
-    const updated = templates.filter((template) => template.id !== id);
-    void writeTemplates(updated)
-      .then(() => setTemplates(updated))
-      .catch((error: any) => {
-        toast.error(error.message || "Não foi possível excluir o rascunho.");
-      });
-  };
-
-  const removeConfirmedLaunch = async (
-    template: RecurringTemplate,
-    monthToRemove: string,
-  ) => {
-    const launchedMonth = monthToRemove;
-    if (
-      !template.confirmedMonths.includes(monthToRemove) &&
-      template.launchedMonth !== monthToRemove
-    ) {
-      return;
-    }
-
-    const card = cards.find((item) => item.id === template.cardId);
-    if (!card) {
-      toast.error("O cartão deste lançamento não está disponível.");
-      return;
-    }
-
-    if (
-      !window.confirm(
-        `Remover "${template.description}" da fatura de ${fmtDate(`${launchedMonth}-01`).slice(3)}?`,
-      )
-    ) {
-      return;
-    }
-
+  const removeTemplate = async (id: string) => {
+    if (!account || saving) return;
     setSaving(true);
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Não autenticado.");
-
-      const [year, month] = launchedMonth.split("-").map(Number);
-      const purchaseMonth = new Date(year, month - 2, 1);
-      const purchaseDate = `${monthISO(purchaseMonth)}-${String(
-        clampDay(purchaseMonth.getFullYear(), purchaseMonth.getMonth(), template.purchaseDay),
-      ).padStart(2, "0")}`;
-
-      const { data: purchases, error: purchaseError } = await supabase
-        .from("cartao_compras")
-        .select("id, person, total_amount")
-        .eq("user_id", user.id)
-        .eq("card_id", card.id)
-        .eq("description", template.description)
-        .eq("purchase_date", purchaseDate);
-
-      if (purchaseError) throw purchaseError;
-
-      const expectedPeople = template.splitPeople?.length
-        ? template.splitPeople
-        : [template.person || null];
-
-      const matchingPurchases = (purchases || []).filter((purchase: any) => {
-        const personMatches = expectedPeople.some(
-          (person) => (purchase.person || null) === person,
-        );
-
-        if (!personMatches) return false;
-
-        if (template.splitCustom) {
-          return expectedPeople.some(
-            (person) =>
-              (purchase.person || null) === person &&
-              Math.abs(
-                Number(purchase.total_amount || 0) -
-                  Number((person ? template.splitAmounts?.[person] : 0) || 0),
-              ) < 0.01,
-          );
-        }
-
-        return true;
-      });
-
-      if (matchingPurchases.length === 0) {
-        throw new Error(
-          "O lançamento não foi encontrado na fatura. Ele pode já ter sido removido manualmente.",
-        );
-      }
-
-      for (const purchase of matchingPurchases) {
-        const { error } = await supabase
-          .from("cartao_compras")
-          .delete()
-          .eq("id", purchase.id);
-
-        if (error) throw error;
-      }
-
-      const updated = templates.map((item) => {
-        if (item.id !== template.id) return item;
-
-        const confirmedMonths = item.confirmedMonths.filter(
-          (monthValue) => monthValue !== launchedMonth,
-        );
-
-        return {
-          ...item,
-          confirmedMonths,
-          launchedMonth: confirmedMonths[confirmedMonths.length - 1],
-        };
-      });
-
-      await writeTemplates(updated);
-      setTemplates(updated);
-      onCreated();
-      toast.success(`"${template.description}" removido da fatura.`);
+      setAccount(await saveRecurringTemplates(account, templates.filter((template) => template.id !== id)));
     } catch (error: any) {
-      toast.error(error.message || "Não foi possível remover o lançamento.");
+      toast.error(error.message || "Não foi possível excluir a compra planejada.");
     } finally {
       setSaving(false);
     }
   };
 
-  const confirmTemplate = async (template: RecurringTemplate) => {
-    if (
-      template.confirmedMonths.includes(targetMonth) ||
-      template.launchedMonth === targetMonth
-    ) {
-      toast.error("Esta compra já foi lançada na fatura do mês selecionado.");
-      return;
-    }
-
-    const card = cards.find((item) => item.id === template.cardId);
-    if (!card) return toast.error("O cartão deste lançamento não está disponível.");
+  const updateLaunch = async (template: RecurringTemplate, remove = false) => {
+    if (!account || saving || !targetMonth) return;
+    if (remove && !window.confirm(
+      `Remover "${template.description}" da fatura de ${fmtDate(`${targetMonth}-01`).slice(3)}?`,
+    )) return;
 
     setSaving(true);
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Não autenticado.");
-
-      const [year, month] = targetMonth.split("-").map(Number);
-      const purchaseMonth = new Date(year, month - 2, 1);
-      const purchaseDate = `${monthISO(purchaseMonth)}-${String(
-        clampDay(purchaseMonth.getFullYear(), purchaseMonth.getMonth(), template.purchaseDay),
-      ).padStart(2, "0")}`;
-
-      // O mês escolhido é o mês de destino da fatura.
-      // Não recalculamos o vencimento a partir da data da compra, pois isso
-      // pode deslocar o lançamento para o mês seguinte.
-      const firstYear = year;
-      const firstMonth = month - 1;
-      const due = Number(card.due_day) || 10;
-
-      const splitPeople = template.splitPeople?.length
-        ? template.splitPeople
-        : [template.person || null];
-
-      const splitValues = splitPeople.map((person, index) => {
-        if (!person) return { person: null, amount: template.amount };
-        if (template.splitCustom) {
-          return {
-            person,
-            amount: Number(template.splitAmounts?.[person] || 0),
-          };
-        }
-
-        const value = Math.round((template.amount / splitPeople.length) * 100) / 100;
-        return {
-          person,
-          amount:
-            index === splitPeople.length - 1
-              ? +(template.amount - value * (splitPeople.length - 1)).toFixed(2)
-              : value,
-        };
-      });
-
-      for (const split of splitValues) {
-        const { data: purchase, error: purchaseError } = await supabase
-          .from("cartao_compras")
-          .insert({
-            user_id: user.id,
-            card_id: card.id,
-            description: template.description,
-            purchase_date: purchaseDate,
-            total_amount: split.amount,
-            installments_count: template.installments,
-            category_id:
-              template.splitCategoryIds?.[split.person || ""] ||
-              template.categoryId ||
-              null,
-            person: split.person,
-            brand: template.brand || null,
-          } as any)
-          .select()
-          .single();
-
-        if (purchaseError) throw purchaseError;
-
-        const installmentValue = Math.round((split.amount / template.installments) * 100) / 100;
-        const installments = Array.from({ length: template.installments }, (_, index) => {
-          const dueDate = new Date(
-            firstYear,
-            firstMonth + index,
-            clampDay(firstYear, firstMonth + index, due),
-          );
-
-          return {
-            user_id: user.id,
-            purchase_id: purchase.id,
-            card_id: card.id,
-            installment_number: index + 1,
-            amount:
-              index === template.installments - 1
-                ? +(split.amount - installmentValue * (template.installments - 1)).toFixed(2)
-                : installmentValue,
-            due_at: localISO(dueDate),
-            status: "pending",
-          };
-        });
-
-        const { error: installmentError } = await supabase
-          .from("cartao_parcelas")
-          .insert(installments as any);
-
-        if (installmentError) throw installmentError;
-      }
-
-      const updated = templates.map((item) =>
-        item.id === template.id
-          ? {
-            ...item,
-            launchedMonth: targetMonth,
-            confirmedMonths: [...item.confirmedMonths, targetMonth],
-          }
-          : item,
-      );
-
-      await writeTemplates(updated);
-      setTemplates(updated);
+      setAccount(await changeRecurringLaunch(account, template.id, targetMonth, remove));
       onCreated();
-      toast.success(`"${template.description}" lançado na fatura.`);
+      toast.success(remove ? "Compra removida da fatura." : "Compra lançada na fatura.");
     } catch (error: any) {
-      toast.error(error.message || "Não foi possível confirmar o lançamento.");
+      toast.error(error.message || "Não foi possível atualizar a fatura.");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(visible) => {
+      if (visible) setTargetMonth(nextMonthISO());
+      setOpen(visible);
+    }}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="rounded-full">
           <RefreshCw className="w-4 h-4 mr-1" />
@@ -525,7 +275,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
           <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
             <p className="font-semibold text-foreground">Seus lançamentos ficam guardados</p>
             <p className="mt-1">
-              As compras planejadas permanecem nesta lista até você excluí-las. Depois de confirmar,
+              As compras planejadas ficam guardadas na sua conta. Depois de confirmar,
               elas continuam no histórico como lançadas.
             </p>
           </div>
@@ -877,7 +627,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
             </div>
 
             <div className="flex gap-2">
-              <Button type="submit" disabled={!selectedCard}>
+              <Button type="submit" disabled={!selectedCard || !account || saving}>
                 {editingId ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                 {editingId ? "Salvar alterações" : "Salvar como rascunho"}
               </Button>
@@ -921,7 +671,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <p className="text-xs text-muted-foreground">
-                As compras guardadas permanecem aqui até você removê-las ou confirmá-las na fatura.
+                Confirme a compra na fatura escolhida. Ela fica disponível para os próximos meses.
                 </p>
               </div>
               <div className="space-y-1">
@@ -935,7 +685,13 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
               </div>
             </div>
 
-            {activeTemplates.length === 0 ? (
+            {loadFailed ? (
+              <p role="alert" className="text-sm text-destructive">
+                Não foi possível carregar as compras. Feche e reabra esta janela para tentar novamente.
+              </p>
+            ) : !account ? (
+              <p role="status" className="text-sm text-muted-foreground">Carregando compras planejadas…</p>
+            ) : activeTemplates.length === 0 ? (
               <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-muted/10 px-5 py-8 text-center">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <RefreshCw className="h-5 w-5" />
@@ -963,8 +719,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                 {activeTemplates.map((template) => {
                   const card = cards.find((item) => item.id === template.cardId);
                   const confirmed =
-                    template.confirmedMonths.includes(targetMonth) ||
-                    template.launchedMonth === targetMonth;
+                    template.confirmedMonths.includes(targetMonth);
                   const people = template.splitPeople?.length
                     ? template.splitPeople
                     : [template.person || "Sem pessoa"];
@@ -1076,8 +831,8 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                             <Button
                               size="sm"
                               variant="default"
-                              disabled={saving || !card}
-                              onClick={() => confirmTemplate(template)}
+                              disabled={saving || !card || !targetMonth}
+                              onClick={() => updateLaunch(template)}
                             >
                               Confirmar na fatura
                             </Button>
@@ -1085,8 +840,8 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                             <Button
                               size="sm"
                               variant="destructive"
-                              disabled={saving || !card}
-                              onClick={() => removeConfirmedLaunch(template, targetMonth)}
+                              disabled={saving || !card || !targetMonth}
+                              onClick={() => updateLaunch(template, true)}
                             >
                               <Trash2 className="mr-1.5 h-4 w-4" />
                               Remover da fatura
@@ -1096,6 +851,7 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                           <Button
                             size="sm"
                             variant="outline"
+                            disabled={saving}
                             onClick={() => editTemplate(template)}
                           >
                             <Pencil className="mr-1.5 h-4 w-4" />
@@ -1105,8 +861,9 @@ export function RecurringCardBox({ cards, cats, onCreated }: Props) {
                           <Button
                             size="icon"
                             variant="ghost"
-                            title="Excluir rascunho"
-                            aria-label="Excluir rascunho"
+                            disabled={saving}
+                            title="Excluir compra planejada"
+                            aria-label="Excluir compra planejada"
                             onClick={() => removeTemplate(template.id)}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />

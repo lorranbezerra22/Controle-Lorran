@@ -3,6 +3,7 @@ import { Bell, ExternalLink, RefreshCw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { brl, fmtDate } from "@/lib/format";
+import { loadRecurringAccount, recurringChangeEvent, type RecurringTemplate } from "@/lib/recurring-templates";
 import {
   getRecurringAlerts,
   RECURRING_ALERT_DAYS_BEFORE,
@@ -44,17 +45,26 @@ function installmentIsPaid(installment: any) {
 export function NotificationBell({ transactions, installments, cards }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const [recurringVersion, setRecurringVersion] = useState(0);
+  const [recurringTemplates, setRecurringTemplates] = useState<RecurringTemplate[]>([]);
 
   useEffect(() => {
-    const refresh = () => setRecurringVersion((version) => version + 1);
-    window.addEventListener("recurring-templates-changed", refresh);
-    window.addEventListener("storage", refresh);
-
-    const interval = window.setInterval(refresh, 60_000);
-
+    let current = true;
+    const refresh = async () => {
+      try {
+        const account = await loadRecurringAccount();
+        if (current) setRecurringTemplates(account.templates);
+      } catch {
+        // The rest of the dashboard remains available while this request is retried.
+      }
+    };
+    void refresh();
+    window.addEventListener(recurringChangeEvent, refresh);
+    window.addEventListener("focus", refresh);
+    const interval = window.setInterval(() => setRecurringVersion((version) => version + 1), 60_000);
     return () => {
-      window.removeEventListener("recurring-templates-changed", refresh);
-      window.removeEventListener("storage", refresh);
+      current = false;
+      window.removeEventListener(recurringChangeEvent, refresh);
+      window.removeEventListener("focus", refresh);
       window.clearInterval(interval);
     };
   }, []);
@@ -105,10 +115,10 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
         );
         return { card: c, dueDate, diff, pendingAmount };
       })
-      .filter(Boolean) as { card: any; dueDate: Date; diff: number }[];
+      .filter((entry) => entry !== null);
 
     const recurringAlerts = getRecurringAlerts(
-      undefined,
+      recurringTemplates,
       now,
       RECURRING_ALERT_DAYS_BEFORE,
     );
@@ -120,7 +130,7 @@ export function NotificationBell({ transactions, installments, cards }: Notifica
       recurringAlerts.length;
 
     return { upcomingTx, overdueTx, overdueInst, cardAlerts, recurringAlerts, total };
-  }, [transactions, installments, cards, recurringVersion]);
+  }, [transactions, installments, cards, recurringTemplates, recurringVersion]);
 
   return (
     <>
